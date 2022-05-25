@@ -29,9 +29,7 @@ from Functions.Geometric import Rodrigues
 def configure_plot(n,m,fig_w,fig_h,title):
 	fig = plt.figure(figsize=(fig_h,fig_w))
 	fig.suptitle(title)
-	ax = fig.add_subplot(n,m,1,projection = '3d')
-	ax = fig.axes(projection='3d')
-	return ax,fig
+	return fig
 
 """
 	function: plot_cameras
@@ -77,7 +75,8 @@ def plot_cameras(cameras,ax,camera_scale,axis_scale,camera_color,frame_color):
 		ax: fig with subplot (see matplotlib docs)
 		fig: configured figure
 """
-def plot_all_cameras(ax,fig,n_cameras,final,desired,init,final_poses,desired_poses,x,y,z,axis_scale,camera_scale,bounds):
+def plot_all_cameras(fig,place,n_cameras,final,desired,init,final_poses,desired_poses,x,y,z,axis_scale,camera_scale,bounds):
+	ax = fig.add_subplot(place[0],place[1],place[2],projection = '3d')
 	ax.set_xlim3d(bounds[0],bounds[1])
 	ax.set_ylim3d(bounds[0],bounds[1])
 	ax.set_zlim3d(bounds[0],bounds[1])
@@ -92,7 +91,7 @@ def plot_all_cameras(ax,fig,n_cameras,final,desired,init,final_poses,desired_pos
 	plot_cameras(final,ax,camera_scale,axis_scale,'blue','None')
 	plot_cameras(init,ax,camera_scale,axis_scale,'red','None')
 
-	#plot trayectories
+	# plot trajectories
 	for i in range(n_cameras):
 		ax.plot(x[i],y[i],z[i], label=str(i+1))
 		plt.grid(True)
@@ -119,7 +118,7 @@ def plot_all_cameras(ax,fig,n_cameras,final,desired,init,final_poses,desired_pos
 		ax: fig with subplot (see matplotlib docs)
 		fig: configured figure
 """
-def plot_quarter(ax,fig,place,x,y,label,ite,size,labels, location=1):
+def plot_quarter(fig,place,x,y,label,ite,size,labels, location=1):
 	ax = fig.add_subplot(place[0],place[1],place[2])
 	plt.xlabel(labels[0])
 	plt.ylabel(labels[1])

@@ -29,6 +29,7 @@ from Functions.Geometric import Rodrigues
 def configure_plot(n,m,fig_w,fig_h,title):
 	fig = plt.figure(figsize=(fig_h,fig_w))
 	fig.suptitle(title)
+	plt.subplots_adjust(left=0.1,bottom=0.1,right=0.9,top=0.9,wspace=0.4,hspace=0.4)
 	return fig
 
 """

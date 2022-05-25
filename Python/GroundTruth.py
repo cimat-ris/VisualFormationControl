@@ -37,8 +37,6 @@ parser.add_argument('--log_level',type=int, default=20,help='Log level (default:
 parser.add_argument('--log_file',default='',help='Log file (default: standard output)')
 args = parser.parse_args()
 
-
-
 # Loggin format
 logging.basicConfig(format='%(levelname)s: %(message)s',level=args.log_level)
 
@@ -139,11 +137,11 @@ cols = 2
 fig  = configure_plot(3,2,15,20,'Position-based control using Ground Truth')
 bounds = [min(-1.0,np.min(x)-0.2,np.min(y)-0.2,np.min(z)-0.2),max(2.5,np.max(x)+0.2,np.max(y)+0.2,np.max(z)+0.2)]
 ax,fig = plot_all_cameras(fig,[rows//2,cols,1],n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,0.5,0.09,bounds)
-ax,fig = plot_quarter(fig,[rows,cols,4],t_arr,err_s,'Actual formation average scale',ite,None,['Time (s)','Actual formation average scale'],4)
+ax,fig = plot_quarter(fig,[rows,cols,2],t_arr,err_s,'Actual formation average scale',ite,None,['Time (s)','Actual formation average scale'],4)
 ax,fig = plot_quarter(fig,[rows,cols,5],t_arr,v,['$v_x$','$v_y$','$v_z$'],ite,None,['Time (s)','Average linear velocity (m/s)'])
-ax,fig = plot_quarter(fig,[rows,cols,6],t_arr,w,['$\omega_x$','$\omega_y$','$\omega_z$'],ite,None,['Time (s)','Average absolute angular velocity (rad/s)'])
-ax,fig = plot_quarter(fig,[rows,cols,7],t_arr,err_t,'Evaluation error in translation ($e_t$)',ite,None,['Time (s)','Evaluation error in translation (m)'])
-ax,fig = plot_quarter(fig,[rows,cols,8],t_arr,err_psi,'Evaluation error in translation ($e_\psi$)',ite,None,['Time (s)','Evaluation error in rotation (rad)'])
+ax,fig = plot_quarter(fig,[rows,cols,6],t_arr,w,['$\omega_x$','$\omega_y$','$\omega_z$'],ite,None,['Time (s)','Avg. abs. angular velocity (rad/s)'])
+ax,fig = plot_quarter(fig,[rows,cols,7],t_arr,err_t,'Error in translation ($e_t$)',ite,None,['Time (s)','Error in translation (m)'])
+ax,fig = plot_quarter(fig,[rows,cols,8],t_arr,err_psi,'Error in rotation ($e_\psi$)',ite,None,['Time (s)','Error in rotation (rad)'])
 
 #save and show
 plt.savefig('graphs/complete.pdf',bbox_inches='tight')

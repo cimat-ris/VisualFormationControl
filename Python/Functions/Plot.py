@@ -10,6 +10,7 @@
 		- plot_quarter
 """
 import matplotlib.pyplot as plt
+import numpy as np
 from math import pi
 from Functions.Geometric import Rodrigues
 
@@ -119,13 +120,13 @@ def plot_all_cameras(fig,place,n_cameras,final,desired,init,final_poses,desired_
 		ax: fig with subplot (see matplotlib docs)
 		fig: configured figure
 """
-def plot_quarter(fig,place,x,y,label,ite,size,labels, location=1):
+def plot_quarter(fig,place,x,y,label,size,labels, location=1):
 	ax = fig.add_subplot(place[0],place[1],place[2])
 	plt.xlabel(labels[0])
 	plt.ylabel(labels[1])
 
 	#if we only have 1 data
-	if y.shape == (ite,):
+	if y.ndim == 1:
 		ax.plot(x,y,label=label)
 	else:
 		#if we have more
@@ -139,3 +140,34 @@ def plot_quarter(fig,place,x,y,label,ite,size,labels, location=1):
 	else:
 		plt.legend(loc=location,prop={'size': size})
 	return ax,fig
+
+"""
+		n_cameras: cameras used.
+		final: the end position of the cameras (list of PlanarCamera)
+		desired: the desired position of the cameras (list of Planar Camera)
+		init: initial positions of the cameras (list of PlanarCamera)
+		final_poses: array with poses of final cameras (returned by function random cameras, and used in the process)
+		desired_poses: array with the desired poses (returned by function line_formation/circle_formation)
+		x: trayectory for every camera in x axis (n x k )
+		y: trayectory for every camera in y axis (n x k)
+		z: trayectory for every camera in z axis (n x k) where n=n_cameras and k=iterations made
+"""
+def plot_consensus_results(n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,v,w,points_x,points_y,points_z,timesteps,errors_t,errors_r,gamma,legend=''):
+	# plotting
+	rows = 4
+	cols = 2
+	fig = configure_plot(rows,cols,15,20,legend)
+	bounds = [min(-1.0,np.min(x)-0.2,np.min(y)-0.2,np.min(z)-0.2),max(2.5,np.max(x)+0.2,np.max(y)+0.2,np.max(z)+0.2)]
+	ax,fig = plot_all_cameras(fig,[rows//2,cols,1],n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,0.5,0.09,bounds)
+	if points_x is not None:
+		ax.plot(points_x,points_y,points_z,'o', alpha=0.2) #plot points
+	if gamma is not None:
+		ax,fig = plot_quarter(fig,[rows,cols,2],timesteps,gamma,'Scale consensus',None,['Time (s)','Scale'],4)
+	ax,fig = plot_quarter(fig,[rows,cols,5],timesteps,v,['$v_x$','$v_y$','$v_z$'],None,['Time (s)','Avg. lin. velocity (m/s)'])
+	ax,fig = plot_quarter(fig,[rows,cols,6],timesteps,w,['$\omega_x$','$\omega_y$','$\omega_z$'],None,['Time (s)','Avg. abs. angular velocity (rad/s)'])
+	ax,fig = plot_quarter(fig,[rows,cols,7],timesteps,errors_t,'Evaluation error in translation ($e_t$)',None,['Time (s)','Error in translation (m)'])
+	ax,fig = plot_quarter(fig,[rows,cols,8],timesteps,errors_r,'Evaluation error in rotation ($e_\psi$)',None,['Time (s)','Error in rotation (rad)'])
+
+	#save and show
+	plt.savefig('graphs/complete.pdf',bbox_inches='tight')
+	plt.show()

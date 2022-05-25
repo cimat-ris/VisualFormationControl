@@ -154,19 +154,5 @@ if 'graphs' in dirs:
 	shutil.rmtree("graphs")
 os.mkdir('graphs')
 
-#plotting
-rows = 4
-cols = 2
-fig = configure_plot(rows,cols,15,20,'Position-based control using Essential Decomposition without scale estimation')
-bounds = [min(-1.0,np.min(x)-0.2,np.min(y)-0.2,np.min(z)-0.2),max(2.5,np.max(x)+0.2,np.max(y)+0.2,np.max(z)+0.2)]
-ax,fig = plot_all_cameras(fig,[rows//2,cols,1],n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,0.5,0.09,bounds)
-ax.plot(xx,yy,zz,'o', alpha=0.2) #plot points
-ax,fig = plot_quarter(fig,[rows,cols,2],t_arr,err_s,'Actual formation average scale',ite,None,['Time (s)','Actual formation average scale'],4)
-ax,fig = plot_quarter(fig,[rows,cols,5],t_arr,v,['$v_x$','$v_y$','$v_z$'],ite,None,['Time (s)','Average linear velocity (m/s)'])
-ax,fig = plot_quarter(fig,[rows,cols,6],t_arr,w,['$\omega_x$','$\omega_y$','$\omega_z$'],ite,None,['Time (s)','Average absolute angular velocity (rad/s)'])
-ax,fig = plot_quarter(fig,[rows,cols,7],t_arr,err_t,'Evaluation error in translation ($e_t$)',ite,None,['Time (s)','Evaluation error in translation (m)'])
-ax,fig = plot_quarter(fig,[rows,cols,8],t_arr,err_psi,'Evaluation error in rotation ($e_\psi$)',ite,None,['Time (s)','Evaluation error in rotation (rad)'])
-
-#save and show
-plt.savefig('graphs/complete.pdf',bbox_inches='tight')
-plt.show()
+# Plot and save results
+plot_consensus_results(n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,v,w,xx,yy,zz,t_arr,err_t,err_psi,None,legend='Position-based control using Essential Decomposition without scale estimation')

@@ -36,7 +36,7 @@ Always run first the rand.py,
 Uses the **homography** to update velocities. It is a **position based control** contained in *HomographyDecompositionScale.py*. It estimates the scale. You can select how many cameras do you want in line: 43 and what formation (line_formation or circle_formation) in line: 45. It verifies if the formation is infinitesimally rigid. The control is contained in *Functions/Control.py*, in the function named HDC. To run the program: 
 
 ```console
-python HomographyDecompositionNoScale.py
+python HomographyDecompositionScale.py
 ```
 
 5. *EssentialDecompositionScale.py* 

@@ -30,8 +30,7 @@ def configure_plot(n,m,fig_w,fig_h,title):
 	fig = plt.figure(figsize=(fig_h,fig_w))
 	fig.suptitle(title)
 	ax = fig.add_subplot(n,m,1,projection = '3d')
-	ax = fig.gca(projection='3d')
-
+	ax = fig.axes(projection='3d')
 	return ax,fig
 
 """

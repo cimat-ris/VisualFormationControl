@@ -11,10 +11,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import cv2
-import shutil, os
-from Functions.PlanarCamera import PlanarCamera   
+import shutil, os, argparse, logging
+from Functions.PlanarCamera import PlanarCamera
 from Functions.Geometric import Rodrigues
+# Parser arguments
+parser = argparse.ArgumentParser(description='example of how to use the functions and the consensus algorithm for control with relative positions and rotations')
+parser.add_argument('--log_level',type=int, default=20,help='Log level (default: 20)')
+parser.add_argument('--log_file',default='',help='Log file (default: standard output)')
+args = parser.parse_args()
 
+# Loggin format
+logging.basicConfig(format='%(levelname)s: %(message)s',level=args.log_level)
 #================================================================point cloud
 xx       = np.loadtxt('cloud/x.data')
 yy       = np.loadtxt('cloud/y.data')
@@ -83,7 +90,7 @@ z_pos = init_z
 roll    = init_roll
 pitch   = init_pitch
 yaw     = init_yaw
-p20 = []    
+p20 = []
 j = 0
 error_e = 1
 err_pix = 10 #error in pixels
@@ -95,13 +102,13 @@ tr_filter = []
 while( j<steps and err_pix > 1e-2):
 
 	# ===================== Calculate new translation and rotation values using Euler's method====================
-	x_pos     +=  dt * U[0, 0] 
+	x_pos     +=  dt * U[0, 0]
 	y_pos     +=  dt * U[1, 0] # Note the velocities change due the camera framework
 	z_pos     +=  dt * U[2, 0]
 	roll    +=  dt * U[3, 0]
 	pitch       +=  dt * U[4, 0]
 	yaw      +=  dt * U[5, 0]
-	
+
 	moving_camera.set_position(x_pos, y_pos, z_pos,roll, pitch, yaw)
 	p_moving = moving_camera.projection(w_points,n_points)
 
@@ -121,7 +128,7 @@ while( j<steps and err_pix > 1e-2):
 		if np.linalg.norm(-tr-tr_filter) < np.linalg.norm(tr-tr_filter):
 			tr =  -tr
 
-		tr_filter = tr.flatten()		
+		tr_filter = tr.flatten()
 		R_filter = R
 	else:
 		R1, R2, tr = cv2.decomposeEssentialMat(E)
@@ -138,15 +145,15 @@ while( j<steps and err_pix > 1e-2):
 	# ==================================== CONTROL COMPUTATION =======================================
 	#i used toscale the error, making it to be less than 10, but this fails when there are rotations
 	#because of the unity vector tr. So i decided to use the pose, in the end this is a position based method
-	err  = np.linalg.norm(moving_camera.t[0]-target_camera.t[0]) 
+	err  = np.linalg.norm(moving_camera.t[0]-target_camera.t[0])
 	ev       = R.T.dot(tr*err)
-	ew       = u.reshape((3,1))   
+	ew       = u.reshape((3,1))
 	e        = np.vstack((ev,ew))
-	U        = -Gain*e.reshape((6,1))	
+	U        = -Gain*e.reshape((6,1))
 	error_e  = np.linalg.norm(e)
 	#Avoiding numerical error
 	U[np.abs(U) < 1.0e-9] = 0.0
-	
+
 	# Copy data for plot
 	UArray[:, j]    = U[:, 0]
 	tArray[j]       = t
@@ -154,25 +161,24 @@ while( j<steps and err_pix > 1e-2):
 	positionArray[0, j] = x_pos
 	positionArray[1, j] = y_pos
 	positionArray[2, j] = z_pos
-	
+
 	# =================================== Average feature error ======================================
 	pixel_error             = p_moving-p_target
 	err_pix 				= np.mean(np.linalg.norm(pixel_error.reshape((2* n_points,1), order='F')))
 	averageErrorArray[j]    = err_pix
 	# ==================================== verifying error =======================================
-	if j == 1 and averageErrorArray[j] > averageErrorArray[j-1] and j == 1:	
+	if j == 1 and averageErrorArray[j] > averageErrorArray[j-1] and j == 1:
 		tr_filter = -tr_filter
 
 	t += dt
 	j += 1
-	print j-1,averageErrorArray[j-1]
+	logging.info('{} {}'.format(j-1,averageErrorArray[j-1]))
 
 # ======================================  Draw cameras ========================================
 
 fig = plt.figure(figsize=(15,10))
 fig.suptitle('World setting')
 ax = fig.add_subplot(2, 2, 1, projection='3d')
-ax = fig.gca(projection='3d')
 ax.plot(xx, yy, zz, 'o')
 ax.plot(positionArray[0,0:j],positionArray[1,0:j],positionArray[2,0:j]) # Plot camera trajectory
 axis_scale      = 0.5

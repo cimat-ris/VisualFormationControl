@@ -1,0 +1,35 @@
+Este paquete permite el control basado en posicion de un dron utilizando la homografía entre una imagen a la que se quiere llegar y la actual
+
+1. Primero, se ejecuta gazebo con un drone y un mundo de donde pueda obtener caracteristicas de una escena plana (textura).
+
+		roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird world_name:=ground
+
+2. Enseguida se coloca al dron en una posicion diferente al origen, pues es la imagen de referencia a la que se quiere llegar (se encuentra en la carpeta source del paquete).
+
+		rosrun placing placing hummingbird 0.5 0.2 1.5 1.57
+
+3. Ahora, se ejecuta una herramienta para ver lo que se ve en la camara del dron.
+
+		rosrun rqt_image_view rqt_image_view 
+
+	En una lista desplegable de la ventana que se abrió, se seleciona hummingbird/camera_nadir/image_raw, eso es lo que ve ahora el dron.
+
+4. Cambiar el home en el código
+		
+	Se necesita cambiar las lineas 94 y 156-161 del codigo para que se acceda a su home y workspace. Después de este se vuelve a realizar catkin build 
+	del workspace donde se encuentra el código. Además se ejecuta source ~./bashrc en la terminal donde se esta trabajando.
+
+5. Se ejecuta el controlador.
+
+		rosrun homography homography
+
+	En la ventana de rqt_image_view se seleciona /matching, nos muestra el matcheo de las características detectadas conforme el dron se mueve. Al final ambas imagenes mostradas deben ser casi iguales. 
+
+También se puede ver el movimiento del dron directamente en gazebo. Para cerrar rqt_image_view se utiliza Ctrl+C. Para volver a ejecutar el nodo homography, vuelva a ejecutar el paso 2 y 5.
+
+Este algoritmo es muy sensible a la primera descomposición de homografía, por lo que a veces se puede ir muy lejos xD.
+
+Si aparece un error en la libreria de OpenCV, lo más probable es que no se tenga bien indicada la ubicación de la misma en el CMakeList.txt del paquete homography. La dirección está indicada en la línea 10 y se tendría que cambiar por la ubicación correcta de su instalación, en cuyo caso no debe de estar muy lejos de la instalación especificada. 
+
+
+

@@ -1,0 +1,16 @@
+<launch>
+  <arg name="enable_logging" default="false"/>
+  <arg name="node_name" default="montijano" />
+
+  <group ns="$(arg node_name)0">
+    <node name="montijano" pkg="montijano" type="montijano" args="0" output="screen"/>
+  </group>
+
+  <group ns="$(arg node_name)1">
+    <node name="montijano" pkg="montijano" type="montijano" args="1" output="screen"/>
+  </group>
+
+  <group ns="$(arg node_name)2">
+    <node name="montijano" pkg="montijano" type="montijano" args="2" output="screen"/>
+  </group>
+</launch>

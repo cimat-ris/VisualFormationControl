@@ -1,0 +1,20 @@
+Este paquete permite mover un dron X a cualquier posicion del mundo (respecto al marco mundo)
+
+- Para ejecutar este paquete, se debe tener abierto Gazebo con un dron
+
+	roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird
+
+- Después, se ejecuta el nodo
+	
+	rosrun placing placing hummingbird 0.1 0.6 2.0 1.0
+
+	Donde:
+		hummingbird - nombre del dron. Cuando se ejecuta mas de uno por lo general es hummingbird1, hummingbird2, etc.
+		0.1 - coordenada en x (marco mundo)
+		0.6 - coordenada en y (marco mundo)
+		0.3 - coordenada en z (marco mundo)
+		1.0 - rotacion en eje z (marco mundo) en radianes.
+
+Con ello, podemos mover al dron en cuestion a cualquier posicion del mundo. Este paquete nos muestra como mandar y recibir instrucciones del drone.
+
+

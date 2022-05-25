@@ -16,32 +16,32 @@ from Functions.Geometric import Rodrigues
 """
 	function: configure_plot
 	description: configures de figure to make subplots.
-	params: 
+	params:
 		n: rows of the grid plot
 		m: columns of the grid plot
 		fig_w: figure width
-		fig_h: figure height 
+		fig_h: figure height
 		title: title of the figure
-	returns: 
+	returns:
 		ax: fig with subplot (see matplotlib docs)
 		fig: configured figure
 """
-def configure_plot(n,m,fig_w,fig_h,title):	
-	fig = plt.figure(figsize=(fig_h,fig_w))	
-	fig.suptitle(title)	
+def configure_plot(n,m,fig_w,fig_h,title):
+	fig = plt.figure(figsize=(fig_h,fig_w))
+	fig.suptitle(title)
 	ax = fig.add_subplot(n,m,1,projection = '3d')
-	ax = fig.gca(projection='3d')	
+	ax = fig.gca(projection='3d')
 
 	return ax,fig
 
 """
 	function: plot_cameras
 	description: it plots the cameras pased as list with the params given.
-	params: 
+	params:
 		cameras: list cameras to plot (PlanarCamera)
-		ax: axis of the plt figure 
+		ax: axis of the plt figure
 		camera_scale: scale of the camera
-		axis_scale: that, axis scale for ax used for the axis related to 
+		axis_scale: that, axis scale for ax used for the axis related to
 			the camera
 		camera_color: color for the cameras, example: 'black','green','blue'..
 			if you don't want to show cameras 'None'
@@ -58,9 +58,9 @@ def plot_cameras(cameras,ax,camera_scale,axis_scale,camera_color,frame_color):
 """
 	function: plot_all_cameras
 	description: plots all the cameras given as param.
-	params: 
-		ax: fig with subplot (see matplotlib docs) 
-		fig: configured figure 
+	params:
+		ax: fig with subplot (see matplotlib docs)
+		fig: configured figure
 		n_cameras: cameras used.
 		final: the end position of the cameras (list of PlanarCamera)
 		desired: the desired position of the cameras (list of Planar Camera)
@@ -74,7 +74,7 @@ def plot_cameras(cameras,ax,camera_scale,axis_scale,camera_color,frame_color):
 		camera_scale: scale to control de size of the camera in the subplot.
 		bounds: the given bounds for the 3d graph [lower,upper], because we wanted it to be square
 		so we can appreciate the formation.
-	returns: 
+	returns:
 		ax: fig with subplot (see matplotlib docs)
 		fig: configured figure
 """
@@ -85,8 +85,8 @@ def plot_all_cameras(ax,fig,n_cameras,final,desired,init,final_poses,desired_pos
 	ax.set_xlabel("$w_x$")
 	ax.set_ylabel("$w_y$")
 	ax.set_zlabel("$w_z$")
-	ax.set_aspect('equal')
-	ax.grid(True)		
+	ax.set_aspect('auto')
+	ax.grid(True)
 
 	#plot cameras
 	plot_cameras(desired,ax,camera_scale,axis_scale,'violet','None')
@@ -98,15 +98,15 @@ def plot_all_cameras(ax,fig,n_cameras,final,desired,init,final_poses,desired_pos
 		ax.plot(x[i],y[i],z[i], label=str(i+1))
 		plt.grid(True)
 		plt.legend(loc=2,prop={'size': 10})
-	
+
 	return ax,fig
 
 """
 	function: plot_quarter
 	description: plots a quarter of a 4x4 plot.
-	params: 
-		ax: fig with subplot (see matplotlib docs) 
-		fig: configured figure 
+	params:
+		ax: fig with subplot (see matplotlib docs)
+		fig: configured figure
 		place: corresponding place [2,2,X] with X as the number of the place
 		x: the x data, list or numpy array [ite elements]
 		y: the y data, numpy array [ite x n] where n can be the amount
@@ -116,18 +116,18 @@ def plot_all_cameras(ax,fig,n_cameras,final,desired,init,final_poses,desired_pos
 		label: the label for the y data, if its more than one, it should be a list.
 		ite: the number of iterations made.
 		size: size of the label
-	returns: 
+	returns:
 		ax: fig with subplot (see matplotlib docs)
 		fig: configured figure
 """
 def plot_quarter(ax,fig,place,x,y,label,ite,size,labels, location=1):
 	ax = fig.add_subplot(place[0],place[1],place[2])
 	plt.xlabel(labels[0])
-	plt.ylabel(labels[1])				
+	plt.ylabel(labels[1])
 
-	#if we only have 1 data	
+	#if we only have 1 data
 	if y.shape == (ite,):
-		ax.plot(x,y,label=label)		
+		ax.plot(x,y,label=label)
 	else:
 		#if we have more
 		data = y.shape[1]

@@ -28,7 +28,7 @@ from Functions.Error import get_error, transform_to_frame, distances
 """
 """
 	function: main
-	description: example of how to use the functions and the consensus 
+	description: example of how to use the functions and the consensus
 	algorithm for control with relative positions and rotations.
 """
 
@@ -37,21 +37,21 @@ from Functions.Error import get_error, transform_to_frame, distances
 n_cameras = 5
 init_cameras, init_poses = verified_random_restricted(n_cameras,0.5,[0.,2.,0.5,1.5,1.,3.,0.,0.,0.,0.,-pi/2.,pi/2.])
 desired_cameras, desired_poses = circle_formation(n_cameras,1.,[1.,1.])
-init_cameras, init_poses = order_cameras(n_cameras, init_cameras,init_poses, desired_poses)	
+init_cameras, init_poses = order_cameras(n_cameras, init_cameras,init_poses, desired_poses)
 copy = copy_cameras(n_cameras,init_poses)
 
-#===================================getting Laplacian and desired relative poses 
+#===================================getting Laplacian and desired relative poses
 L = get_L_radius(n_cameras,init_poses,1.5)
-p_aster,R_aster = get_relative(n_cameras,desired_cameras,L) 
+p_aster,R_aster = get_relative(n_cameras,desired_cameras,L)
 #transform translations to cameras 1 frame
-p_n_a = transform_to_frame(desired_cameras[0].R,p_aster,desired_cameras)	
+p_n_a = transform_to_frame(desired_cameras[0].R,p_aster,desired_cameras)
 #obtaining distances between drones in desired formation
 dist_aster = distances(n_cameras, desired_cameras)
 
 #==================================================================define params
 # Define the gain
 lambdav         = 2.
-lambdaw         = 6.	
+lambdaw         = 6.
 # Timing parameters
 dt = 0.01   # Time Delta, seconds.
 ite = 0 #iterations
@@ -71,44 +71,44 @@ v = [] #velocity
 x = [] #pos x for every camera
 y = [] #pos y for every camera
 z = [] #pos z for every camera
-for i in range(n_cameras):	
+for i in range(n_cameras):
 	x.append([])
 	y.append([])
-	z.append([])	
+	z.append([])
 
-#=================================================================init algorithm 
+#=================================================================init algorithm
 while (e_t > threshold or e_psi > threshold) and ite < max_ite:
 	#compute relative poses
 	p,R = get_relative(n_cameras, init_cameras, L)
-	#Compute velocities 
+	#Compute velocities
 	vi, wi = GTC(n_cameras,p,p_aster,R,R_aster,lambdaw,lambdav)
 	#compute error
 	p_n = transform_to_frame(init_cameras[0].R,p,init_cameras)#transform to camera 1 frame
-	dist = distances(n_cameras,init_cameras)#computing real distances for simulation purposes	
+	dist = distances(n_cameras,init_cameras)#computing real distances for simulation purposes
 	e_t, e_psi, e_s = get_error(p_n,p_n_a,R,R_aster,init_cameras,desired_cameras, dist, dist_aster)
 	err_t.append(e_t)
-	err_psi.append(e_psi)	
+	err_psi.append(e_psi)
 	err_s.append(e_s)
 
 	#getting back to world frame with those velocities
-	init_poses = move_wf(n_cameras,init_cameras,vi,wi,dt)			
-	#assing the new pose		
+	init_poses = move_wf(n_cameras,init_cameras,vi,wi,dt)
+	#assing the new pose
 	for i in range(n_cameras):
 		x[i].append(init_poses[i][0])
 		y[i].append(init_poses[i][1])
 		z[i].append(init_poses[i][2])
-		init_cameras[i].set_position(init_poses[i][0],init_poses[i][1],init_poses[i][2],init_poses[i][3],init_poses[i][4],init_poses[i][5])	
+		init_cameras[i].set_position(init_poses[i][0],init_poses[i][1],init_poses[i][2],init_poses[i][3],init_poses[i][4],init_poses[i][5])
 
-	#save info for plots		
+	#save info for plots
 	v.append(sum(vi)/n_cameras)
-	w.append(sum(np.abs(wi))/n_cameras)		
-	t_arr.append(ite*dt)					
-	#Next		
+	w.append(sum(np.abs(wi))/n_cameras)
+	t_arr.append(ite*dt)
+	#Next
 	ite+=1
-	print ite,'Translation error: ',e_t, 'Rotation error: ', e_psi
-	
-print "*********************\nLaplacian is\n", L
-#=======================================================================plotting 
+	print('{} Translation error: {} Rotation error: {} '.format(ite,e_t ,e_psi))
+
+print("*********************\nLaplacian is\n", L)
+#=======================================================================plotting
 #converting to numpy
 v = np.array(v)
 w = np.array(w)

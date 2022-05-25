@@ -113,7 +113,7 @@ while (e_t > threshold or e_psi > threshold) and ite < max_ite:
 	t_arr.append(ite*dt)
 	#Next
 	ite+=1
-	logging.info('{} Translation error: {} Rotation error: {} '.format(ite,e_t ,e_psi))
+	logging.info('{} Translation error: {:.4f} Rotation error: {:.4f} '.format(ite,e_t ,e_psi))
 
 logging.info("*********************\nLaplacian is {}\n".format(L))
 #=======================================================================plotting

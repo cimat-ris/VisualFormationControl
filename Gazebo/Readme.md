@@ -75,7 +75,7 @@ In a second terminal,
 # Test the image acquisition
 In a first terminal,
 ```bash
-> roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird
+> roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird  world_name:=ground
 ```
 In a second terminal,
 ```bash

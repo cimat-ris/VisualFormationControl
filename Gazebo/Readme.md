@@ -57,21 +57,36 @@ Installation steps (**noetic**) inspired from [this post](https://github.com/eth
 > bash setup.sh
 ```
 
-4. Compile in the workspace directoruy
+4. Compile in the workspace directory
 ```bash
 > catkin build
 ```
 
 # Test the Placing package
-In a first terminal
+In a first terminal,
 ```bash
 > roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird
 ```
-In a second terminal
+In a second terminal,
 ```bash
 > rosrun placing placing hummingbird 0.1 0.6 2.0 1.0
 ```
 
+# Test the image acquisition
+In a first terminal,
+```bash
+> roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird
+```
+In a second terminal,
+```bash
+> rosrun placing placing hummingbird 0.1 0.6 2.0 1.0
+```
+In a third terminal,
+```bash
+> rosrun rqt_image_view rqt_image_view
+```
+
+You should 
 
 How to use:
 https://www.overleaf.com/read/zqzqrrgbwrqc

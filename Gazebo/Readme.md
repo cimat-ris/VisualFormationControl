@@ -57,6 +57,21 @@ Installation steps (**noetic**) inspired from [this post](https://github.com/eth
 > bash setup.sh
 ```
 
+4. Compile in the workspace directoruy
+```bash
+> catkin build
+```
+
+# Test the Placing package
+In a first terminal
+```bash
+> roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird
+```
+In a second terminal
+```bash
+> rosrun placing placing hummingbird 0.1 0.6 2.0 1.0
+```
+
 
 How to use:
 https://www.overleaf.com/read/zqzqrrgbwrqc

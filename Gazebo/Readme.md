@@ -1,3 +1,4 @@
+# Installation of rotors
 
 Installation steps (**noetic**) inspired from [this post](https://github.com/ethz-asl/rotors_simulator/issues/699]):
 
@@ -41,8 +42,25 @@ Installation steps (**noetic**) inspired from [this post](https://github.com/eth
 > source ~/.bashrc
 ```
 
+# Installation of the visual formation control code
+
+1. Download the repository and go into the Gazebo directory
+```bash
+> git clone git clone git@github.com:cimat-ris/VisualFormationControl.git
+> cd Gazebo
+```
+
+2. Edit the WORKSPACE variable in setup.sh 
+
+3. Run the setup.sh script. It will copy the code into the work directory, install the MAV model with camera, the ground plane image etc.
+```bash
+> bash setup.sh
+```
+
+
 How to use:
 https://www.overleaf.com/read/zqzqrrgbwrqc
+
 
 
 

@@ -86,7 +86,7 @@ In a third terminal,
 > rosrun rqt_image_view rqt_image_view
 ```
 
-You should 
+You should see the image taken by the MAV in the rqt_image_view.
 
 How to use:
 https://www.overleaf.com/read/zqzqrrgbwrqc

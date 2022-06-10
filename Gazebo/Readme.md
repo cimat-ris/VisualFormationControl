@@ -1,5 +1,5 @@
 
-Installation steps (**noetic**):
+Installation steps (**noetic**) inspired from [this post](https://github.com/ethz-asl/rotors_simulator/issues/699]):
 
 1. Install and initialize ROS noetic desktop full, additional ROS packages, catkin-tools, and wstool:
 ```bash

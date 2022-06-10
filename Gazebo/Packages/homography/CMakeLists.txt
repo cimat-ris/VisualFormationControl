@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.3...3.22)
 project(homography)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -8,7 +8,7 @@ project(homography)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-set(OpenCV_DIR "/opt/ros/kinetic/share/OpenCV-3.3.1-dev")
+set(OpenCV_DIR "/usr/lib/x86_64-linux-gnu/cmake/opencv4")
 find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport
@@ -113,7 +113,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES homography
-  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs 
+  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 

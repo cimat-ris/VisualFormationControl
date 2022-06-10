@@ -1,7 +1,7 @@
 /*
 Intel (Zapopan, Jal), Robotics Lab (CIMAT, Gto), Patricia Tavares & Gerardo Rodriguez.
 November 20th, 2017
-This ROS code is used to connect rotors_simulator hummingbird's camera 
+This ROS code is used to connect rotors_simulator hummingbird's camera
 and process the images to obtain the homography.
 */
 
@@ -45,7 +45,7 @@ double my_abs(double a);
 sensor_msgs::ImagePtr image_msg;
 
 /* CHANGE THE NAME OF MY WORKSPCE TO YOUR WORKSPACE */
-string workspace = "/home/phyrsash/patty_ws";
+string workspace = "/home/jbhayet/catkin_ws";
 
 /* defining where the drone will move and integrating system*/
 float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;
@@ -66,7 +66,7 @@ int nlevels=8;
 int edgeThreshold=15; // Changed default (31);
 int firstLevel=0;
 int WTA_K=2;
-int scoreType=cv::ORB::HARRIS_SCORE;
+cv::ORB::ScoreType scoreType=cv::ORB::HARRIS_SCORE;
 int patchSize=31;
 int fastThreshold=20;
 
@@ -82,7 +82,7 @@ Mat R_best; //to save the rot and trans
 
 /* Main function */
 int main(int argc, char **argv){
-	
+
 	/***************************************************************************************** INIT */
 	ros::init(argc,argv,"homography");
 	ros::NodeHandle nh;
@@ -113,7 +113,7 @@ int main(int argc, char **argv){
 	K.at<double>(2,2) = 1.0;
 
 	cout << "Calibration Matrix " << endl << K << endl;
-	
+
 	/**************************************************************************** data for graphics */
 	vector<float> vel_x; vector<float> vel_y; vector<float> vel_z; vector<float> vel_yaw;
 	vector<float> errors; vector<float> time;
@@ -122,7 +122,7 @@ int main(int argc, char **argv){
 	while(ros::ok()){
 		//get a msg
 		ros::spinOnce();
-		
+
 		if(updated == 0){rate.sleep(); continue;} //if we havent get the pose
 
 		//save data
@@ -131,32 +131,32 @@ int main(int argc, char **argv){
 
 		//do we conitnue?
 		if(mean_feature_error < feature_threshold)
-			break;		
+			break;
 
 		//publish image of the matching
-		image_pub.publish(image_msg); 			
-		t+=dt;			
-		//integrating 
+		image_pub.publish(image_msg);
+		t+=dt;
+		//integrating
 		X = X + Kv*Vx*dt;
 		Y = Y + Kv*Vy*dt;
 		Z = Z + Kv*Vz*dt;
 		Yaw = Yaw + Kw*Vyaw*dt;
-		
+
 		//create message for the pose
 		trajectory_msgs::MultiDOFJointTrajectory msg;
-		Eigen::VectorXd position; position.resize(3); 
+		Eigen::VectorXd position; position.resize(3);
 		position(0) = X; position(1) = Y; position(2) = Z;
 
 		// prepare msg
 		msg.header.stamp=ros::Time::now();
-		mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(position, Yaw, &msg);	
+		mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(position, Yaw, &msg);
 
 		//publish
 		pos_pub.publish(msg);
-		rate.sleep();		 	
+		rate.sleep();
 	}
 
-	//save data 
+	//save data
 	string file_folder = "/src/homography/src/data/";
 	writeFile(errors, workspace+file_folder+"errors.txt");
 	writeFile(time, workspace+file_folder+"time.txt");
@@ -168,22 +168,22 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-/* 
+/*
 	function: imageCallback
-	description: uses the msg image and converts it to and opencv image to obtain the kp and 
+	description: uses the msg image and converts it to and opencv image to obtain the kp and
 	descriptors, it is done if the drone has moved to the defined position. After that the resulting image and velocities are published.
-	params: 
+	params:
 		msg: ptr to the msg image.
 */
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
-	
+
 	try{
 		Mat img=cv_bridge::toCvShare(msg,"bgr8")->image;
-	
+
 		/*************************************************************KP*/
 		Mat descriptors; vector<KeyPoint> kp; //declaring kp and descriptors for actual image
-	
+
 		/*************************************************************Creatring ORB*/
 		Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
 		orb->detect(img, kp);
@@ -193,7 +193,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
   		vector<vector<DMatch>> matches;
  		matcher.knnMatch(desired_descriptors,descriptors,matches,2);
-	
+
 		/************************************************************* Processing to get only goodmatches*/
 		vector<DMatch> goodMatches;
 
@@ -203,7 +203,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		}
 
 		/************************************************************* Findig homography */
-		 //-- transforming goodmatches to points		
+		 //-- transforming goodmatches to points
   		vector<Point2f> p1;
   		vector<Point2f> p2;
 
@@ -212,20 +212,20 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 			p1.push_back(desired_kp[goodMatches[i].queryIdx]. pt);
 			p2.push_back(kp[goodMatches[i].trainIdx].pt);
 		}
-	
+
 		//computing error
 		Mat a = Mat(p1); Mat b = Mat(p2);
-		mean_feature_error = norm(a,b)/(float)p1.size();		
-		
-		//finding homography	     
-		Mat H = findHomography(p1, p2 ,CV_RANSAC, 0.5);	
-	
-		/************************************************************* Draw matches */					
+		mean_feature_error = norm(a,b)/(float)p1.size();
+
+		//finding homography
+		Mat H = findHomography(p1, p2 ,RANSAC, 0.5);
+
+		/************************************************************* Draw matches */
 		Mat img_matches = Mat::zeros(img.rows, img.cols * 2, img.type());
-		drawMatches(desired_img, desired_kp, img, kp, 
-					goodMatches, img_matches, 
+		drawMatches(desired_img, desired_kp, img, kp,
+					goodMatches, img_matches,
 					Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-	
+
 		/************************************************************* Prepare message */
 		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,img_matches).toImageMsg();
 		image_msg->header.frame_id = "matching_image";
@@ -237,26 +237,26 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 		/************************************************************* descomposing homography*/
 		vector<Mat> Rs;
-		vector<Mat> Ts;	
-		vector<Mat> Ns;	
+		vector<Mat> Ts;
+		vector<Mat> Ns;
 		decomposeHomographyMat(H,K,Rs,Ts,Ns);
-		
+
 		//////////////////////////////////////////////////////////// Selecting one decomposition the first time
 		if(selected == 0){
 			//to store the matrix Rotation and translation that best fix
-			//constructing the extrinsic parameters matrix for the actual image			
-			Mat P2 = Mat::eye(3, 4, CV_64F);								
-		
+			//constructing the extrinsic parameters matrix for the actual image
+			Mat P2 = Mat::eye(3, 4, CV_64F);
+
 			double th = 0.1, nz = 1.0; //max value for z in the normal plane
 			//preparing the points for the test
 			vector<Point2f> pp1; vector<Point2f> pp2; pp1.push_back(p1[0]);pp2.push_back(p2[0]);
 
 			//for every rotation matrix
-			for(int i=0;i<Rs.size();i++){				
-				//constructing the extrinsic parameters matrix for the desired image	
-				Mat P1; hconcat(Rs[i],Ts[i],P1);					
+			for(int i=0;i<Rs.size();i++){
+				//constructing the extrinsic parameters matrix for the desired image
+				Mat P1; hconcat(Rs[i],Ts[i],P1);
 				//to store the result
-				Mat p3D; 
+				Mat p3D;
 				triangulatePoints(P1,P2,pp1,pp2,p3D); //obtaining 3D point
 				//transforming to homogeneus
 				Mat point(4,1,CV_64F);
@@ -266,25 +266,25 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 				point.at<double>(3,0) = p3D.at<float>(3,0) /p3D.at<float>(3,0);
 				//verify if the point is in front of the camera. Also if is similar to [0 0 1] o [0 0 -1]
 				//grving preference to the frist
-						
-				//cout << " Punto " << point << endl<< "  t " << Ts[i] <<endl<< " n " << Ns[i] << endl<<"----------"<<endl; 
-				if(point.at<double>(2,0) >= 0.0 && my_abs(my_abs(Ns[i].at<double>(2,0))-1.0) < th ){						
+
+				//cout << " Punto " << point << endl<< "  t " << Ts[i] <<endl<< " n " << Ns[i] << endl<<"----------"<<endl;
+				if(point.at<double>(2,0) >= 0.0 && my_abs(my_abs(Ns[i].at<double>(2,0))-1.0) < th ){
 					if(nz > 0){
 						Rs[i].copyTo(R_best);
-						Ts[i].copyTo(t_best);									
-						nz = Ns[i].at<double>(2,0);				
+						Ts[i].copyTo(t_best);
+						nz = Ns[i].at<double>(2,0);
 						selected = 1;
 					}
-				}					
+				}
 			}
 			//process again, it is probably only in z axiw rotation, and we want the one with the highest nz component
 			if (selected == 0){
 				double max = -1;
-				for(int i=0;i<Rs.size();i++){				
-					//constructing the extrinsic parameters matrix for the desired image	
-					Mat P1; hconcat(Rs[i],Ts[i],P1);					
+				for(int i=0;i<Rs.size();i++){
+					//constructing the extrinsic parameters matrix for the desired image
+					Mat P1; hconcat(Rs[i],Ts[i],P1);
 					//to store the result
-					Mat p3D; 
+					Mat p3D;
 					triangulatePoints(P1,P2,pp1,pp2,p3D); //obtaining 3D point
 					//transforming to homogeneus
 					Mat point(4,1,CV_64F);
@@ -292,14 +292,14 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 					point.at<double>(1,0) = p3D.at<float>(1,0) /p3D.at<float>(3,0);
 					point.at<double>(2,0) = p3D.at<float>(2,0) /p3D.at<float>(3,0);
 					point.at<double>(3,0) = p3D.at<float>(3,0) /p3D.at<float>(3,0);
-			
-					if(point.at<double>(2,0) >= 0.0 && my_abs(Ns[i].at<double>(2,0)) > max){												
+
+					if(point.at<double>(2,0) >= 0.0 && my_abs(Ns[i].at<double>(2,0)) > max){
 						Rs[i].copyTo(R_best);
-						Ts[i].copyTo(t_best);									
-						max = my_abs(Ns[i].at<double>(2,0));				
-						selected = 1;						
-					}					
-				}	
+						Ts[i].copyTo(t_best);
+						max = my_abs(Ns[i].at<double>(2,0));
+						selected = 1;
+					}
+				}
 			}
 
 			//cout << "selected " << endl;
@@ -312,32 +312,32 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 			//choose the closest to the previous one
 			for(int i=0;i<Rs.size();i++){
 				double norm_diff_rot = norm(Rs[i],R_best);
-				double norm_diff_t = norm(Ts[i],t_best);		
+				double norm_diff_t = norm(Ts[i],t_best);
 				if(norm_diff_rot < min_r){ Rs[i].copyTo(r_best_for_now); min_r=norm_diff_rot; }
-				if(norm_diff_t < min_t){ Ts[i].copyTo(t_best_for_now); min_t=norm_diff_t; }					
-			}				
+				if(norm_diff_t < min_t){ Ts[i].copyTo(t_best_for_now); min_t=norm_diff_t; }
+			}
 			//save the best but dont modify it yet
 			r_best_for_now.copyTo(R_best);
 			t_best_for_now.copyTo(t_best);
 		}
-		
-		/********************************************************* calculing velocities in the axis*/	
-		
-		//velocities from homography decomposition		
+
+		/********************************************************* calculing velocities in the axis*/
+
+		//velocities from homography decomposition
 		Vx = (float) t_best.at<double>(0,1);
 		Vy = (float) t_best.at<double>(0,0);
 		Vz =  (float) t_best.at<double>(0,2); //due to camera framework
 		//velocities from homography decomposition and euler angles.
 		Vec3f angles = rotationMatrixToEulerAngles(R_best);
-		Vyaw = (float) -angles[2];//due to camera framework		
-		
+		Vyaw = (float) -angles[2];//due to camera framework
+
 		if(updated == 1)
 		cout << "---------------->\nVx: " << Vx << " Vy: " << Vy << " Vz: " << Vz << " Wz: " << Vyaw << " average error: " << mean_feature_error <<  endl;
 
 	}catch (cv_bridge::Exception& e){
 	 	ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
    }
-	
+
 }
 
 /*
@@ -345,7 +345,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 	description: get the ppose info from the groundtruth of the drone and uses it in simulation
 	params: message with pose info
 */
-void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){	
+void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	//creating quaternion
 	tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
 	//creatring rotation matrix ffrom quaternion
@@ -354,32 +354,32 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	double roll, pitch, yaw;
 	mat.getEulerYPR(yaw, pitch, roll);
 	//saving the data obtained
-	Roll = (float) roll; Pitch = (float) pitch; 
-	
+	Roll = (float) roll; Pitch = (float) pitch;
+
 	//setting the position if its the first time
-	if(updated == 0){ 
+	if(updated == 0){
 		X = (float) msg->position.x;
 		Y = (float) msg->position.y;
 		Z = (float) msg->position.z;
 		Yaw = (float) yaw;
 		updated = 1;
 		cout << "Init pose" << endl << "X: " << X << endl << "Y: " << Y << endl << "Z: " << Z << endl;
-		cout << "Roll: " << Roll << endl << "Pitch: " << Pitch << endl << "Yaw: " << Yaw << endl;	
+		cout << "Roll: " << Roll << endl << "Pitch: " << Pitch << endl << "Yaw: " << Yaw << endl;
 	}
 }
 
-/* 
+/*
 	function: rotationMatrixToEulerAngles
-	params: 
+	params:
 		R: rotation matrix
-	result: 
+	result:
 		vector containing the euler angles
 	function taken from : https://www.learnopencv.com/rotation-matrix-to-euler-angles/
 */
-Vec3f rotationMatrixToEulerAngles(Mat &R){      
-    float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) ); 
+Vec3f rotationMatrixToEulerAngles(Mat &R){
+    float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
     bool singular = sy < 1e-6; // If
- 
+
     float x, y, z;
     if (!singular){
         x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
@@ -390,7 +390,7 @@ Vec3f rotationMatrixToEulerAngles(Mat &R){
         y = atan2(-R.at<double>(2,0), sy);
         z = 0;
     }
-    return Vec3f(x, y, z);        
+    return Vec3f(x, y, z);
 }
 
 /*
@@ -407,7 +407,7 @@ void writeFile(vector<float> &vec, const string& name){
 	myfile.close();
 }
 
-/* 
+/*
 	function: abs
 	description: dummy function to get and absolute value.
 	params: number to use in the function.

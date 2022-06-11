@@ -141,6 +141,7 @@ int main(int argc, char **argv){
 		Y = Y + Kv*Vy*dt;
 		Z = Z + Kv*Vz*dt;
 		Yaw = Yaw + Kw*Vyaw*dt;
+    cout << X << " " << Y << " " << Z << endl;
 
 		//create message for the pose
 		trajectory_msgs::MultiDOFJointTrajectory msg;
@@ -219,7 +220,8 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 		//finding homography
 		Mat H = findHomography(p1, p2 ,RANSAC, 0.5);
-
+    if (H.rows==0)
+      return;
 		/************************************************************* Draw matches */
 		Mat img_matches = Mat::zeros(img.rows, img.cols * 2, img.type());
 		drawMatches(desired_img, desired_kp, img, kp,
@@ -230,16 +232,18 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,img_matches).toImageMsg();
 		image_msg->header.frame_id = "matching_image";
 	 	image_msg->width = img_matches.cols;
-	  	image_msg->height = img_matches.rows;
-	  	image_msg->is_bigendian = false;
+	  image_msg->height = img_matches.rows;
+	  image_msg->is_bigendian = false;
 		image_msg->step = sizeof(unsigned char) * img_matches.cols*3;
-	  	image_msg->header.stamp = ros::Time::now();
-
+	  image_msg->header.stamp = ros::Time::now();
+    cout << "9 " << endl;
+    cout << H << endl;
 		/************************************************************* descomposing homography*/
 		vector<Mat> Rs;
 		vector<Mat> Ts;
 		vector<Mat> Ns;
 		decomposeHomographyMat(H,K,Rs,Ts,Ns);
+    cout << "10 " << endl;
 
 		//////////////////////////////////////////////////////////// Selecting one decomposition the first time
 		if(selected == 0){
@@ -322,6 +326,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		}
 
 		/********************************************************* calculing velocities in the axis*/
+    cout << "11 " << endl;
 
 		//velocities from homography decomposition
 		Vx = (float) t_best.at<double>(0,1);

@@ -88,6 +88,24 @@ In a third terminal,
 
 You should see the image taken by the MAV in the rqt_image_view.
 
+# Test the homography-based control
+In a first terminal,
+```bash
+> roslaunch rotors_gazebo mav_hovering_example.launch mav_name:=hummingbird  world_name:=ground
+```
+In a second terminal,
+```bash
+> rosrun placing placing hummingbird 0.1 0.6 2.0 1.0
+```
+In a third terminal,
+```bash
+> rosrun rqt_image_view rqt_image_view
+```
+In a fourth terminal,
+```bash
+> rosrun homography homography
+```
+
 How to use:
 https://www.overleaf.com/read/zqzqrrgbwrqc
 

@@ -44,8 +44,8 @@ double my_abs(double a);
 /* Declaring objetcs to receive messages */
 sensor_msgs::ImagePtr image_msg;
 
-/* CHANGE THE NAME OF MY WORKSPCE TO YOUR WORKSPACE */
-string workspace = "/home/jbhayet/catkin_ws";
+/* Workspace definition from CMake */
+string workspace = WORKSPACE;
 
 /* defining where the drone will move and integrating system*/
 float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;

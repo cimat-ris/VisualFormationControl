@@ -1,0 +1,4 @@
+<launch>
+  <node name="homography_node" type="homography" pkg="homography" output="screen"/>
+  <rosparam command="load" file="$(find homography)/config/params.yaml"/>
+</launch>

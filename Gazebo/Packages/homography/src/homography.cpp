@@ -39,8 +39,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 Vec3f rotationMatrixToEulerAngles(Mat &R);
 void writeFile(vector<float> &vec, const string& name);
-void loadParameters(ros::NodeHandle &);
-double my_abs(double a);
+void loadParameters(const ros::NodeHandle &);
 
 /* Declaring objetcs to receive messages */
 sensor_msgs::ImagePtr image_msg;
@@ -52,7 +51,7 @@ string workspace = WORKSPACE;
 float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;
 float Vx = 0, Vy = 0, Vz= 0, Vyaw = 0;
 // TODO: read from yaml file?
-float dt = 0.025;
+float dt;
 float Kv, Kw;
 double feature_threshold;
 double mean_feature_error = 1e10;/* Error on the matched kp */
@@ -273,7 +272,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 				//grving preference to the frist
 
 				//cout << " Punto " << point << endl<< "  t " << Ts[i] <<endl<< " n " << Ns[i] << endl<<"----------"<<endl;
-				if(point.at<double>(2,0) >= 0.0 && my_abs(my_abs(Ns[i].at<double>(2,0))-1.0) < th ){
+				if(point.at<double>(2,0) >= 0.0 && fabs(fabs(Ns[i].at<double>(2,0))-1.0) < th ){
 					if(nz > 0){
 						Rs[i].copyTo(R_best);
 						Ts[i].copyTo(t_best);
@@ -298,10 +297,10 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 					point.at<double>(2,0) = p3D.at<float>(2,0) /p3D.at<float>(3,0);
 					point.at<double>(3,0) = p3D.at<float>(3,0) /p3D.at<float>(3,0);
 
-					if(point.at<double>(2,0) >= 0.0 && my_abs(Ns[i].at<double>(2,0)) > max){
+					if(point.at<double>(2,0) >= 0.0 && fabs(Ns[i].at<double>(2,0)) > max){
 						Rs[i].copyTo(R_best);
 						Ts[i].copyTo(t_best);
-						max = my_abs(Ns[i].at<double>(2,0));
+						max = fabs(Ns[i].at<double>(2,0));
 						selected = 1;
 					}
 				}
@@ -411,18 +410,7 @@ void writeFile(vector<float> &vec, const string& name){
 	myfile.close();
 }
 
-/*
-	function: abs
-	description: dummy function to get and absolute value.
-	params: number to use in the function.
-*/
-double my_abs(double a){
-	if(a<0)
-		return -a;
-	return a;
-}
-
-void loadParameters(ros::NodeHandle &nh) {
+void loadParameters(const ros::NodeHandle &nh) {
 	// Load intrinsic parameters
 	XmlRpc::XmlRpcValue kConfig;
 	K = Mat(3,3, CV_64F, double(0));
@@ -442,4 +430,6 @@ void loadParameters(ros::NodeHandle &nh) {
 	// Load gain parameters
 	Kv=nh.param(std::string("gain_v"),0.0);
 	Kw=nh.param(std::string("gain_w"),0.0);
+  // Load sampling time parameter
+  dt=nh.param(std::string("dt"),0.01);
 }

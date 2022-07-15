@@ -50,6 +50,7 @@ string workspace = WORKSPACE;
 /* defining where the drone will move and integrating system*/
 float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;
 float Vx = 0, Vy = 0, Vz= 0, Vyaw = 0;
+// TODO: read from yaml file?
 float dt = 0.025;
 float Kv = 0.75, Kw = 1.1; //gains 0.75 1.1
 double feature_threshold = 0.5; //in pixels
@@ -86,6 +87,20 @@ int main(int argc, char **argv){
 	/***************************************************************************************** INIT */
 	ros::init(argc,argv,"homography");
 	ros::NodeHandle nh;
+  // Load intrinsic parameters
+  XmlRpc::XmlRpcValue kConfig;
+  K = Mat(3,3, CV_64F, double(0));
+  if (nh.hasParam("camera_intrinsic_parameters")) {
+      nh.getParam("camera_intrinsic_parameters", kConfig);
+      if (kConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
+      for (int i=0;i<9;i++) {
+             std::ostringstream ostr;
+             ostr << kConfig[i];
+             std::istringstream istr(ostr.str());
+             istr >> K.at<double>(i/3,i%3);
+      }
+  }
+  cout << "[INF] Calibration Matrix " << endl << K << endl;
 	image_transport::ImageTransport it(nh);
 
 	/************************************************************* CREATING PUBLISHER AND SUBSCRIBER */
@@ -96,23 +111,18 @@ int main(int argc, char **argv){
 	/************************************************************************** OPENING DESIRED IMAGE */
 	string image_dir = "/src/homography/src/desired.png";
 	desired_img = imread(workspace+image_dir,IMREAD_COLOR);
+	if(desired_img.empty()) {
+		 cerr <<  "[ERR] Could not open or find the reference image" << std::endl ;
+		 return -1;
+	}
+
 	Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
-   	orb->detect(desired_img, desired_kp);
+	orb->detect(desired_img, desired_kp);
 	orb->compute(desired_img,desired_kp, desired_descriptors);
 
 	/******************************************************************************* MOVING TO A POSE */
 	ros::Publisher pos_pub = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("/hummingbird/command/trajectory",1);
 	ros::Subscriber pos_sub = nh.subscribe<geometry_msgs::Pose>("/hummingbird/ground_truth/pose",1,poseCallback);
-
-	/******************************************************************************* CAMERA MATRIX */
-	K = Mat(3,3, CV_64F, double(0));
-	K.at<double>(0,0) = 241.4268236;
-	K.at<double>(1,1) = 241.4268236;
-	K.at<double>(0,2) = 376.0;
-	K.at<double>(1,2) = 240.0;
-	K.at<double>(2,2) = 1.0;
-
-	cout << "Calibration Matrix " << endl << K << endl;
 
 	/**************************************************************************** data for graphics */
 	vector<float> vel_x; vector<float> vel_y; vector<float> vel_z; vector<float> vel_yaw;
@@ -129,21 +139,22 @@ int main(int argc, char **argv){
 		time.push_back(t);errors.push_back((float)mean_feature_error);
 		vel_x.push_back(Vx);vel_y.push_back(Vy);vel_z.push_back(Vz);vel_yaw.push_back(Vyaw);
 
-		//do we conitnue?
+		// Do we continue?
 		if(mean_feature_error < feature_threshold)
 			break;
 
-		//publish image of the matching
+		// Publish image of the matching
 		image_pub.publish(image_msg);
 		t+=dt;
-		//integrating
+
+		// Integrating
 		X = X + Kv*Vx*dt;
 		Y = Y + Kv*Vy*dt;
 		Z = Z + Kv*Vz*dt;
 		Yaw = Yaw + Kw*Vyaw*dt;
-    cout << X << " " << Y << " " << Z << endl;
+		cout << X << " " << Y << " " << Z << endl;
 
-		//create message for the pose
+		// Create message for the pose
 		trajectory_msgs::MultiDOFJointTrajectory msg;
 		Eigen::VectorXd position; position.resize(3);
 		position(0) = X; position(1) = Y; position(2) = Z;
@@ -182,33 +193,33 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 	try{
 		Mat img=cv_bridge::toCvShare(msg,"bgr8")->image;
 
-		/*************************************************************KP*/
-		Mat descriptors; vector<KeyPoint> kp; //declaring kp and descriptors for actual image
+		/*** KP ***/
+		Mat descriptors; vector<KeyPoint> kp; // kp and descriptors for current image
 
-		/*************************************************************Creatring ORB*/
+		/*** Creatring ORB object ***/
 		Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
 		orb->detect(img, kp);
 		orb->compute(img, kp, descriptors);
 
 		/************************************************************* Using flann for matching*/
 		FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
-  		vector<vector<DMatch>> matches;
- 		matcher.knnMatch(desired_descriptors,descriptors,matches,2);
+vector<vector<DMatch>> matches;
+		 matcher.knnMatch(desired_descriptors,descriptors,matches,2);
 
 		/************************************************************* Processing to get only goodmatches*/
 		vector<DMatch> goodMatches;
 
 		for(int i = 0; i < matches.size(); ++i){
-	    	if (matches[i][0].distance < matches[i][1].distance * RATIO)
-	        	goodMatches.push_back(matches[i][0]);
+				if (matches[i][0].distance < matches[i][1].distance * RATIO)
+						goodMatches.push_back(matches[i][0]);
 		}
 
 		/************************************************************* Findig homography */
 		 //-- transforming goodmatches to points
-  		vector<Point2f> p1;
-  		vector<Point2f> p2;
+			vector<Point2f> p1;
+			vector<Point2f> p2;
 
-  		for(int i = 0; i < goodMatches.size(); i++){
+			for(int i = 0; i < goodMatches.size(); i++){
 			//-- Get the keypoints from the good matches
 			p1.push_back(desired_kp[goodMatches[i].queryIdx]. pt);
 			p2.push_back(kp[goodMatches[i].trainIdx].pt);
@@ -220,8 +231,8 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 		//finding homography
 		Mat H = findHomography(p1, p2 ,RANSAC, 0.5);
-    if (H.rows==0)
-      return;
+		if (H.rows==0)
+			return;
 		/************************************************************* Draw matches */
 		Mat img_matches = Mat::zeros(img.rows, img.cols * 2, img.type());
 		drawMatches(desired_img, desired_kp, img, kp,
@@ -231,19 +242,19 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		/************************************************************* Prepare message */
 		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,img_matches).toImageMsg();
 		image_msg->header.frame_id = "matching_image";
-	 	image_msg->width = img_matches.cols;
-	  image_msg->height = img_matches.rows;
-	  image_msg->is_bigendian = false;
+		 image_msg->width = img_matches.cols;
+		image_msg->height = img_matches.rows;
+		image_msg->is_bigendian = false;
 		image_msg->step = sizeof(unsigned char) * img_matches.cols*3;
-	  image_msg->header.stamp = ros::Time::now();
-    cout << "9 " << endl;
-    cout << H << endl;
+		image_msg->header.stamp = ros::Time::now();
+		cout << "9 " << endl;
+		cout << H << endl;
 		/************************************************************* descomposing homography*/
 		vector<Mat> Rs;
 		vector<Mat> Ts;
 		vector<Mat> Ns;
 		decomposeHomographyMat(H,K,Rs,Ts,Ns);
-    cout << "10 " << endl;
+		cout << "10 " << endl;
 
 		//////////////////////////////////////////////////////////// Selecting one decomposition the first time
 		if(selected == 0){
@@ -325,13 +336,11 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 			t_best_for_now.copyTo(t_best);
 		}
 
-		/********************************************************* calculing velocities in the axis*/
-    cout << "11 " << endl;
-
+		/**********Computing velocities in the axis*/
 		//velocities from homography decomposition
 		Vx = (float) t_best.at<double>(0,1);
 		Vy = (float) t_best.at<double>(0,0);
-		Vz =  (float) t_best.at<double>(0,2); //due to camera framework
+		Vz = (float) t_best.at<double>(0,2); //due to camera framework
 		//velocities from homography decomposition and euler angles.
 		Vec3f angles = rotationMatrixToEulerAngles(R_best);
 		Vyaw = (float) -angles[2];//due to camera framework
@@ -340,8 +349,8 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		cout << "---------------->\nVx: " << Vx << " Vy: " << Vy << " Vz: " << Vz << " Wz: " << Vyaw << " average error: " << mean_feature_error <<  endl;
 
 	}catch (cv_bridge::Exception& e){
-	 	ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-   }
+		 ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
+	 }
 
 }
 
@@ -382,20 +391,20 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	function taken from : https://www.learnopencv.com/rotation-matrix-to-euler-angles/
 */
 Vec3f rotationMatrixToEulerAngles(Mat &R){
-    float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
-    bool singular = sy < 1e-6; // If
+		float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
+		bool singular = sy < 1e-6; // If
 
-    float x, y, z;
-    if (!singular){
-        x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
-        y = atan2(-R.at<double>(2,0), sy);
-        z = atan2(R.at<double>(1,0), R.at<double>(0,0));
-    }else{
-        x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
-        y = atan2(-R.at<double>(2,0), sy);
-        z = 0;
-    }
-    return Vec3f(x, y, z);
+		float x, y, z;
+		if (!singular){
+				x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
+				y = atan2(-R.at<double>(2,0), sy);
+				z = atan2(R.at<double>(1,0), R.at<double>(0,0));
+		}else{
+				x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
+				y = atan2(-R.at<double>(2,0), sy);
+				z = 0;
+		}
+		return Vec3f(x, y, z);
 }
 
 /*
@@ -405,7 +414,7 @@ Vec3f rotationMatrixToEulerAngles(Mat &R){
 */
 void writeFile(vector<float> &vec, const string& name){
 	ofstream myfile;
-  	myfile.open(name);
+		myfile.open(name);
 	for(int i=0;i<vec.size();i++)
 		myfile << vec[i] << endl;
 

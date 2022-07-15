@@ -27,6 +27,7 @@ and process the images to obtain the homography.
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "utils_geom.h"
 /* defining  ratio for flann*/
 #define RATIO 0.7
 
@@ -37,7 +38,6 @@ using namespace std;
 /* Declaring callbacks and other functions*/
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
-Vec3f rotationMatrixToEulerAngles(Mat &R);
 void writeFile(vector<float> &vec, const string& name);
 void loadParameters(const ros::NodeHandle &);
 
@@ -243,7 +243,6 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		vector<Mat> Ts;
 		vector<Mat> Ns;
 		decomposeHomographyMat(H,K,Rs,Ts,Ns);
-		cout << "10 " << endl;
 
 		//////////////////////////////////////////////////////////// Selecting one decomposition the first time
 		if(selected == 0){
@@ -271,7 +270,6 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 				//verify if the point is in front of the camera. Also if is similar to [0 0 1] o [0 0 -1]
 				//grving preference to the frist
 
-				//cout << " Punto " << point << endl<< "  t " << Ts[i] <<endl<< " n " << Ns[i] << endl<<"----------"<<endl;
 				if(point.at<double>(2,0) >= 0.0 && fabs(fabs(Ns[i].at<double>(2,0))-1.0) < th ){
 					if(nz > 0){
 						Rs[i].copyTo(R_best);
@@ -371,44 +369,8 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	}
 }
 
-/*
-	function: rotationMatrixToEulerAngles
-	params:
-		R: rotation matrix
-	result:
-		vector containing the euler angles
-	function taken from : https://www.learnopencv.com/rotation-matrix-to-euler-angles/
-*/
-Vec3f rotationMatrixToEulerAngles(Mat &R){
-		float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
-		bool singular = sy < 1e-6; // If
 
-		float x, y, z;
-		if (!singular){
-				x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
-				y = atan2(-R.at<double>(2,0), sy);
-				z = atan2(R.at<double>(1,0), R.at<double>(0,0));
-		}else{
-				x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
-				y = atan2(-R.at<double>(2,0), sy);
-				z = 0;
-		}
-		return Vec3f(x, y, z);
-}
 
-/*
-	Function: writeFile
-	description: Writes the vect given as param into a file with the specified name
-	params: std:vector containing the info and file name
-*/
-void writeFile(vector<float> &vec, const string& name){
-	ofstream myfile;
-		myfile.open(name);
-	for(int i=0;i<vec.size();i++)
-		myfile << vec[i] << endl;
-
-	myfile.close();
-}
 
 void loadParameters(const ros::NodeHandle &nh) {
 	// Load intrinsic parameters
@@ -430,6 +392,6 @@ void loadParameters(const ros::NodeHandle &nh) {
 	// Load gain parameters
 	Kv=nh.param(std::string("gain_v"),0.0);
 	Kw=nh.param(std::string("gain_w"),0.0);
-  // Load sampling time parameter
-  dt=nh.param(std::string("dt"),0.01);
+	// Load sampling time parameter
+	dt=nh.param(std::string("dt"),0.01);
 }

@@ -39,6 +39,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 Vec3f rotationMatrixToEulerAngles(Mat &R);
 void writeFile(vector<float> &vec, const string& name);
+void loadParameters(ros::NodeHandle &);
 double my_abs(double a);
 
 /* Declaring objetcs to receive messages */
@@ -87,25 +88,9 @@ int main(int argc, char **argv){
 	/***************************************************************************************** INIT */
 	ros::init(argc,argv,"homography");
 	ros::NodeHandle nh;
-  // Load intrinsic parameters
-  XmlRpc::XmlRpcValue kConfig;
-  K = Mat(3,3, CV_64F, double(0));
-  if (nh.hasParam("camera_intrinsic_parameters")) {
-      nh.getParam("camera_intrinsic_parameters", kConfig);
-      if (kConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
-      for (int i=0;i<9;i++) {
-             std::ostringstream ostr;
-             ostr << kConfig[i];
-             std::istringstream istr(ostr.str());
-             istr >> K.at<double>(i/3,i%3);
-      }
-  }
-  cout << "[INF] Calibration Matrix " << endl << K << endl;
-  // Load error threshold parameter
-  feature_threshold=nh.param(std::string("feature_error_threshold"),std::numeric_limits<double>::max());
-  // Load gain parameters
-  Kv=nh.param(std::string("gain_v"),0.0);
-  Kw=nh.param(std::string("gain_w"),0.0);
+	loadParameters(nh);
+
+
 	image_transport::ImageTransport it(nh);
 
 	/************************************************************* CREATING PUBLISHER AND SUBSCRIBER */
@@ -208,7 +193,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 		/************************************************************* Using flann for matching*/
 		FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
-    vector<vector<DMatch>> matches;
+		vector<vector<DMatch>> matches;
 		 matcher.knnMatch(desired_descriptors,descriptors,matches,2);
 
 		/************************************************************* Processing to get only goodmatches*/
@@ -435,4 +420,26 @@ double my_abs(double a){
 	if(a<0)
 		return -a;
 	return a;
+}
+
+void loadParameters(ros::NodeHandle &nh) {
+	// Load intrinsic parameters
+	XmlRpc::XmlRpcValue kConfig;
+	K = Mat(3,3, CV_64F, double(0));
+	if (nh.hasParam("camera_intrinsic_parameters")) {
+			nh.getParam("camera_intrinsic_parameters", kConfig);
+			if (kConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
+			for (int i=0;i<9;i++) {
+						 std::ostringstream ostr;
+						 ostr << kConfig[i];
+						 std::istringstream istr(ostr.str());
+						 istr >> K.at<double>(i/3,i%3);
+			}
+	}
+	cout << "[INF] Calibration Matrix " << endl << K << endl;
+	// Load error threshold parameter
+	feature_threshold=nh.param(std::string("feature_error_threshold"),std::numeric_limits<double>::max());
+	// Load gain parameters
+	Kv=nh.param(std::string("gain_v"),0.0);
+	Kw=nh.param(std::string("gain_w"),0.0);
 }

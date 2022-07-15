@@ -52,8 +52,8 @@ float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;
 float Vx = 0, Vy = 0, Vz= 0, Vyaw = 0;
 // TODO: read from yaml file?
 float dt = 0.025;
-float Kv = 0.75, Kw = 1.1; //gains 0.75 1.1
-double feature_threshold = 0.5; //in pixels
+float Kv, Kw;
+double feature_threshold;
 double mean_feature_error = 1e10;/* Error on the matched kp */
 int updated = 0; //of the pose has been updated
 float t = 0;//time
@@ -101,6 +101,11 @@ int main(int argc, char **argv){
       }
   }
   cout << "[INF] Calibration Matrix " << endl << K << endl;
+  // Load error threshold parameter
+  feature_threshold=nh.param(std::string("feature_error_threshold"),std::numeric_limits<double>::max());
+  // Load gain parameters
+  Kv=nh.param(std::string("gain_v"),0.0);
+  Kw=nh.param(std::string("gain_w"),0.0);
 	image_transport::ImageTransport it(nh);
 
 	/************************************************************* CREATING PUBLISHER AND SUBSCRIBER */
@@ -128,12 +133,12 @@ int main(int argc, char **argv){
 	vector<float> vel_x; vector<float> vel_y; vector<float> vel_z; vector<float> vel_yaw;
 	vector<float> errors; vector<float> time;
 
-	/******************************************************************************* BUCLE START*/
+	/******************************************************************************* CYCLE START*/
 	while(ros::ok()){
 		//get a msg
 		ros::spinOnce();
 
-		if(updated == 0){rate.sleep(); continue;} //if we havent get the pose
+		if(updated==0){rate.sleep(); continue;} //if we havent get the new pose
 
 		//save data
 		time.push_back(t);errors.push_back((float)mean_feature_error);
@@ -203,7 +208,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 		/************************************************************* Using flann for matching*/
 		FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
-vector<vector<DMatch>> matches;
+    vector<vector<DMatch>> matches;
 		 matcher.knnMatch(desired_descriptors,descriptors,matches,2);
 
 		/************************************************************* Processing to get only goodmatches*/

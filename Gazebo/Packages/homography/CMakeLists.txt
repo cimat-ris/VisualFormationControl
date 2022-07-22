@@ -206,5 +206,5 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(homography src/homography.cpp src/utils_geom.cpp src/utils_io.cpp src/utils_params.cpp)
+add_executable(homography src/homography.cpp src/utils_geom.cpp src/utils_io.cpp src/utils_params.cpp src/utils_vc.cpp)
 target_link_libraries(homography ${catkin_LIBRARIES})

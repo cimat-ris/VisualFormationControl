@@ -8,10 +8,10 @@ and process the images to obtain the homography.
 /******************************************************* ROS libraries*/
 #include <ros/ros.h>
 #include "tf/transform_datatypes.h"
-#include <image_transport/image_transport.h>
-#include <sensor_msgs/image_encodings.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 #include <mav_msgs/conversions.h>
+#include <image_transport/image_transport.h>
+#include <sensor_msgs/image_encodings.h>
 
 /**************************************************** OpenCv Libraries*/
 #include <opencv2/core.hpp>
@@ -28,8 +28,10 @@ and process the images to obtain the homography.
 #include <stdio.h>
 
 #include "utils_geom.h"
-#include "utils_params.h"
+#include "utils_io.h"
+#include "utils_vc.h"
 
+// TODO: MOVE
 /* defining  ratio for flann*/
 #define RATIO 0.7
 
@@ -40,33 +42,31 @@ using namespace std;
 /* Declaring callbacks and other functions*/
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
-void writeFile(vector<float> &vec, const string& name);
 
-/* Declaring objetcs to receive messages */
+/* Declaring objects to receive messages */
 sensor_msgs::ImagePtr image_msg;
 
 /* Workspace definition from CMake */
 string workspace = WORKSPACE;
 
+// Visual control parameters
 vc_parameters params;
 
-/* defining where the drone will move and integrating system*/
-float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;
-float Vx = 0, Vy = 0, Vz= 0, Vyaw = 0;
-double mean_feature_error = 1e10;/* Error on the matched kp */
-int updated = 0; //of the pose has been updated
-float t = 0;//time
-int selected  = 0; //to see if we have already choose a decomposition
-float sign = 1.0;
+// Visual control state
+vc_state state;
 
-/* declaring detector params */
+// Control vector
+vc_control control;
+
+float sign = 1.0;
+int selected  = 0; //to see if we have already choose a decomposition
+double mean_feature_error = 1e10;/* Error on the matched kp */
 
 /* Declaring data for the desired pos: image, descriptors and keypoints of the desired pose */
 Mat desired_descriptors;
 vector<KeyPoint> desired_kp;
 Mat desired_img;
 
-/* Matrix for camera calibration*/
 Mat t_best;
 Mat R_best; //to save the rot and trans
 
@@ -111,11 +111,14 @@ int main(int argc, char **argv){
 		//get a msg
 		ros::spinOnce();
 
-		if(updated==0){rate.sleep(); continue;} //if we havent get the new pose
+		if(!state.initialized){rate.sleep(); continue;} //if we havent get the new pose
 
 		//save data
-		time.push_back(t);errors.push_back((float)mean_feature_error);
-		vel_x.push_back(Vx);vel_y.push_back(Vy);vel_z.push_back(Vz);vel_yaw.push_back(Vyaw);
+		time.push_back(state.t);errors.push_back((float)mean_feature_error);
+		vel_x.push_back(control.Vx);
+    vel_y.push_back(control.Vy);
+    vel_z.push_back(control.Vz);
+    vel_yaw.push_back(control.Vyaw);
 
 		// Do we continue?
 		if(mean_feature_error < params.feature_threshold)
@@ -123,26 +126,18 @@ int main(int argc, char **argv){
 
 		// Publish image of the matching
 		image_pub.publish(image_msg);
-		t+=params.dt;
 
-		// Integrating
-		X = X + params.Kv*Vx*params.dt;
-		Y = Y + params.Kv*Vy*params.dt;
-		Z = Z + params.Kv*Vz*params.dt;
-		Yaw = Yaw + params.Kw*Vyaw*params.dt;
-		cout << X << " " << Y << " " << Z << endl;
+    // Update state with the current control
+    auto new_pose = state.update(control);
+    // Create message for the pose
+    trajectory_msgs::MultiDOFJointTrajectory msg;
+    // Prepare msg
+    msg.header.stamp=ros::Time::now();
+    mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(new_pose.first, new_pose.second, &msg);
 
-		// Create message for the pose
-		trajectory_msgs::MultiDOFJointTrajectory msg;
-		Eigen::VectorXd position; position.resize(3);
-		position(0) = X; position(1) = Y; position(2) = Z;
+    // Publish msg
+    pos_pub.publish(msg);
 
-		// prepare msg
-		msg.header.stamp=ros::Time::now();
-		mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(position, Yaw, &msg);
-
-		//publish
-		pos_pub.publish(msg);
 		rate.sleep();
 	}
 
@@ -314,15 +309,15 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 		/**********Computing velocities in the axis*/
 		//velocities from homography decomposition
-		Vx = (float) t_best.at<double>(0,1);
-		Vy = (float) t_best.at<double>(0,0);
-		Vz = (float) t_best.at<double>(0,2); //due to camera framework
+		control.Vx = (float) t_best.at<double>(0,1);
+		control.Vy = (float) t_best.at<double>(0,0);
+		control.Vz = (float) t_best.at<double>(0,2); //due to camera framework
 		//velocities from homography decomposition and euler angles.
 		Vec3f angles = rotationMatrixToEulerAngles(R_best);
-		Vyaw = (float) -angles[2];//due to camera framework
+		control.Vyaw = (float) -angles[2];//due to camera framework
 
-		if(updated == 1)
-		cout << "---------------->\nVx: " << Vx << " Vy: " << Vy << " Vz: " << Vz << " Wz: " << Vyaw << " average error: " << mean_feature_error <<  endl;
+		if(state.initialized)
+		  cout << "---------------->\nVx: " << control.Vx << " Vy: " << control.Vy << " Vz: " << control.Vz << " Wz: " << control.Vyaw << " average error: " << mean_feature_error <<  endl;
 
 	}catch (cv_bridge::Exception& e){
 		 ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
@@ -344,16 +339,11 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	double roll, pitch, yaw;
 	mat.getEulerYPR(yaw, pitch, roll);
 	//saving the data obtained
-	Roll = (float) roll; Pitch = (float) pitch;
+	state.Roll = (float) roll; state.Pitch = (float) pitch;
 
 	//setting the position if its the first time
-	if(updated == 0){
-		X = (float) msg->position.x;
-		Y = (float) msg->position.y;
-		Z = (float) msg->position.z;
-		Yaw = (float) yaw;
-		updated = 1;
-		cout << "Init pose" << endl << "X: " << X << endl << "Y: " << Y << endl << "Z: " << Z << endl;
-		cout << "Roll: " << Roll << endl << "Pitch: " << Pitch << endl << "Yaw: " << Yaw << endl;
+	if(!state.initialized){
+    state.set_gains(params);
+    state.initialize((float) msg->position.x,(float) msg->position.y,(float) msg->position.z,yaw);
 	}
 }

@@ -103,7 +103,7 @@ In a third terminal,
 ```
 In a fourth terminal,
 ```bash
-> roslaunch homography  homography.launch
+> roslaunch vc_controller  homography.launch
 ```
 
 How to use:

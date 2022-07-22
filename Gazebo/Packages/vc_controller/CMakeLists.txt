@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3...3.22)
-project(homography)
+project(vc_controller)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -112,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES homography
+#  LIBRARIES vc_controller
   CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs
 #  DEPENDS system_lib
 )
@@ -130,7 +130,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/homography.cpp
+#   src/${PROJECT_NAME}/vc_controller.cpp
 # )
 
 ## Add cmake target dependencies of the library

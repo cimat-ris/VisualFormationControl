@@ -28,6 +28,8 @@ and process the images to obtain the homography.
 #include <stdio.h>
 
 #include "utils_geom.h"
+#include "utils_params.h"
+
 /* defining  ratio for flann*/
 #define RATIO 0.7
 
@@ -39,7 +41,6 @@ using namespace std;
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 void writeFile(vector<float> &vec, const string& name);
-void loadParameters(const ros::NodeHandle &);
 
 /* Declaring objetcs to receive messages */
 sensor_msgs::ImagePtr image_msg;
@@ -47,13 +48,11 @@ sensor_msgs::ImagePtr image_msg;
 /* Workspace definition from CMake */
 string workspace = WORKSPACE;
 
+vc_parameters params;
+
 /* defining where the drone will move and integrating system*/
 float X = 0, Y = 0 ,Z = 0, Yaw = 0, Pitch = 0, Roll = 0;
 float Vx = 0, Vy = 0, Vz= 0, Vyaw = 0;
-// TODO: read from yaml file?
-float dt;
-float Kv, Kw;
-double feature_threshold;
 double mean_feature_error = 1e10;/* Error on the matched kp */
 int updated = 0; //of the pose has been updated
 float t = 0;//time
@@ -77,7 +76,6 @@ vector<KeyPoint> desired_kp;
 Mat desired_img;
 
 /* Matrix for camera calibration*/
-Mat K;
 Mat t_best;
 Mat R_best; //to save the rot and trans
 
@@ -87,7 +85,7 @@ int main(int argc, char **argv){
 	/***************************************************************************************** INIT */
 	ros::init(argc,argv,"homography");
 	ros::NodeHandle nh;
-	loadParameters(nh);
+	params.load(nh);
 
 
 	image_transport::ImageTransport it(nh);
@@ -129,18 +127,18 @@ int main(int argc, char **argv){
 		vel_x.push_back(Vx);vel_y.push_back(Vy);vel_z.push_back(Vz);vel_yaw.push_back(Vyaw);
 
 		// Do we continue?
-		if(mean_feature_error < feature_threshold)
+		if(mean_feature_error < params.feature_threshold)
 			break;
 
 		// Publish image of the matching
 		image_pub.publish(image_msg);
-		t+=dt;
+		t+=params.dt;
 
 		// Integrating
-		X = X + Kv*Vx*dt;
-		Y = Y + Kv*Vy*dt;
-		Z = Z + Kv*Vz*dt;
-		Yaw = Yaw + Kw*Vyaw*dt;
+		X = X + params.Kv*Vx*params.dt;
+		Y = Y + params.Kv*Vy*params.dt;
+		Z = Z + params.Kv*Vz*params.dt;
+		Yaw = Yaw + params.Kw*Vyaw*params.dt;
 		cout << X << " " << Y << " " << Z << endl;
 
 		// Create message for the pose
@@ -242,7 +240,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		vector<Mat> Rs;
 		vector<Mat> Ts;
 		vector<Mat> Ns;
-		decomposeHomographyMat(H,K,Rs,Ts,Ns);
+		decomposeHomographyMat(H,params.K,Rs,Ts,Ns);
 
 		//////////////////////////////////////////////////////////// Selecting one decomposition the first time
 		if(selected == 0){
@@ -367,31 +365,4 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 		cout << "Init pose" << endl << "X: " << X << endl << "Y: " << Y << endl << "Z: " << Z << endl;
 		cout << "Roll: " << Roll << endl << "Pitch: " << Pitch << endl << "Yaw: " << Yaw << endl;
 	}
-}
-
-
-
-
-void loadParameters(const ros::NodeHandle &nh) {
-	// Load intrinsic parameters
-	XmlRpc::XmlRpcValue kConfig;
-	K = Mat(3,3, CV_64F, double(0));
-	if (nh.hasParam("camera_intrinsic_parameters")) {
-			nh.getParam("camera_intrinsic_parameters", kConfig);
-			if (kConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
-			for (int i=0;i<9;i++) {
-						 std::ostringstream ostr;
-						 ostr << kConfig[i];
-						 std::istringstream istr(ostr.str());
-						 istr >> K.at<double>(i/3,i%3);
-			}
-	}
-	cout << "[INF] Calibration Matrix " << endl << K << endl;
-	// Load error threshold parameter
-	feature_threshold=nh.param(std::string("feature_error_threshold"),std::numeric_limits<double>::max());
-	// Load gain parameters
-	Kv=nh.param(std::string("gain_v"),0.0);
-	Kw=nh.param(std::string("gain_w"),0.0);
-	// Load sampling time parameter
-	dt=nh.param(std::string("dt"),0.01);
 }

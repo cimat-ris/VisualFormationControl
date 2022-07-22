@@ -34,6 +34,14 @@ void vc_parameters::load(const ros::NodeHandle &nh) {
 	cout << "[INF] Calibration Matrix " << endl << this->K << endl;
 	// Load error threshold parameter
 	this->feature_threshold=nh.param(std::string("feature_error_threshold"),std::numeric_limits<double>::max());
+  // Load feature detector parameters
+  this->nfeatures=nh.param(std::string("nfeatures"),100);
+  this->scaleFactor=nh.param(std::string("scaleFactor"),1.0);
+  this->nlevels=nh.param(std::string("nlevels"),5);
+  this->edgeThreshold=nh.param(std::string("edgeThreshold"),15);
+  this->patchSize=nh.param(std::string("patchSize"),30);
+  this->fastThreshold=nh.param(std::string("fastThreshold"),20);
+
 	// Load gain parameters
 	this->Kv=nh.param(std::string("gain_v"),0.0);
 	this->Kw=nh.param(std::string("gain_w"),0.0);

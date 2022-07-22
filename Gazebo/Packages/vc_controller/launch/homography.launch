@@ -1,4 +1,4 @@
 <launch>
-  <node name="homography_node" type="homography" pkg="homography" output="screen"/>
-  <rosparam command="load" file="$(find homography)/config/params.yaml"/>
+  <node name="vc_controller_node" type="vc_controller" pkg="vc_controller" output="screen"/>
+  <rosparam command="load" file="$(find vc_controller)/config/params.yaml"/>
 </launch>

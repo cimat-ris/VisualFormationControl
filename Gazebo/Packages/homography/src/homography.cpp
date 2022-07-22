@@ -60,15 +60,6 @@ int selected  = 0; //to see if we have already choose a decomposition
 float sign = 1.0;
 
 /* declaring detector params */
-int nfeatures=250;
-float scaleFactor=1.2f;
-int nlevels=8;
-int edgeThreshold=15; // Changed default (31);
-int firstLevel=0;
-int WTA_K=2;
-cv::ORB::ScoreType scoreType=cv::ORB::HARRIS_SCORE;
-int patchSize=31;
-int fastThreshold=20;
 
 /* Declaring data for the desired pos: image, descriptors and keypoints of the desired pose */
 Mat desired_descriptors;
@@ -103,7 +94,7 @@ int main(int argc, char **argv){
 		 return -1;
 	}
 
-	Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
+	Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
 	orb->detect(desired_img, desired_kp);
 	orb->compute(desired_img,desired_kp, desired_descriptors);
 
@@ -184,7 +175,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		Mat descriptors; vector<KeyPoint> kp; // kp and descriptors for current image
 
 		/*** Creatring ORB object ***/
-		Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
+		Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
 		orb->detect(img, kp);
 		orb->compute(img, kp, descriptors);
 

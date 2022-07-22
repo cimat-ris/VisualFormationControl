@@ -4,6 +4,19 @@
 using namespace cv;
 using namespace std;
 
+// Constructor
+vc_parameters::vc_parameters() : feature_threshold(0.5),
+																nfeatures(250),
+                                scaleFactor(1.2f),
+                                nlevels(8),
+                                edgeThreshold(15),
+                                firstLevel(0),
+                                WTA_K(2),
+                                scoreType(cv::ORB::HARRIS_SCORE),
+                                patchSize(30),
+                                fastThreshold(20) {}
+
+// Method to load from node handle
 void vc_parameters::load(const ros::NodeHandle &nh) {
 	// Load intrinsic parameters
 	XmlRpc::XmlRpcValue kConfig;

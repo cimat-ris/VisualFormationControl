@@ -103,7 +103,7 @@ In a third terminal,
 ```
 In a fourth terminal,
 ```bash
-> rosrun homography homography
+> roslaunch homography  homography.launch
 ```
 
 How to use:

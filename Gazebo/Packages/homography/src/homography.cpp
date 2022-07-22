@@ -30,10 +30,7 @@ and process the images to obtain the homography.
 #include "utils_geom.h"
 #include "utils_io.h"
 #include "utils_vc.h"
-
-// TODO: MOVE
-/* defining  ratio for flann*/
-#define RATIO 0.7
+#include "utils_img.h"
 
 /* Declaring namespaces */
 using namespace cv;
@@ -58,14 +55,13 @@ vc_state state;
 // Control vector
 vc_control control;
 
-float sign = 1.0;
-int selected  = 0; //to see if we have already choose a decomposition
-double mean_feature_error = 1e10;/* Error on the matched kp */
+// Desired configuration
+vc_desired_configuration desired_configuration;
 
-/* Declaring data for the desired pos: image, descriptors and keypoints of the desired pose */
-Mat desired_descriptors;
-vector<KeyPoint> desired_kp;
-Mat desired_img;
+// Result of the matching operation
+vc_homograpy_matching_result matching_result;
+
+int selected  = 0; //to see if we have already choose a decomposition
 
 Mat t_best;
 Mat R_best; //to save the rot and trans
@@ -88,15 +84,15 @@ int main(int argc, char **argv){
 
 	/************************************************************************** OPENING DESIRED IMAGE */
 	string image_dir = "/src/homography/src/desired.png";
-	desired_img = imread(workspace+image_dir,IMREAD_COLOR);
-	if(desired_img.empty()) {
+	desired_configuration.img = imread(workspace+image_dir,IMREAD_COLOR);
+	if(desired_configuration.img.empty()) {
 		 cerr <<  "[ERR] Could not open or find the reference image" << std::endl ;
 		 return -1;
 	}
 
 	Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
-	orb->detect(desired_img, desired_kp);
-	orb->compute(desired_img,desired_kp, desired_descriptors);
+	orb->detect(desired_configuration.img, desired_configuration.kp);
+	orb->compute(desired_configuration.img,desired_configuration.kp, desired_configuration.descriptors);
 
 	/******************************************************************************* MOVING TO A POSE */
 	ros::Publisher pos_pub = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("/hummingbird/command/trajectory",1);
@@ -114,14 +110,14 @@ int main(int argc, char **argv){
 		if(!state.initialized){rate.sleep(); continue;} //if we havent get the new pose
 
 		//save data
-		time.push_back(state.t);errors.push_back((float)mean_feature_error);
+		time.push_back(state.t);errors.push_back((float)matching_result.mean_feature_error);
 		vel_x.push_back(control.Vx);
     vel_y.push_back(control.Vy);
     vel_z.push_back(control.Vz);
     vel_yaw.push_back(control.Vyaw);
 
 		// Do we continue?
-		if(mean_feature_error < params.feature_threshold)
+		if(matching_result.mean_feature_error < params.feature_threshold)
 			break;
 
 		// Publish image of the matching
@@ -129,6 +125,7 @@ int main(int argc, char **argv){
 
     // Update state with the current control
     auto new_pose = state.update(control);
+
     // Create message for the pose
     trajectory_msgs::MultiDOFJointTrajectory msg;
     // Prepare msg
@@ -166,68 +163,22 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 	try{
 		Mat img=cv_bridge::toCvShare(msg,"bgr8")->image;
 
-		/*** KP ***/
-		Mat descriptors; vector<KeyPoint> kp; // kp and descriptors for current image
-
-		/*** Creatring ORB object ***/
-		Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
-		orb->detect(img, kp);
-		orb->compute(img, kp, descriptors);
-
-		/************************************************************* Using flann for matching*/
-		FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
-		vector<vector<DMatch>> matches;
-		 matcher.knnMatch(desired_descriptors,descriptors,matches,2);
-
-		/************************************************************* Processing to get only goodmatches*/
-		vector<DMatch> goodMatches;
-
-		for(int i = 0; i < matches.size(); ++i){
-				if (matches[i][0].distance < matches[i][1].distance * RATIO)
-						goodMatches.push_back(matches[i][0]);
-		}
-
-		/************************************************************* Findig homography */
-		 //-- transforming goodmatches to points
-			vector<Point2f> p1;
-			vector<Point2f> p2;
-
-			for(int i = 0; i < goodMatches.size(); i++){
-			//-- Get the keypoints from the good matches
-			p1.push_back(desired_kp[goodMatches[i].queryIdx]. pt);
-			p2.push_back(kp[goodMatches[i].trainIdx].pt);
-		}
-
-		//computing error
-		Mat a = Mat(p1); Mat b = Mat(p2);
-		mean_feature_error = norm(a,b)/(float)p1.size();
-
-		//finding homography
-		Mat H = findHomography(p1, p2 ,RANSAC, 0.5);
-		if (H.rows==0)
-			return;
-		/************************************************************* Draw matches */
-		Mat img_matches = Mat::zeros(img.rows, img.cols * 2, img.type());
-		drawMatches(desired_img, desired_kp, img, kp,
-					goodMatches, img_matches,
-					Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-
+    // Call to function estimating the homography
+    if (compute_homography(img,params,desired_configuration,matching_result)<0)
+      return;
 		/************************************************************* Prepare message */
-		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,img_matches).toImageMsg();
+		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,matching_result.img_matches).toImageMsg();
 		image_msg->header.frame_id = "matching_image";
-		 image_msg->width = img_matches.cols;
-		image_msg->height = img_matches.rows;
+		 image_msg->width = matching_result.img_matches.cols;
+		image_msg->height = matching_result.img_matches.rows;
 		image_msg->is_bigendian = false;
-		image_msg->step = sizeof(unsigned char) * img_matches.cols*3;
+		image_msg->step = sizeof(unsigned char) * matching_result.img_matches.cols*3;
 		image_msg->header.stamp = ros::Time::now();
-		cout << "9 " << endl;
-		cout << H << endl;
-		/************************************************************* descomposing homography*/
+		/************************************************************* decomposing homography*/
 		vector<Mat> Rs;
 		vector<Mat> Ts;
 		vector<Mat> Ns;
-		decomposeHomographyMat(H,params.K,Rs,Ts,Ns);
-
+		decomposeHomographyMat(matching_result.H,params.K,Rs,Ts,Ns);
 		//////////////////////////////////////////////////////////// Selecting one decomposition the first time
 		if(selected == 0){
 			//to store the matrix Rotation and translation that best fix
@@ -236,7 +187,9 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 			double th = 0.1, nz = 1.0; //max value for z in the normal plane
 			//preparing the points for the test
-			vector<Point2f> pp1; vector<Point2f> pp2; pp1.push_back(p1[0]);pp2.push_back(p2[0]);
+			vector<Point2f> pp1; vector<Point2f> pp2;
+      pp1.push_back(matching_result.p1[0]);
+      pp2.push_back(matching_result.p2[0]);
 
 			//for every rotation matrix
 			for(int i=0;i<Rs.size();i++){
@@ -287,9 +240,6 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 					}
 				}
 			}
-
-			//cout << "selected " << endl;
-			//cout << t_best << endl;
 			//if not of them has been selected
 			//now, we are not going to do everything again
 		}else{//if we already selected one, select the closest to that one
@@ -317,7 +267,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		control.Vyaw = (float) -angles[2];//due to camera framework
 
 		if(state.initialized)
-		  cout << "---------------->\nVx: " << control.Vx << " Vy: " << control.Vy << " Vz: " << control.Vz << " Wz: " << control.Vyaw << " average error: " << mean_feature_error <<  endl;
+		  cout << "---------------->\nVx: " << control.Vx << " Vy: " << control.Vy << " Vz: " << control.Vz << " Wz: " << control.Vyaw << " average error: " << matching_result.mean_feature_error <<  endl;
 
 	}catch (cv_bridge::Exception& e){
 		 ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
@@ -331,9 +281,9 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 	params: message with pose info
 */
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
-	//creating quaternion
+	// Creating quaternion
 	tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
-	//creatring rotation matrix ffrom quaternion
+	// Creatring rotation matrix ffrom quaternion
 	tf::Matrix3x3 mat(q);
 	//obtaining euler angles
 	double roll, pitch, yaw;

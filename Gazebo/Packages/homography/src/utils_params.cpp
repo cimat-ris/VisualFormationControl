@@ -14,7 +14,8 @@ vc_parameters::vc_parameters() : feature_threshold(0.5),
                                 WTA_K(2),
                                 scoreType(cv::ORB::HARRIS_SCORE),
                                 patchSize(30),
-                                fastThreshold(20) {}
+                                fastThreshold(20),
+                                flann_ratio(0.7) {}
 
 // Method to load from node handle
 void vc_parameters::load(const ros::NodeHandle &nh) {
@@ -41,10 +42,12 @@ void vc_parameters::load(const ros::NodeHandle &nh) {
   this->edgeThreshold=nh.param(std::string("edgeThreshold"),15);
   this->patchSize=nh.param(std::string("patchSize"),30);
   this->fastThreshold=nh.param(std::string("fastThreshold"),20);
+  this->flann_ratio=nh.param(std::string("flann_ratio"),0.7);
 
 	// Load gain parameters
 	this->Kv=nh.param(std::string("gain_v"),0.0);
 	this->Kw=nh.param(std::string("gain_w"),0.0);
+  
 	// Load sampling time parameter
 	this->dt=nh.param(std::string("dt"),0.01);
 }

@@ -1,0 +1,55 @@
+#include "utils_img.h"
+
+using namespace cv;
+using namespace std;
+
+vc_homograpy_matching_result::vc_homograpy_matching_result(): mean_feature_error(1e10) {}
+
+int compute_homography(const Mat&img, const vc_parameters&params, const vc_desired_configuration&desired_configuration, vc_homograpy_matching_result& result) {
+  /*** KP ***/
+  Mat descriptors; vector<KeyPoint> kp; // kp and descriptors for current image
+
+  /*** Creatring ORB object ***/
+  Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
+  orb->detect(img, kp);
+  if (kp.size()==0)
+    return -1;
+  orb->compute(img, kp, descriptors);
+  /************************************************************* Using flann for matching*/
+  FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
+  vector<vector<DMatch>> matches;
+  matcher.knnMatch(desired_configuration.descriptors,descriptors,matches,2);
+
+  /************************************************************* Processing to get only goodmatches*/
+  vector<DMatch> goodMatches;
+  for(int i = 0; i < matches.size(); ++i) {
+    if (matches[i][0].distance < matches[i][1].distance * params.flann_ratio)
+        goodMatches.push_back(matches[i][0]);
+    }
+  if (goodMatches.size()==0)
+    return -1;
+
+  /************************************************************* Findig homography */
+  //-- transforming goodmatches to points
+  result.p1.clear();
+  result.p2.clear();
+  for(int i = 0; i < goodMatches.size(); i++){
+    //-- Get the keypoints from the good matches
+    result.p1.push_back(desired_configuration.kp[goodMatches[i].queryIdx].pt);
+    result.p2.push_back(kp[goodMatches[i].trainIdx].pt);
+  }
+
+  //computing error
+  Mat a = Mat(result.p1); Mat b = Mat(result.p2);
+  result.mean_feature_error = norm(a,b)/(float)result.p1.size();
+  // Finding homography
+  result.H = findHomography(result.p1, result.p2 ,RANSAC, 0.5);
+  if (result.H.rows==0)
+    return -1;
+  /************************************************************* Draw matches */
+  result.img_matches = Mat::zeros(img.rows, img.cols * 2, img.type());
+  drawMatches(desired_configuration.img, desired_configuration.kp, img, kp,
+      goodMatches, result.img_matches,
+      Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+  return 0;
+}

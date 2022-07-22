@@ -2,9 +2,25 @@
 #include <string>
 #include <vector>
 #include <ros/ros.h>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/features2d.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
 
 #include "utils_params.h"
 #include <Eigen/Dense>
+
+#ifndef UTILS_VC
+#define UTILS_VC
+
+class vc_desired_configuration {
+  public:
+    cv::Mat descriptors;
+    std::vector<cv::KeyPoint> kp;
+    cv::Mat img;
+};
 
 class vc_control {
 	public:
@@ -30,3 +46,5 @@ class vc_state {
 		std::pair<Eigen::VectorXd,float> update(const vc_control &command);
 		void initialize(const float &x,const float &y,const float &z,const float &yaw);
 };
+
+#endif

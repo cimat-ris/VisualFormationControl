@@ -14,7 +14,7 @@ std::pair<Eigen::VectorXd,float> vc_state::update(const vc_control &command) {
   this->Y = this->Y + this->Kv*command.Vy*this->dt;
   this->Z = this->Z + this->Kv*command.Vz*this->dt;
   this->Yaw = this->Yaw + this->Kw*command.Vyaw*this->dt;
-  cout << this->X << " " << this->Y << " " << this->Z << endl;
+  cout << "X: " << this->X << " Y:" << this->Y << " Z:" << this->Z << endl;
 
   Eigen::VectorXd position; position.resize(3);
   position(0) = this->X; position(1) = this->Y; position(2) = this->Z;

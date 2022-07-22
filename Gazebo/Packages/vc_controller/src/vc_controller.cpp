@@ -83,7 +83,7 @@ int main(int argc, char **argv){
 	ros::Rate rate(40);
 
 	/************************************************************************** OPENING DESIRED IMAGE */
-	string image_dir = "/src/homography/src/desired.png";
+	string image_dir = "/src/vc_controller/src/desired.png";
 	desired_configuration.img = imread(workspace+image_dir,IMREAD_COLOR);
 	if(desired_configuration.img.empty()) {
 		 cerr <<  "[ERR] Could not open or find the reference image" << std::endl ;

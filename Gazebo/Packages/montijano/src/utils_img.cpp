@@ -3,9 +3,9 @@
 using namespace cv;
 using namespace std;
 
-vc_homograpy_matching_result::vc_homograpy_matching_result(): mean_feature_error(1e10) {}
+montijano_homograpy_matching_result::montijano_homograpy_matching_result(): mean_feature_error(1e10) {}
 
-int compute_homography(const Mat&img, const vc_parameters&params, const vc_desired_configuration&desired_configuration, vc_homograpy_matching_result& result) {
+int compute_homography(const Mat&img, const montijano_parameters&params, const montijano_desired_configuration&desired_configuration, montijano_homograpy_matching_result& result) {
 	/*** KP ***/
 	Mat descriptors; vector<KeyPoint> kp; // kp and descriptors for current image
 
@@ -55,7 +55,7 @@ int compute_homography(const Mat&img, const vc_parameters&params, const vc_desir
 }
 
 int select_decomposition(const vector<Mat> &Rs,const vector<Mat> &Ts,const vector<Mat> &Ns,
-												const vc_homograpy_matching_result& matching_result,
+												const montijano_homograpy_matching_result& matching_result,
 												int &selected,Mat&Rbest,Mat &tbest) {
 		if(selected == 0) {
 			// To store the matrix Rotation and translation that best fix

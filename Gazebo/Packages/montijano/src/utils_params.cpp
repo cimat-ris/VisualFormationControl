@@ -5,7 +5,7 @@ using namespace cv;
 using namespace std;
 
 // Constructor
-vc_parameters::vc_parameters() : feature_threshold(0.5),
+montijano_parameters::montijano_parameters() : feature_threshold(0.5),
 																nfeatures(250),
                                 scaleFactor(1.2f),
                                 nlevels(8),
@@ -18,7 +18,7 @@ vc_parameters::vc_parameters() : feature_threshold(0.5),
                                 flann_ratio(0.7) {}
 
 // Method to load from node handle
-void vc_parameters::load(const ros::NodeHandle &nh) {
+void montijano_parameters::load(const ros::NodeHandle &nh) {
 	// Load intrinsic parameters
 	XmlRpc::XmlRpcValue kConfig;
 	this->K = Mat(3,3, CV_64F, double(0));

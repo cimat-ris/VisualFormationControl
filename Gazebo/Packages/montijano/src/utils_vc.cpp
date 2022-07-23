@@ -4,10 +4,10 @@
 
 using namespace std;
 
-vc_state::vc_state() : X(0),Y(0),Z(0),Yaw(0),Pitch(0),Roll(0),
+montijano_state::montijano_state() : X(0),Y(0),Z(0),Yaw(0),Pitch(0),Roll(0),
                       initialized(false),t(0),dt(0.025),Kv(1.0),Kw(1.0) {}
 
-std::pair<Eigen::VectorXd,float> vc_state::update(const vc_control &command) {
+std::pair<Eigen::VectorXd,float> montijano_state::update(const montijano_control &command) {
   this->t+=this->dt;
   // Integrating
   this->X = this->X + this->Kv*command.Vx*this->dt;
@@ -21,7 +21,7 @@ std::pair<Eigen::VectorXd,float> vc_state::update(const vc_control &command) {
   return make_pair(position,this->Yaw);
 }
 
-void vc_state::initialize(const float &x,const float &y,const float &z,const float &yaw) {
+void montijano_state::initialize(const float &x,const float &y,const float &z,const float &yaw) {
   this->X = x;
   this->Y = y;
   this->Z = z;

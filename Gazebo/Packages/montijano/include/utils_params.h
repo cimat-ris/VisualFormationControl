@@ -5,7 +5,7 @@
 #ifndef UTILS_PARAMS
 #define UTILS_PARAMS
 
-class vc_parameters {
+class montijano_parameters {
 	public:
 		// Control parameters
 		float Kv;
@@ -28,7 +28,7 @@ class vc_parameters {
 		cv::Mat K;
 
 		// Methods
-		vc_parameters();
+		montijano_parameters();
 		void load(const ros::NodeHandle &nh);
 };
 

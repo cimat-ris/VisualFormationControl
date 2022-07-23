@@ -54,40 +54,19 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 
 /* OTHER Libs functions*/
-/*
-Vec3d rotationMatrixToEulerAngles(Mat &R);
-Mat rotationX(double roll);
-Mat rotationY(double pitch);
-Mat rotationZ(double yaw);*/
-// void writeFile(vector<float> &vec, char *name);
-// double my_abs(double a);
+
 void initDesiredPoses(int montijano);
-// void readLaplacian(char *dir);
-// cv::Mat readLaplacian(char * dir, int n );
-// int ** readLaplacian(char * dir, int n );
 void getNeighbors(int me, int ** L );
 double choose(double x,double x1,double x2,double x3,double x4);
 
 /*********************************************************************************** Computer Vision Params */
-#define RATIO 0.7 /* defining  ratio for flann*/
+montijano_parameters params ;
+
 /* declaring detector params */
 Mat descriptors; vector<KeyPoint> kp,kpm; //kp and descriptors for actual image for this drone
-int n_matches = 0; //matching
-int nfeatures=100;//250
-float scaleFactor=1.2f;
-int nlevels=8;
-int edgeThreshold=20; // Changed default (31);
-int firstLevel=0;
-int WTA_K=2;
-// int scoreType=cv::ORB::HARRIS_SCORE;
-cv::ORB::ScoreType scoreType=cv::ORB::HARRIS_SCORE;
-int patchSize=31;
-int fastThreshold=20;
-Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
 
 /*********************************************************************************** Declaring neighbors params*/
 const int n = 3; //amount of drones in the system
-// int L[n][n];
 int neighbors[n]; //array with the neighbors
 int info[n],rec[n]; //neighbors comunicating the image description and receiving homgraphy
 int n_info, n_rec=0; //number of neigbors communicating image info
@@ -105,9 +84,6 @@ sensor_msgs::ImagePtr matching[n]; // to send matching
 /*********************************************************************************** Vars to move the actual drone*/
 double X = 0.0, Y = 0.0 ,Z = 0.0, Yaw = 0.0, Pitch = 0.0, Roll = 0.0; //pose
 double Vx = 0.0, Vy = 0.0, Vz= 0.0, Vyaw = 0.0; //linear velocities
-double dt = 0.02; //samplig time
-double Kv = 0.75, Kw = 1.1; //gains
-double error_threshold = 0.1; //in meters
 double mean_error = 1e10; //error in 
 int updated = 0; //if the pose has been updated
 float t = 0;//time
@@ -115,13 +91,20 @@ float sign = 1.0;
 int done = 0, ite = 0,d[n][n];
 double xc[n][n],yc[n][n],z[n][n],yaw[n][n];
 
-/*********************************************************************************** Camera matrix*/
-Mat K;
 
 /* Main function */
 int main(int argc, char **argv){
-// 	cv::Mat L = readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt",n);
+    
+    /*  LOADING STUFF   */
     int ** L = readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt",n);
+    ros::init(argc,argv,"montijano");
+    ros::NodeHandle nh;
+    image_transport::ImageTransport it(nh);
+    
+    params.load(nh);
+    Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
+    orb->detect(img, kp);
+    orb->compute(img, kp, descriptors);
 	/*********************************************************************************** Verify if the dron label has been set */
 	if(argc == 1){//you havent named the quadrotor to use!
 		cout << "You did not name a hummingbird" <<endl;
@@ -132,7 +115,7 @@ int main(int argc, char **argv){
 	string act(argv[1]);//actual neighbor in string, a value between 1 and n (inclusive)
 	actual = atoi(argv[1]);//actual neighbor integer, a value between 1 and n (inclusive)
 	//read the given laplacian
-// 	readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt", L,n);
+
 	//assign the corresponding neighbors to this drone using the laplacian
 	 getNeighbors(actual, L);
 	 
@@ -140,11 +123,7 @@ int main(int argc, char **argv){
 		for(int j=0;j<n;j++)
 			d[i][j] = 0;
 	}
-	/*********************************************************************************** Init node */
-	ros::init(argc,argv,"montijano");
-	ros::NodeHandle nh;
-	image_transport::ImageTransport it(nh);
-	
+
 	/*********************************************************************************** Pubs and subs for the actual drone */
 	ros::Subscriber pos_sub = nh.subscribe<geometry_msgs::Pose>("/hummingbird"+act+"/ground_truth/pose",1,poseCallback);
 	image_transport::Subscriber image_sub = it.subscribe("/hummingbird"+act+"/camera_nadir/image_raw",1,imageCallback);
@@ -188,13 +167,7 @@ int main(int argc, char **argv){
 	//define ros rate
 	ros::Rate rate(20);
 
-	/*********************************************************************************** CAMERA MATRIX, the same for everyone*/
-	K = Mat(3,3, CV_64F, double(0));
-	K.at<double>(0,0) = 241.4268236;
-	K.at<double>(1,1) = 241.4268236;
-	K.at<double>(0,2) = 376.0;
-	K.at<double>(1,2) = 240.0;
-	K.at<double>(2,2) = 1.0;
+	
 	initDesiredPoses(0);//load the desired poses
 
 	/******************************************************************************* BUCLE START*/
@@ -219,7 +192,7 @@ int main(int argc, char **argv){
 		done = 0;
 
 		//add time
-		t+=dt;	
+		t+=params.dt;	
 
 		//do we stop?
 		if(t>10.0)
@@ -234,11 +207,11 @@ int main(int argc, char **argv){
 
 		//change in rotation
 		Mat S = (Mat_<double>(3, 3) << 0,-Vyaw,0,Vyaw,0,0,0,0,0);
-		Mat R_d = Rz*S; Mat R = Rz+R_d*dt; Vec3f angles = rotationMatrixToEulerAngles(R);
+		Mat R_d = Rz*S; Mat R = Rz+R_d*params.dt; Vec3f angles = rotationMatrixToEulerAngles(R);
 
-		X = X + p_d.at<double>(0,0)*dt;
-		Y = Y + p_d.at<double>(1,0)*dt;
-		Z = Z + p_d.at<double>(2,0)*dt;
+		X = X + p_d.at<double>(0,0)*params.dt;
+		Y = Y + p_d.at<double>(1,0)*params.dt;
+		Z = Z + p_d.at<double>(2,0)*params.dt;
 		Yaw = (double) angles[2];
 		
 		//create message for the pose
@@ -265,7 +238,7 @@ int main(int argc, char **argv){
 	params: 
 		msg: the message
 */
-void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr& msg){
+void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr& msg ){
 	
 	//geometric constraint, roll and pitch from neighbor
 	double GC[3][3], r = msg->roll, p=msg->pitch;
@@ -287,8 +260,8 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		Mat RXj = rotationX(r); Mat RXi = rotationX(Roll);
 		Mat RYj = rotationY(p); Mat RYi = rotationY(Pitch);
 		//rectification to agent i and agent j
-		Mat Hir = RXi.inv() * RYi.inv()*K.inv();
-		Mat Hjr = RXj.inv() * RYj.inv()*K.inv();
+		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
+		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
 		//rectified matrix
 		Mat Hr = Hir*H*Hjr.inv();		
 
@@ -297,15 +270,15 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		xc[jj][ii] = Hr.at<double>(1,2);
 		yc[jj][ii] = Hr.at<double>(0,2);
 			//velocities from homography 		
-		Vx += Kv*(Z*Hr.at<double>(1,2)-x_aster[jj][ii]);
-		Vy +=  Kv*(Z*Hr.at<double>(0,2)-y_aster[jj][ii]);		
-		Vyaw += Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
+		Vx += params.Kv*(Z*Hr.at<double>(1,2)-x_aster[jj][ii]);
+		Vy +=  params.Kv*(Z*Hr.at<double>(0,2)-y_aster[jj][ii]);		
+		Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
 		}else{
 		
 		vector<Mat> rotations;
 		vector<Mat> translations;
 		vector<Mat> normals;
-		decomposeHomographyMat(H, K, rotations,translations, normals);
+		decomposeHomographyMat(H, params.K, rotations,translations, normals);
 
 		double gg2[2],min=1e10;
 		for(int i =0;i<4;i++){
@@ -324,9 +297,9 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		}
 		xc[jj][ii] = gg2[0];
 		yc[jj][ii] = gg2[1];
-		Vx += Kv*(Z*xc[jj][ii]-x_aster[jj][ii]);
-		Vy +=  Kv*(Z*yc[jj][ii]-y_aster[jj][ii]);	
-		Vyaw += Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
+		Vx += params.Kv*(Z*xc[jj][ii]-x_aster[jj][ii]);
+		Vy +=  params.Kv*(Z*yc[jj][ii]-y_aster[jj][ii]);	
+		Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
 		}
 		
 	}
@@ -339,14 +312,15 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 	params: 
 		msg: ptr to the msg image.
 */
-void imageCallback(const sensor_msgs::Image::ConstPtr& msg){	
+void imageCallback(const sensor_msgs::Image::ConstPtr& msg ){	
 	try{		
 		img=cv_bridge::toCvShare(msg,"bgr8")->image;
 		
 		/************************************************************ Creatring ORB*/
 		kp.clear();
-		orb->detect(img, kp);
-		orb->compute(img, kp, descriptors);
+        //  TODO: determinar si esto no afecta o hay que dejar orb global
+// 		orb->detect(img, kp);
+// 		orb->compute(img, kp, descriptors);
 
 		/************************************************************ Prepare msg to publish descriptors*/
 		int rows = descriptors.rows, cols = descriptors.cols;
@@ -412,13 +386,14 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	vector<DMatch> goodMatches;
 
 	for(int i = 0; i < matches.size(); ++i){
-    	if (matches[i][0].distance < matches[i][1].distance * RATIO)
+    	if (matches[i][0].distance < matches[i][1].distance * params.flann_ratio)
         	goodMatches.push_back(matches[i][0]);
 	}
 
 	/************************************************************* Finding homography */
 	 //-- transforming goodmatches to points		
-	vector<Point2f> p1; vector<Point2f> p2; n_matches = 0; vector<int> mask;
+	vector<Point2f> p1; vector<Point2f> p2; 
+    vector<int> mask;
 
 	for(int i = 0; i < goodMatches.size(); i++){
 		//-- Get the keypoints from the good matches
@@ -427,7 +402,6 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 		
 	}
 
-	n_matches = 0;	
 	Mat H = findHomography(p1, p2 ,RANSAC, 1,mask);
 	
 	
@@ -456,8 +430,8 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 		Mat RYj = rotationY(pitchj);
 		Mat RYi = rotationY(Pitch);
 		//rectify homography
-		Mat Hir = RXi.inv() * RYi.inv()*K.inv();
-		Mat Hjr = RXj.inv() * RYj.inv()*K.inv();
+		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
+		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
 		Mat Hr = Hir*H*Hjr.inv();
 	if(d[actual][autor]==0){
 	d[actual][autor] = 1;
@@ -465,15 +439,15 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	//velocities from homography 	
 
 	
-	Vx += Kv*(Z*Hr.at<double>(1,2)-x_aster[actual][autor]);
-	Vy += Kv*(Z*Hr.at<double>(0,2)-y_aster[actual][autor]);		
-	Vyaw += Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);//due to camera framework	
+	Vx += params.Kv*(Z*Hr.at<double>(1,2)-x_aster[actual][autor]);
+	Vy += params.Kv*(Z*Hr.at<double>(0,2)-y_aster[actual][autor]);		
+	Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);//due to camera framework	
 	}else{
 		
 		vector<Mat> rotations;
 		vector<Mat> translations;
 		vector<Mat> normals;
-		decomposeHomographyMat(H, K, rotations,translations, normals);
+		decomposeHomographyMat(H, params.K, rotations,translations, normals);
 
 double gg2[2],min=1e10;
 		for(int i =0;i<4;i++){
@@ -492,9 +466,9 @@ double gg2[2],min=1e10;
 		}
 		xc[actual][autor] = gg2[0];
 		yc[actual][autor] = gg2[1];
-		Vx += Kv*(Z*xc[actual][autor]-x_aster[actual][autor]);
-		Vy +=  Kv*(Z*yc[actual][autor]-y_aster[actual][autor]);	
-		Vyaw += Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);
+		Vx += params.Kv*(Z*xc[actual][autor]-x_aster[actual][autor]);
+		Vy +=  params.Kv*(Z*yc[actual][autor]-y_aster[actual][autor]);	
+		Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);
 	}
 	
 }	
@@ -544,94 +518,6 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	}	
 }
 
-/* 
-	function: rotationMatrixToEulerAngles
-	params: 
-		R: rotation matrix
-	result: 
-		vector containing the euler angles
-	function taken from : https://www.learnopencv.com/rotation-matrix-to-euler-angles/
-*/
-// Vec3d rotationMatrixToEulerAngles(Mat &R){      
-//     double sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) ); 
-//     bool singular = sy < 1e-6; // If
-//  
-//     double x, y, z;
-//     if (!singular){
-//         x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
-//         y = atan2(-R.at<double>(2,0), sy);
-//         z = atan2(R.at<double>(1,0), R.at<double>(0,0));
-//     }else{
-//         x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
-//         y = atan2(-R.at<double>(2,0), sy);
-//         z = 0;
-//     }
-//     return Vec3d(x, y, z);        
-// }
-
-/*
-	function: rotationX
-	description: creates a matrix with rotation in X axis
-	params:
-		roll: angle in roll
-*/
-// Mat rotationX(double roll){
-// 	return (Mat_<double>(3, 3) <<
-//                   1,          0,           0,
-//                   0, cos(roll), -sin(roll),
-//                   0, sin(roll),  cos(roll));
-// }
-// 
-// /*
-// 	function: rotationY
-// 	description: creates a matrix with rotation in Y axis
-// 	params:
-// 		pitch: angle in pitch
-// */
-// Mat rotationY(double pitch){
-// 	return (Mat_<double>(3, 3) <<
-//                   cos(pitch), 0, sin(pitch),
-//                   0, 1,          0,
-//                   -sin(pitch), 0,  cos(pitch));
-// }
-// 
-// /*
-// 	function: rotationZ
-// 	description: creates a matrix with rotation in Z axis
-// 	params:
-// 		yaw: angle in yaw
-// */
-// Mat rotationZ(double yaw){
-// 	return (Mat_<double>(3, 3) <<                 
-//                   cos(yaw), -sin(yaw), 0,
-//                   sin(yaw),  cos(yaw), 0,
-// 		  0,          0,           1);
-// }
-
-/*
-	Function: writeFile
-	description: Writes the vect given as param into a file with the specified name
-	params: std:vector containing the info and file name
-*/
-// void writeFile(vector<float> &vec, char *name){
-// 	ofstream myfile;
-//   	myfile.open(name);
-// 	for(int i=0;i<vec.size();i++)
-// 		myfile << vec[i] << endl;
-// 
-// 	myfile.close();
-// }
-
-/* 
-	function: abs
-	description: dummy function to get an absolute value.
-	params: number to use in the function.
-*/
-// double my_abs(double a){
-// 	if(a<0)
-// 		return -a;
-// 	return a;
-// }
 
 
 
@@ -674,45 +560,6 @@ void initDesiredPoses(int montijano){
 	}	
 }
 
-/*
-	Function: readLaplacian()
-	description: reads the laplacian from a file and saves it in L (nxn matrix)
-	params: 
-		dir: direction of the file containing the laplacian
-*/
-// void readLaplacian(char *dir){
-// 	fstream inFile;
-// 	int x=0,i=0,j=0;
-// 	//open file
-// 	inFile.open(dir);
-// 	//read file
-// 	while (inFile >> x) {
-// 		L[i][j] = x;
-// 		j++; if(j==n) {i++;j=0;}
-// 	}
-// 	
-// 	//close file
-// 	inFile.close();
-// }
-// cv::Mat readLaplacian(char *dir){
-//     
-// 	fstream inFile;
-//     int data[n*n];
-// 	int x=0,i=0;
-// 	//open file
-// 	inFile.open(dir);
-// 	//read file
-// 	while (inFile >> x) {
-// 		data[i] = x;
-// 		i++;
-// 	}
-// 	
-// 	//close file
-// 	inFile.close();
-//     
-//     cv:Mat L(n,n,CV_32SC1, data);
-//     return L;
-// }
 
 /*
 	function: getNeighbors

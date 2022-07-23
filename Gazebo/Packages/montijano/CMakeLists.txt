@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.3...3.22)
 project(montijano)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -7,6 +7,7 @@ project(montijano)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+
 set(OpenCV_DIR "/opt/ros/kinetic/share/OpenCV-3.3.1-dev")
 find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
@@ -18,8 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
 	mav_msgs
 	geometry_msgs
 	OpenCV REQUIRED
-	message_generation
-)
+    message_generation
+    )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -114,8 +115,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES homography
-	CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs message_runtime
+#  LIBRARIES vc_controller
+  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 
@@ -126,13 +127,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/homography.cpp
+#   src/${PROJECT_NAME}/vc_controller.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -208,6 +209,6 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(montijano src/montijano.cpp)
+add_executable(montijano src/montijano.cpp src/utils_geom.cpp src/utils_io.cpp src/utils_params.cpp src/utils_vc.cpp src/utils_img.cpp)
 add_dependencies(montijano montijano_generate_messages_cpp)
 target_link_libraries(montijano ${catkin_LIBRARIES})

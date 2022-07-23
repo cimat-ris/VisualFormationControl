@@ -36,24 +36,36 @@ and process some homography-based montijano control.
 #include <string>
 #include <math.h>
 
+/*  CUSTOM LIBS */
+
+#include "utils_geom.h"
+#include "utils_io.h"
+#include "utils_vc.h"
+#include "utils_img.h"
+
 /*********************************************************************************** Declaring namespaces*/
 using namespace cv;
 using namespace std;
 
-/*********************************************************************************** Declaring callbacks and other functions*/
+/*********************************************************************************** Declaring callbacks */
 void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr& msg);
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
+
+/* OTHER Libs functions*/
+/*
 Vec3d rotationMatrixToEulerAngles(Mat &R);
 Mat rotationX(double roll);
 Mat rotationY(double pitch);
-Mat rotationZ(double yaw);
-void writeFile(vector<float> &vec, char *name);
-double my_abs(double a);
+Mat rotationZ(double yaw);*/
+// void writeFile(vector<float> &vec, char *name);
+// double my_abs(double a);
 void initDesiredPoses(int montijano);
-void readLaplacian(char *dir);
-void getNeighbors(int me);
+// void readLaplacian(char *dir);
+// cv::Mat readLaplacian(char * dir, int n );
+// int ** readLaplacian(char * dir, int n );
+void getNeighbors(int me, int ** L );
 double choose(double x,double x1,double x2,double x3,double x4);
 
 /*********************************************************************************** Computer Vision Params */
@@ -67,14 +79,15 @@ int nlevels=8;
 int edgeThreshold=20; // Changed default (31);
 int firstLevel=0;
 int WTA_K=2;
-int scoreType=cv::ORB::HARRIS_SCORE;
+// int scoreType=cv::ORB::HARRIS_SCORE;
+cv::ORB::ScoreType scoreType=cv::ORB::HARRIS_SCORE;
 int patchSize=31;
 int fastThreshold=20;
 Ptr<ORB> orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
 
 /*********************************************************************************** Declaring neighbors params*/
 const int n = 3; //amount of drones in the system
-int L[n][n]; //Laplacian of the system
+// int L[n][n];
 int neighbors[n]; //array with the neighbors
 int info[n],rec[n]; //neighbors comunicating the image description and receiving homgraphy
 int n_info, n_rec=0; //number of neigbors communicating image info
@@ -107,20 +120,21 @@ Mat K;
 
 /* Main function */
 int main(int argc, char **argv){
-	
+// 	cv::Mat L = readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt",n);
+    int ** L = readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt",n);
 	/*********************************************************************************** Verify if the dron label has been set */
 	if(argc == 1){//you havent named the quadrotor to use!
 		cout << "You did not name a hummingbird" <<endl;
 		return 0;
 	}
-
+    
 	/*********************************************************************************** Defining neighbors */
 	string act(argv[1]);//actual neighbor in string, a value between 1 and n (inclusive)
 	actual = atoi(argv[1]);//actual neighbor integer, a value between 1 and n (inclusive)
 	//read the given laplacian
-	readLaplacian("/home/phyrsash/patty_ws/src/montijano/src/Laplacian.txt");
+// 	readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt", L,n);
 	//assign the corresponding neighbors to this drone using the laplacian
-	 getNeighbors(actual);
+	 getNeighbors(actual, L);
 	 
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++)
@@ -414,7 +428,7 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	}
 
 	n_matches = 0;	
-	Mat H = findHomography(p1, p2 ,CV_RANSAC, 1,mask);
+	Mat H = findHomography(p1, p2 ,RANSAC, 1,mask);
 	
 	
 	/************************************************************* preparing homography message */	
@@ -538,22 +552,22 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 		vector containing the euler angles
 	function taken from : https://www.learnopencv.com/rotation-matrix-to-euler-angles/
 */
-Vec3d rotationMatrixToEulerAngles(Mat &R){      
-    double sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) ); 
-    bool singular = sy < 1e-6; // If
- 
-    double x, y, z;
-    if (!singular){
-        x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
-        y = atan2(-R.at<double>(2,0), sy);
-        z = atan2(R.at<double>(1,0), R.at<double>(0,0));
-    }else{
-        x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
-        y = atan2(-R.at<double>(2,0), sy);
-        z = 0;
-    }
-    return Vec3d(x, y, z);        
-}
+// Vec3d rotationMatrixToEulerAngles(Mat &R){      
+//     double sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) ); 
+//     bool singular = sy < 1e-6; // If
+//  
+//     double x, y, z;
+//     if (!singular){
+//         x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
+//         y = atan2(-R.at<double>(2,0), sy);
+//         z = atan2(R.at<double>(1,0), R.at<double>(0,0));
+//     }else{
+//         x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
+//         y = atan2(-R.at<double>(2,0), sy);
+//         z = 0;
+//     }
+//     return Vec3d(x, y, z);        
+// }
 
 /*
 	function: rotationX
@@ -561,63 +575,63 @@ Vec3d rotationMatrixToEulerAngles(Mat &R){
 	params:
 		roll: angle in roll
 */
-Mat rotationX(double roll){
-	return (Mat_<double>(3, 3) <<
-                  1,          0,           0,
-                  0, cos(roll), -sin(roll),
-                  0, sin(roll),  cos(roll));
-}
-
-/*
-	function: rotationY
-	description: creates a matrix with rotation in Y axis
-	params:
-		pitch: angle in pitch
-*/
-Mat rotationY(double pitch){
-	return (Mat_<double>(3, 3) <<
-                  cos(pitch), 0, sin(pitch),
-                  0, 1,          0,
-                  -sin(pitch), 0,  cos(pitch));
-}
-
-/*
-	function: rotationZ
-	description: creates a matrix with rotation in Z axis
-	params:
-		yaw: angle in yaw
-*/
-Mat rotationZ(double yaw){
-	return (Mat_<double>(3, 3) <<                 
-                  cos(yaw), -sin(yaw), 0,
-                  sin(yaw),  cos(yaw), 0,
-		  0,          0,           1);
-}
+// Mat rotationX(double roll){
+// 	return (Mat_<double>(3, 3) <<
+//                   1,          0,           0,
+//                   0, cos(roll), -sin(roll),
+//                   0, sin(roll),  cos(roll));
+// }
+// 
+// /*
+// 	function: rotationY
+// 	description: creates a matrix with rotation in Y axis
+// 	params:
+// 		pitch: angle in pitch
+// */
+// Mat rotationY(double pitch){
+// 	return (Mat_<double>(3, 3) <<
+//                   cos(pitch), 0, sin(pitch),
+//                   0, 1,          0,
+//                   -sin(pitch), 0,  cos(pitch));
+// }
+// 
+// /*
+// 	function: rotationZ
+// 	description: creates a matrix with rotation in Z axis
+// 	params:
+// 		yaw: angle in yaw
+// */
+// Mat rotationZ(double yaw){
+// 	return (Mat_<double>(3, 3) <<                 
+//                   cos(yaw), -sin(yaw), 0,
+//                   sin(yaw),  cos(yaw), 0,
+// 		  0,          0,           1);
+// }
 
 /*
 	Function: writeFile
 	description: Writes the vect given as param into a file with the specified name
 	params: std:vector containing the info and file name
 */
-void writeFile(vector<float> &vec, char *name){
-	ofstream myfile;
-  	myfile.open(name);
-	for(int i=0;i<vec.size();i++)
-		myfile << vec[i] << endl;
-
-	myfile.close();
-}
+// void writeFile(vector<float> &vec, char *name){
+// 	ofstream myfile;
+//   	myfile.open(name);
+// 	for(int i=0;i<vec.size();i++)
+// 		myfile << vec[i] << endl;
+// 
+// 	myfile.close();
+// }
 
 /* 
 	function: abs
 	description: dummy function to get an absolute value.
 	params: number to use in the function.
 */
-double my_abs(double a){
-	if(a<0)
-		return -a;
-	return a;
-}
+// double my_abs(double a){
+// 	if(a<0)
+// 		return -a;
+// 	return a;
+// }
 
 
 
@@ -666,20 +680,39 @@ void initDesiredPoses(int montijano){
 	params: 
 		dir: direction of the file containing the laplacian
 */
-void readLaplacian(char *dir){
-	fstream inFile;
-	int x=0,i=0,j=0;
-	//open file
-	inFile.open(dir);
-	//read file
-	while (inFile >> x) {
-		L[i][j] = x;
-		j++; if(j==n) {i++;j=0;}
-	}
-	
-	//close file
-	inFile.close();
-}
+// void readLaplacian(char *dir){
+// 	fstream inFile;
+// 	int x=0,i=0,j=0;
+// 	//open file
+// 	inFile.open(dir);
+// 	//read file
+// 	while (inFile >> x) {
+// 		L[i][j] = x;
+// 		j++; if(j==n) {i++;j=0;}
+// 	}
+// 	
+// 	//close file
+// 	inFile.close();
+// }
+// cv::Mat readLaplacian(char *dir){
+//     
+// 	fstream inFile;
+//     int data[n*n];
+// 	int x=0,i=0;
+// 	//open file
+// 	inFile.open(dir);
+// 	//read file
+// 	while (inFile >> x) {
+// 		data[i] = x;
+// 		i++;
+// 	}
+// 	
+// 	//close file
+// 	inFile.close();
+//     
+//     cv:Mat L(n,n,CV_32SC1, data);
+//     return L;
+// }
 
 /*
 	function: getNeighbors
@@ -687,7 +720,7 @@ void readLaplacian(char *dir){
 	params:
 		me: integer representing the label of the actual agent
 */
-void getNeighbors(int me){
+void getNeighbors(int me, int ** L ){
 	//search in the corresponding laplacian row
 	for(int i=0;i<n;i++)
 		if(L[me][i]==-1){

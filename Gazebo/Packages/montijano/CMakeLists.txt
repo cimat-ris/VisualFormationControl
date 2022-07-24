@@ -8,7 +8,7 @@ project(montijano)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-set(OpenCV_DIR "/opt/ros/kinetic/share/OpenCV-3.3.1-dev")
+set(OpenCV_DIR "/usr/lib/x86_64-linux-gnu/cmake/opencv4/")
 find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport

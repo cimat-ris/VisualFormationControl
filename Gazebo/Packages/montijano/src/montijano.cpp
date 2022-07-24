@@ -57,7 +57,7 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 
 void initDesiredPoses(int montijano);
 void getNeighbors(int me, int ** L );
-double choose(double x,double x1,double x2,double x3,double x4);
+
 
 /*********************************************************************************** Computer Vision Params */
 montijano_parameters params ;
@@ -81,30 +81,30 @@ montijano::geometric_constraint gm[n];//to send homography
 Mat Hom[n],img; //to send homographies and get the actual image
 sensor_msgs::ImagePtr matching[n]; // to send matching
 
-/*********************************************************************************** Vars to move the actual drone*/
-double X = 0.0, Y = 0.0 ,Z = 0.0, Yaw = 0.0, Pitch = 0.0, Roll = 0.0; //pose
-double Vx = 0.0, Vy = 0.0, Vz= 0.0, Vyaw = 0.0; //linear velocities
-double mean_error = 1e10; //error in 
-int updated = 0; //if the pose has been updated
-float t = 0;//time
-float sign = 1.0; 
-int done = 0, ite = 0,d[n][n];
+/*  state and control   */
+
+montijano_state state;
+montijano_control control;
+
+int ite = 0,d[n][n];
 double xc[n][n],yc[n][n],z[n][n],yaw[n][n];
 
+Ptr<ORB> orb;
 
 /* Main function */
 int main(int argc, char **argv){
     
     /*  LOADING STUFF   */
-    int ** L = readLaplacian("/home/bloodfield/catkin_ws/src/montijano/src/Laplacian.txt",n);
+
+    int ** L = readLaplacian(WORKSPACE "/src/montijano/src/Laplacian.txt",n);
     ros::init(argc,argv,"montijano");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     
     params.load(nh);
-    Ptr<ORB> orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
-    orb->detect(img, kp);
-    orb->compute(img, kp, descriptors);
+     orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
+
+     
 	/*********************************************************************************** Verify if the dron label has been set */
 	if(argc == 1){//you havent named the quadrotor to use!
 		cout << "You did not name a hummingbird" <<endl;
@@ -174,13 +174,13 @@ int main(int argc, char **argv){
 	while(ros::ok()){
 		
 		//reset velocities
-		Vx = 0.0; Vy = 0.0; Vz = 0.0; Vyaw = 0.0;		
+		control.Vx = 0.0; control.Vy = 0.0; control.Vz = 0.0; control.Vyaw = 0.0;		
 			
 		//get a msg	
 		ros::spinOnce();
 		
 		//if we havent get the pose
-		if(updated == 0){rate.sleep(); continue;}
+		if(state.updated == 0){rate.sleep(); continue;}
 		
 		//publish kp and descriptors
 		id_pub.publish(id);
@@ -189,39 +189,39 @@ int main(int argc, char **argv){
 			pubs_constraint[i].publish(gm[i]);
 
 		//reset the kp and descriptors calculation				
-		done = 0;
+		state.done = 0;
 
 		//add time
-		t+=params.dt;	
+		state.t+=params.dt;	
 
 		//do we stop?
-		if(t>10.0)
+		if(state.t>10.0)
 			break;
-		printf("---->%d %f %f %f\n",actual,Vx,Vy,Vyaw);
+		printf("---->%d %f %f %f\n",actual,control.Vx,control.Vy,control.Vyaw);
 		
 		/***********************************************MOVING THE DRONE*/		
 		//moving drone
-		Mat Rz = rotationZ(Yaw);
-		Vec3d Vel(Vx,Vy,Vz);
+		Mat Rz = rotationZ(state.Yaw);
+		Vec3d Vel(control.Vx,control.Vy,control.Vz);
 		Mat p_d = Rz*Mat(Vel);//change in position
 
 		//change in rotation
-		Mat S = (Mat_<double>(3, 3) << 0,-Vyaw,0,Vyaw,0,0,0,0,0);
+		Mat S = (Mat_<double>(3, 3) << 0,-control.Vyaw,0,control.Vyaw,0,0,0,0,0);
 		Mat R_d = Rz*S; Mat R = Rz+R_d*params.dt; Vec3f angles = rotationMatrixToEulerAngles(R);
 
-		X = X + p_d.at<double>(0,0)*params.dt;
-		Y = Y + p_d.at<double>(1,0)*params.dt;
-		Z = Z + p_d.at<double>(2,0)*params.dt;
-		Yaw = (double) angles[2];
+		state.X  += p_d.at<double>(0,0)*params.dt;
+		state.Y  += p_d.at<double>(1,0)*params.dt;
+		state.Z  += p_d.at<double>(2,0)*params.dt;
+		state.Yaw  += (double) angles[2];
 		
 		//create message for the pose
 		trajectory_msgs::MultiDOFJointTrajectory msg;
 		Eigen::VectorXd position; position.resize(3); 
-		position(0) = X; position(1) = Y; position(2) = Z;
+		position(0) = state.X; position(1) = state.Y; position(2) = state.Z;
 
 		// prepare msg
 		msg.header.stamp=ros::Time::now();
-		mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(position, Yaw, &msg);	
+		mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(position, state.Yaw, &msg);	
 		
 		rate.sleep();	
 		//publish position
@@ -257,8 +257,8 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 
 
 		//create rotation matrices to obtain the rectified matrix
-		Mat RXj = rotationX(r); Mat RXi = rotationX(Roll);
-		Mat RYj = rotationY(p); Mat RYi = rotationY(Pitch);
+		Mat RXj = rotationX(r); Mat RXi = rotationX(state.Roll);
+		Mat RYj = rotationY(p); Mat RYi = rotationY(state.Pitch);
 		//rectification to agent i and agent j
 		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
 		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
@@ -270,9 +270,9 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		xc[jj][ii] = Hr.at<double>(1,2);
 		yc[jj][ii] = Hr.at<double>(0,2);
 			//velocities from homography 		
-		Vx += params.Kv*(Z*Hr.at<double>(1,2)-x_aster[jj][ii]);
-		Vy +=  params.Kv*(Z*Hr.at<double>(0,2)-y_aster[jj][ii]);		
-		Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
+		control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-x_aster[jj][ii]);
+		control.Vy +=  params.Kv*(state.Z*Hr.at<double>(0,2)-y_aster[jj][ii]);		
+		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
 		}else{
 		
 		vector<Mat> rotations;
@@ -297,9 +297,9 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		}
 		xc[jj][ii] = gg2[0];
 		yc[jj][ii] = gg2[1];
-		Vx += params.Kv*(Z*xc[jj][ii]-x_aster[jj][ii]);
-		Vy +=  params.Kv*(Z*yc[jj][ii]-y_aster[jj][ii]);	
-		Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
+		control.Vx += params.Kv*(state.Z*xc[jj][ii]-x_aster[jj][ii]);
+		control.Vy +=  params.Kv*(state.Z*yc[jj][ii]-y_aster[jj][ii]);	
+		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
 		}
 		
 	}
@@ -318,9 +318,9 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg ){
 		
 		/************************************************************ Creatring ORB*/
 		kp.clear();
-        //  TODO: determinar si esto no afecta o hay que dejar orb global
-// 		orb->detect(img, kp);
-// 		orb->compute(img, kp, descriptors);
+        
+        orb->detect(img, kp);
+		orb->compute(img, kp, descriptors);
 
 		/************************************************************ Prepare msg to publish descriptors*/
 		int rows = descriptors.rows, cols = descriptors.cols;
@@ -341,10 +341,10 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg ){
     			id.kps.push_back(k);
 		}
 		//add aditional data and say that you have calculated everything
-		done = 1;
+		state.done = 1;
 		id.autor = actual;
-		id.roll = Roll;
-		id.pitch = Pitch;
+		id.roll = state.Roll;
+		id.pitch = state.Pitch;
 
 	}catch (cv_bridge::Exception& e){
 	 	ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
@@ -376,7 +376,7 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	}
 	
 	/************************************************************* Using flann for matching*/
-	if(done==0) return; //if we dont have our own kp and descriptors
+	if(state.done==0) return; //if we dont have our own kp and descriptors
 
 	FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
   	vector<vector<DMatch>> matches;
@@ -411,8 +411,8 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 
 	//create a geometric constraint and fill it
 	montijano::geometric_constraint cons;
-	cons.roll = Roll;
-	cons.pitch = Pitch;
+	cons.roll = state.Roll;
+	cons.pitch = state.Pitch;
 	cons.i = actual;
 	cons.j = autor;
 
@@ -426,9 +426,9 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	double rollj = msg->roll, pitchj = msg->pitch;//getting roll and pitch data from neighbor
 	
 		Mat RXj = rotationX(rollj);
-		Mat RXi = rotationX(Roll);
+		Mat RXi = rotationX(state.Roll);
 		Mat RYj = rotationY(pitchj);
-		Mat RYi = rotationY(Pitch);
+		Mat RYi = rotationY(state.Pitch);
 		//rectify homography
 		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
 		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
@@ -439,9 +439,9 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	//velocities from homography 	
 
 	
-	Vx += params.Kv*(Z*Hr.at<double>(1,2)-x_aster[actual][autor]);
-	Vy += params.Kv*(Z*Hr.at<double>(0,2)-y_aster[actual][autor]);		
-	Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);//due to camera framework	
+	control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-x_aster[actual][autor]);
+	control.Vy += params.Kv*(state.Z*Hr.at<double>(0,2)-y_aster[actual][autor]);		
+	control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);//due to camera framework	
 	}else{
 		
 		vector<Mat> rotations;
@@ -466,28 +466,12 @@ double gg2[2],min=1e10;
 		}
 		xc[actual][autor] = gg2[0];
 		yc[actual][autor] = gg2[1];
-		Vx += params.Kv*(Z*xc[actual][autor]-x_aster[actual][autor]);
-		Vy +=  params.Kv*(Z*yc[actual][autor]-y_aster[actual][autor]);	
-		Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);
+		control.Vx += params.Kv*(state.Z*xc[actual][autor]-x_aster[actual][autor]);
+		control.Vy +=  params.Kv*(state.Z*yc[actual][autor]-y_aster[actual][autor]);	
+		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);
 	}
 	
 }	
-
-double choose(double x,double x1,double x2,double x3,double x4){
-	double dif[4];
-	dif[0] = abs(x-x1); 
-	dif[1] = abs(x-x2); 
-	dif[2] = abs(x-x3); 
-	dif[3] = abs(x-x4); 
-	
-	if (dif[0]<dif[1] && dif[0] < dif[2] && dif[0] < dif[3])
-		return x1;
-	if (dif[1]<dif[2] && dif[1] < dif[0] && dif[1] <dif[3])
-		return x2;
-	if (dif[2]<dif[0] && dif[2] < dif[1] && dif[2] < dif[3])
-		return x3;
-	return x4;
-}
 
 /*
 	Function: PoseCallback
@@ -503,17 +487,17 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	double roll, pitch, yaw;
 	mat.getEulerYPR(yaw, pitch, roll);
 	//saving the data obtained
-	Roll = roll; Pitch = pitch; 
+	state.Roll = roll; state.Pitch = pitch; 
 	
-	if(updated == 0){
+	if(state.updated == 0){
 		//setting the position if its the first time 
-		X = msg->position.x;
-		Y = msg->position.y;
-		Z = msg->position.z;
-		Yaw = yaw;
-		updated = 1;
-		cout << "Init pose drone " << actual << endl << "X: " << X << endl << "Y: " << Y << endl << "Z: " << Z << endl;
-		cout << "Roll: " << Roll << endl << "Pitch: " << Pitch << endl << "Yaw: " << Yaw << endl ;
+		state.X = msg->position.x;
+		state.Y = msg->position.y;
+		state.Z = msg->position.z;
+		state.Yaw = yaw;
+		state.updated = 1;
+		cout << "Init pose drone " << actual << endl << "X: " << state.X << endl << "Y: " << state.Y << endl << "Z: " << state.Z << endl;
+		cout << "Roll: " << state.Roll << endl << "Pitch: " << state.Pitch << endl << "Yaw: " << state.Yaw << endl ;
 		cout << "-------------" << endl;	
 	}	
 }

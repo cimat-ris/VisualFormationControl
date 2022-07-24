@@ -33,9 +33,11 @@ class montijano_state {
 		/* defining where the drone will move and integrating system*/
 		float X,Y,Z,Yaw,Pitch,Roll;
 		bool initialized;
+        bool updated;
+        bool done;
 		float t,dt;
 		float Kv,Kw;
-		ros::Publisher ros_pub;
+// 		ros::Publisher ros_pub;
 		// Methods
 		montijano_state();
 		inline void set_gains(const montijano_parameters&params) {
@@ -43,7 +45,7 @@ class montijano_state {
 			this->Kw = params.Kw;
 			this->dt = params.dt;
 		};
-		std::pair<Eigen::VectorXd,float> update(const montijano_control &command);
+// 		std::pair<Eigen::VectorXd,float> update(const montijano_control &command);
 		void initialize(const float &x,const float &y,const float &z,const float &yaw);
 };
 

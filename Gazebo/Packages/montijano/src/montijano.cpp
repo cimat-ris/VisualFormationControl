@@ -192,7 +192,7 @@ int main(int argc, char **argv){
 		state.done = 0;
 
 		//add time
-		state.t+=params.dt;	
+// 		state.t+=params.dt;	
 
 		//do we stop?
 		if(state.t>10.0)
@@ -209,10 +209,17 @@ int main(int argc, char **argv){
 		Mat S = (Mat_<double>(3, 3) << 0,-control.Vyaw,0,control.Vyaw,0,0,0,0,0);
 		Mat R_d = Rz*S; Mat R = Rz+R_d*params.dt; Vec3f angles = rotationMatrixToEulerAngles(R);
 
-		state.X  += p_d.at<double>(0,0)*params.dt;
-		state.Y  += p_d.at<double>(1,0)*params.dt;
-		state.Z  += p_d.at<double>(2,0)*params.dt;
-		state.Yaw  += (double) angles[2];
+        
+        //  Update
+        control.Vx = p_d.at<double>(0,0);
+        control.Vy = p_d.at<double>(1,0);
+        control.Vz = p_d.at<double>(2,0);
+        control.Vyaw = (double) angles[2];
+        state.update(control);
+// 		state.X  += p_d.at<double>(0,0)*params.dt;
+// 		state.Y  += p_d.at<double>(1,0)*params.dt;
+// 		state.Z  += p_d.at<double>(2,0)*params.dt;
+// 		state.Yaw  += (double) angles[2];
 		
 		//create message for the pose
 		trajectory_msgs::MultiDOFJointTrajectory msg;
@@ -489,16 +496,21 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	//saving the data obtained
 	state.Roll = roll; state.Pitch = pitch; 
 	
-	if(state.updated == 0){
-		//setting the position if its the first time 
-		state.X = msg->position.x;
-		state.Y = msg->position.y;
-		state.Z = msg->position.z;
-		state.Yaw = yaw;
-		state.updated = 1;
-		cout << "Init pose drone " << actual << endl << "X: " << state.X << endl << "Y: " << state.Y << endl << "Z: " << state.Z << endl;
-		cout << "Roll: " << state.Roll << endl << "Pitch: " << state.Pitch << endl << "Yaw: " << state.Yaw << endl ;
-		cout << "-------------" << endl;	
+	if(!state.updated ){
+        
+        state.set_gains(params);
+        state.initialize((float) msg->position.x,(float) msg->position.y,(float) msg->position.z,yaw);
+
+// 		//setting the position if its the first time 
+// 		state.X = msg->position.x;
+// 		state.Y = msg->position.y;
+// 		state.Z = msg->position.z;
+// 		state.Yaw = yaw;
+//         
+// 		state.updated = 1;
+// 		cout << "Init pose drone " << actual << endl << "X: " << state.X << endl << "Y: " << state.Y << endl << "Z: " << state.Z << endl;
+// 		cout << "Roll: " << state.Roll << endl << "Pitch: " << state.Pitch << endl << "Yaw: " << state.Yaw << endl ;
+// 		cout << "-------------" << endl;	
 	}	
 }
 

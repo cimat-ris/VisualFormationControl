@@ -45,7 +45,7 @@ class montijano_state {
 			this->Kw = params.Kw;
 			this->dt = params.dt;
 		};
-// 		std::pair<Eigen::VectorXd,float> update(const montijano_control &command);
+		std::pair<Eigen::VectorXd,float> update(const montijano_control &command);
 		void initialize(const float &x,const float &y,const float &z,const float &yaw);
 };
 

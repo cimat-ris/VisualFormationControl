@@ -21,6 +21,7 @@ void writeFile(vector<float> &vec, const string& name){
 
 int ** readLaplacian(char *dir, int n){
     
+    //  TODO: allocate linerly
     int **L;
     L = new int *[n];
     for(int i = 0; i <n; i++)

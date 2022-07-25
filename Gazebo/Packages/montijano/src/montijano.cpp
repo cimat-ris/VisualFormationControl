@@ -54,12 +54,6 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 
-/* OTHER Libs functions*/
-
-// void initDesiredPoses(int montijano);
-void getNeighbors(int me, int ** L );
-
-
 /*********************************************************************************** Computer Vision Params */
 montijano_parameters params ;
 
@@ -68,10 +62,8 @@ Mat descriptors; vector<KeyPoint> kp,kpm; //kp and descriptors for actual image 
 
 /*********************************************************************************** Declaring neighbors params*/
 const int n = 3; //amount of drones in the system
-int neighbors[n]; //array with the neighbors
 int info[n],rec[n]; //neighbors comunicating the image description and receiving homgraphy
 int n_info, n_rec=0; //number of neigbors communicating image info
-int n_neigh = 0; //amount of neighbors
 int actual; //the drone running this script
 
 /*********************************************************************************** Declaring msg*/
@@ -86,24 +78,23 @@ montijano_state state;
 multiagent_state multiagent;
 montijano_control control;
 
-int ite = 0;
-
 Ptr<ORB> orb;
 
 /* Main function */
 int main(int argc, char **argv){
     
+    int ite = 0;
+    
     /*  LOADING STUFF   */
-
-    int ** L = readLaplacian(WORKSPACE "/src/montijano/src/Laplacian.txt",n);
     ros::init(argc,argv,"montijano");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     
+    //  TODO: selesctor as argument
+    //  0 = linea; 1 = circulo
     multiagent.load(nh,"0");
     params.load(nh);
      orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
-
      
 	/*********************************************************************************** Verify if the dron label has been set */
 	if(argc == 1){//you havent named the quadrotor to use!
@@ -112,17 +103,14 @@ int main(int argc, char **argv){
 	}
     
 	/*********************************************************************************** Defining neighbors */
-	string act(argv[1]);//actual neighbor in string, a value between 1 and n (inclusive)
-	actual = atoi(argv[1]);//actual neighbor integer, a value between 1 and n (inclusive)
-	//read the given laplacian
 
-	//assign the corresponding neighbors to this drone using the laplacian
-	 getNeighbors(actual, L);
-	 
-	for(int i=0;i<n;i++){
-		for(int j=0;j<n;j++)
-			multiagent.d[i][j] = 0;
-	}
+    string act(argv[1]);//actual neighbor in string, a value between 1 and n (inclusive)
+	actual = atoi(argv[1]);//actual neighbor integer, a value between 1 and n (inclusive)
+    
+    int neighbors[n]; //array with the neighbors
+    int n_neigh = 0; //amount of neighbors
+    int ** L;
+    readLaplacian(WORKSPACE "/src/montijano/src/Laplacian.txt", L, n, neighbors, &n_neigh, actual);
 
 	/*********************************************************************************** Pubs and subs for the actual drone */
 	ros::Subscriber pos_sub = nh.subscribe<geometry_msgs::Pose>("/hummingbird"+act+"/ground_truth/pose",1,poseCallback);
@@ -255,9 +243,7 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 
 		//invert matrix
 		Mat H = Mat(3, 3, CV_64F, GC).inv();
-            multiagent.update( r,p, params, state,control,  H, ii,  jj);
-
-        
+        multiagent.update( r,p, params, state,control,  H, ii,  jj);
 		
 	}
 }
@@ -412,19 +398,3 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 
 
 
-
-
-/*
-	function: getNeighbors
-	description: gets the neighbors from the given agent using the laplacian
-	params:
-		me: integer representing the label of the actual agent
-*/
-void getNeighbors(int me, int ** L ){
-	//search in the corresponding laplacian row
-	for(int i=0;i<n;i++)
-		if(L[me][i]==-1){
-			neighbors[n_neigh]=i;
-			n_neigh++;
-		}
-}

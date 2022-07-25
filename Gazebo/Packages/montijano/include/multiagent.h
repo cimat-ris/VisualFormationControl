@@ -24,7 +24,7 @@ public:
     //  TODO, accept n form global 
     int n = 3;
     double x_aster[3][3], y_aster[3][3],z_aster[3][3],yaw_aster[3][3]; //desired poses
-    int d[3][3];
+    int d[3][3] = {0};
     double xc[3][3],yc[3][3],z[3][3],yaw[3][3];
     
     void load(const ros::NodeHandle &nh, std::string sel);

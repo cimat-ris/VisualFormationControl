@@ -19,10 +19,10 @@ void writeFile(vector<float> &vec, const string& name){
 	myfile.close();
 }
 
-int ** readLaplacian(char *dir, int n){
+void readLaplacian(char *dir, int ** L , int n, int * neighbors, int* n_neigh, int actual ){
     
     //  TODO: allocate linerly
-    int **L;
+//     int **L;
     L = new int *[n];
     for(int i = 0; i <n; i++)
         L[i] = new int[n];
@@ -40,5 +40,14 @@ int ** readLaplacian(char *dir, int n){
 	//close file
 	inFile.close();
     
-    return L;
+    
+	//search in the corresponding laplacian row
+	for(int i=0;i<n;i++)
+		if(L[actual][i]==-1){
+			neighbors[*n_neigh]=i;
+			(*n_neigh)++;
+		}
+
+    
+//     return L;
 }

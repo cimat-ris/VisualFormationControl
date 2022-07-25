@@ -56,7 +56,7 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 
 /* OTHER Libs functions*/
 
-void initDesiredPoses(int montijano);
+// void initDesiredPoses(int montijano);
 void getNeighbors(int me, int ** L );
 
 
@@ -100,6 +100,7 @@ int main(int argc, char **argv){
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     
+    multiagent.load(nh,"0");
     params.load(nh);
      orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
 
@@ -167,8 +168,6 @@ int main(int argc, char **argv){
 	ros::Rate rate(20);
 
 	
-	initDesiredPoses(0);//load the desired poses
-
 	/******************************************************************************* BUCLE START*/
 	while(ros::ok()){
 		
@@ -413,45 +412,6 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 
 
 
-
-/*
-	fuction: initDesiredPoses
-	description: inits the desired relative poses between agents
-	using the laplacian and amount of agents
-	params:
-		montijano: 0=line montijano, 1: circle montijano.
-*/
-void initDesiredPoses(int montijano){
-
-	//init everything with zero
-	for(int i=0;i<n;i++){
-		for(int j=0;j<n;j++){
-			multiagent.x_aster[i][j]=0.0;
-			multiagent.y_aster[i][j]=0.0;
-			multiagent.z_aster[i][j]=0.0;
-			multiagent.yaw_aster[i][j]=0.0;
-		}}
-
-	if(montijano==0){		
-		multiagent.x_aster[0][1] =multiagent.x_aster[1][2] = 1.0;
-		multiagent.x_aster[2][1] = multiagent.x_aster[1][0] = -1.0;
-		multiagent.x_aster[2][0] = -2;
-		multiagent.x_aster[0][2] = 2.0;
-	}else if(montijano==1){
-		multiagent.x_aster[0][1] = -1.5;
-		multiagent.y_aster[0][1] = 0.8660254;
-		multiagent.x_aster[0][2] = -1.5;
-		multiagent.y_aster[0][2] = -0.8660254;
-		multiagent.x_aster[1][0] = 1.5;
-		multiagent.y_aster[1][0] = -0.8660254;
-		multiagent.x_aster[1][2] = -6.66133815e-16;
-		multiagent.y_aster[1][2] =  -1.73205081e+00;
-		multiagent.x_aster[2][0] = 1.5;
-		multiagent.y_aster[2][0] = 0.8660254;
-		multiagent.x_aster[2][1] = 6.66133815e-16;
-		multiagent.y_aster[2][1] = 1.73205081e+00;
-	}	
-}
 
 
 /*

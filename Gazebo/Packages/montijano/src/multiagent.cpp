@@ -4,7 +4,36 @@
 using namespace cv;
 using namespace std;
 
- 
+ void multiagent_state::load(const ros::NodeHandle &nh, string sel){
+     
+     // Load desired poses
+	XmlRpc::XmlRpcValue kConfig;
+	string param_name = "desired_poses_"+sel;
+    if (nh.hasParam(param_name)) {
+			nh.getParam(param_name, kConfig);
+			if (kConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
+			for (int i=0;i<9;i++) {
+						 std::ostringstream ostr;
+						 ostr << kConfig[i];
+						 std::istringstream istr(ostr.str());
+						 istr >> this->x_aster[i/3][i%3];
+			}
+			for (int i=0;i<9;i++) {
+						 std::ostringstream ostr;
+						 ostr << kConfig[i];
+						 std::istringstream istr(ostr.str());
+						 istr >> this->y_aster[i/3][i%3];
+			}
+			for (int i=0;i<9;i++) {
+						 std::ostringstream ostr;
+						 ostr << kConfig[i];
+						 std::istringstream istr(ostr.str());
+						 istr >> this->z_aster[i/3][i%3];
+			}
+	}
+	cout << "[INF] Calibration Matrix " << endl << this->x_aster << endl;
+     
+}
  
  void multiagent_state::update(double rollj, double pitchj, const montijano_parameters&params, montijano_state &state ,  montijano_control &control, cv::Mat H, int ii, int jj){
 

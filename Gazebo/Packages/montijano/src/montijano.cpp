@@ -42,6 +42,7 @@ and process some homography-based montijano control.
 #include "utils_io.h"
 #include "utils_vc.h"
 #include "utils_img.h"
+#include "multiagent.h"
 
 /*********************************************************************************** Declaring namespaces*/
 using namespace cv;
@@ -72,22 +73,24 @@ int info[n],rec[n]; //neighbors comunicating the image description and receiving
 int n_info, n_rec=0; //number of neigbors communicating image info
 int n_neigh = 0; //amount of neighbors
 int actual; //the drone running this script
-double x_aster[n][n], y_aster[n][n],z_aster[n][n],yaw_aster[n][n]; //desired poses
+// double multiagent.x_aster[n][n], multiagent.y_aster[n][n],z_aster[n][n],multiagent.yaw_aster[n][n]; //desired poses
 
 /*********************************************************************************** Declaring msg*/
 sensor_msgs::ImagePtr image_msg; //to get image
 montijano::image_description id; //for image description
 montijano::geometric_constraint gm[n];//to send homography
 Mat Hom[n],img; //to send homographies and get the actual image
-sensor_msgs::ImagePtr matching[n]; // to send matching
+// sensor_msgs::ImagePtr matching[n]; // to send matching
 
 /*  state and control   */
 
 montijano_state state;
+multiagent_state multiagent;
 montijano_control control;
 
-int ite = 0,d[n][n];
-double xc[n][n],yc[n][n],z[n][n],yaw[n][n];
+int ite = 0;
+// int d[n][n];
+// double xc[n][n],yc[n][n],z[n][n],yaw[n][n];
 
 Ptr<ORB> orb;
 
@@ -121,7 +124,7 @@ int main(int argc, char **argv){
 	 
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++)
-			d[i][j] = 0;
+			multiagent.d[i][j] = 0;
 	}
 
 	/*********************************************************************************** Pubs and subs for the actual drone */
@@ -248,7 +251,8 @@ int main(int argc, char **argv){
 void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr& msg ){
 	
 	//geometric constraint, roll and pitch from neighbor
-	double GC[3][3], r = msg->roll, p=msg->pitch;
+	double GC[3][3];
+    double  r = msg->roll, p=msg->pitch;
 	int ii=msg->i,jj=msg->j; //received calculation from agent i to agent j, we need the inverse
 	//if we received the correct inmontijano
 	if(ii!=0 && jj!=0){
@@ -261,7 +265,11 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		//invert matrix
 		Mat H = Mat(3, 3, CV_64F, GC).inv();
 
+        //  TODO Update: ii=msg->i,jj=msg->j
+            multiagent.update( r,p, params, state,control,  H, ii,  jj);
 
+        
+/*
 
 		//create rotation matrices to obtain the rectified matrix
 		Mat RXj = rotationX(r); Mat RXi = rotationX(state.Roll);
@@ -270,44 +278,44 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
 		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
 		//rectified matrix
-		Mat Hr = Hir*H*Hjr.inv();		
+		Mat Hr = Hir*H*Hjr.inv();		*/
 
-		if(d[jj][ii] == 0){
-		d[jj][ii]  =1;
-		xc[jj][ii] = Hr.at<double>(1,2);
-		yc[jj][ii] = Hr.at<double>(0,2);
-			//velocities from homography 		
-		control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-x_aster[jj][ii]);
-		control.Vy +=  params.Kv*(state.Z*Hr.at<double>(0,2)-y_aster[jj][ii]);		
-		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
-		}else{
-		
-		vector<Mat> rotations;
-		vector<Mat> translations;
-		vector<Mat> normals;
-		decomposeHomographyMat(H, params.K, rotations,translations, normals);
-
-		double gg2[2],min=1e10;
-		for(int i =0;i<4;i++){
-			double c[2],c2[2];
-			for(int j=0;j<2;j++){
-				c[j] = translations[i].at<double>(j,0);			
-			}c2[0] = xc[jj][ii]; c2[1] =yc[jj][ii]; 
-			double aux = c[1];
-			c[1] = c[0];
-			c[0] = aux;
-			double k = sqrt((c[0]-c2[0])*(c[0]-c2[0])+(c[1]-c2[1])*(c[1]-c2[1]));	
-			if(k < min){
-				min = k;
-				gg2[0] = c[0]; gg2[1]=c[1];
-			}
-		}
-		xc[jj][ii] = gg2[0];
-		yc[jj][ii] = gg2[1];
-		control.Vx += params.Kv*(state.Z*xc[jj][ii]-x_aster[jj][ii]);
-		control.Vy +=  params.Kv*(state.Z*yc[jj][ii]-y_aster[jj][ii]);	
-		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[jj][ii]);
-		}
+// 		if(d[jj][ii] == 0){
+//             d[jj][ii]  =1;
+//             xc[jj][ii] = Hr.at<double>(1,2);
+//             yc[jj][ii] = Hr.at<double>(0,2);
+//                 //velocities from homography 		
+//             control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-multiagent.x_aster[jj][ii]);
+//             control.Vy +=  params.Kv*(state.Z*Hr.at<double>(0,2)-multiagent.y_aster[jj][ii]);		
+//             control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[jj][ii]);
+// 		}else{
+// 		
+//             vector<Mat> rotations;
+//             vector<Mat> translations;
+//             vector<Mat> normals;
+//             decomposeHomographyMat(H, params.K, rotations,translations, normals);
+// 
+//             double gg2[2],min=1e10;
+//             for(int i =0;i<4;i++){
+//                 double c[2],c2[2];
+//                 for(int j=0;j<2;j++){
+//                     c[j] = translations[i].at<double>(j,0);			
+//                 }c2[0] = xc[jj][ii]; c2[1] =yc[jj][ii]; 
+//                 double aux = c[1];
+//                 c[1] = c[0];
+//                 c[0] = aux;
+//                 double k = sqrt((c[0]-c2[0])*(c[0]-c2[0])+(c[1]-c2[1])*(c[1]-c2[1]));	
+//                 if(k < min){
+//                     min = k;
+//                     gg2[0] = c[0]; gg2[1]=c[1];
+//                 }
+//             }
+//             xc[jj][ii] = gg2[0];
+//             yc[jj][ii] = gg2[1];
+//             control.Vx += params.Kv*(state.Z*xc[jj][ii]-multiagent.x_aster[jj][ii]);
+//             control.Vy +=  params.Kv*(state.Z*yc[jj][ii]-multiagent.y_aster[jj][ii]);	
+//             control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[jj][ii]);
+// 		}
 		
 	}
 }
@@ -429,54 +437,61 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 			cons.constraint[i*3+j] = H.at<double>(i,j);
 	gm[index] = cons;
 	H.copyTo(Hom[index]);
+    
+    //  TODO: update: ii = autor, jj = actual
+    double rollj = msg->roll, pitchj = msg->pitch;
+//     multiagent.update( msg, params,state, control,  H,  autor,  actual);
+    multiagent.update( rollj, pitchj, params,state, control,  H,  autor,  actual);
 	/************************************************************* computing velocities */	
-	double rollj = msg->roll, pitchj = msg->pitch;//getting roll and pitch data from neighbor
+// 	double rollj = msg->roll, pitchj = msg->pitch;//getting roll and pitch data from neighbor
 	
-		Mat RXj = rotationX(rollj);
-		Mat RXi = rotationX(state.Roll);
-		Mat RYj = rotationY(pitchj);
-		Mat RYi = rotationY(state.Pitch);
-		//rectify homography
-		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
-		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
-		Mat Hr = Hir*H*Hjr.inv();
-	if(d[actual][autor]==0){
-	d[actual][autor] = 1;
-	xc[actual][autor] = Hr.at<double>(1,2); yc[actual][autor] = Hr.at<double>(0,2);
-	//velocities from homography 	
-
-	
-	control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-x_aster[actual][autor]);
-	control.Vy += params.Kv*(state.Z*Hr.at<double>(0,2)-y_aster[actual][autor]);		
-	control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);//due to camera framework	
-	}else{
-		
-		vector<Mat> rotations;
-		vector<Mat> translations;
-		vector<Mat> normals;
-		decomposeHomographyMat(H, params.K, rotations,translations, normals);
-
-double gg2[2],min=1e10;
-		for(int i =0;i<4;i++){
-			double c[2],c2[2];
-			for(int j=0;j<2;j++){
-				c[j] = translations[i].at<double>(j,0);			
-			}c2[0] = xc[actual][autor]; c2[1] =yc[actual][autor]; 
-			double aux = c[1];
-			c[1] = c[0];
-			c[0] = aux;
-			double k = sqrt((c[0]-c2[0])*(c[0]-c2[0])+(c[1]-c2[1])*(c[1]-c2[1]));	
-			if(k < min){
-				min = k;
-				gg2[0] = c[0]; gg2[1]=c[1];
-			}
-		}
-		xc[actual][autor] = gg2[0];
-		yc[actual][autor] = gg2[1];
-		control.Vx += params.Kv*(state.Z*xc[actual][autor]-x_aster[actual][autor]);
-		control.Vy +=  params.Kv*(state.Z*yc[actual][autor]-y_aster[actual][autor]);	
-		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-yaw_aster[actual][autor]);
-	}
+// 		Mat RXj = rotationX(rollj);
+// 		Mat RXi = rotationX(state.Roll);
+// 		Mat RYj = rotationY(pitchj);
+// 		Mat RYi = rotationY(state.Pitch);
+// 		//rectify homography
+// 		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
+// 		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
+// 		Mat Hr = Hir*H*Hjr.inv();
+        
+    
+// 	if(d[actual][autor]==0){
+//         d[actual][autor] = 1;
+//         xc[actual][autor] = Hr.at<double>(1,2); yc[actual][autor] = Hr.at<double>(0,2);
+//         //velocities from homography 	
+// 
+//         
+//         control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-multiagent.x_aster[actual][autor]);
+//         control.Vy += params.Kv*(state.Z*Hr.at<double>(0,2)-multiagent.y_aster[actual][autor]);		
+//         control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[actual][autor]);//due to camera framework	
+// 	}else{
+// 		
+// 		vector<Mat> rotations;
+// 		vector<Mat> translations;
+// 		vector<Mat> normals;
+// 		decomposeHomographyMat(H, params.K, rotations,translations, normals);
+// 
+//         double gg2[2],min=1e10;
+// 		for(int i =0;i<4;i++){
+// 			double c[2],c2[2];
+// 			for(int j=0;j<2;j++){
+// 				c[j] = translations[i].at<double>(j,0);			
+// 			}c2[0] = xc[actual][autor]; c2[1] =yc[actual][autor]; 
+// 			double aux = c[1];
+// 			c[1] = c[0];
+// 			c[0] = aux;
+// 			double k = sqrt((c[0]-c2[0])*(c[0]-c2[0])+(c[1]-c2[1])*(c[1]-c2[1]));	
+// 			if(k < min){
+// 				min = k;
+// 				gg2[0] = c[0]; gg2[1]=c[1];
+// 			}
+// 		}
+// 		xc[actual][autor] = gg2[0];
+// 		yc[actual][autor] = gg2[1];
+// 		control.Vx += params.Kv*(state.Z*xc[actual][autor]-multiagent.x_aster[actual][autor]);
+// 		control.Vy +=  params.Kv*(state.Z*yc[actual][autor]-multiagent.y_aster[actual][autor]);	
+// 		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[actual][autor]);
+// 	}
 	
 }	
 
@@ -529,30 +544,30 @@ void initDesiredPoses(int montijano){
 	//init everything with zero
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++){
-			x_aster[i][j]=0.0;
-			y_aster[i][j]=0.0;
-			z_aster[i][j]=0.0;
-			yaw_aster[i][j]=0.0;
+			multiagent.x_aster[i][j]=0.0;
+			multiagent.y_aster[i][j]=0.0;
+			multiagent.z_aster[i][j]=0.0;
+			multiagent.yaw_aster[i][j]=0.0;
 		}}
 
 	if(montijano==0){		
-		x_aster[0][1] =x_aster[1][2] = 1.0;
-		x_aster[2][1] = x_aster[1][0] = -1.0;
-		x_aster[2][0] = -2;
-		x_aster[0][2] = 2.0;
+		multiagent.x_aster[0][1] =multiagent.x_aster[1][2] = 1.0;
+		multiagent.x_aster[2][1] = multiagent.x_aster[1][0] = -1.0;
+		multiagent.x_aster[2][0] = -2;
+		multiagent.x_aster[0][2] = 2.0;
 	}else if(montijano==1){
-		x_aster[0][1] = -1.5;
-		y_aster[0][1] = 0.8660254;
-		x_aster[0][2] = -1.5;
-		y_aster[0][2] = -0.8660254;
-		x_aster[1][0] = 1.5;
-		y_aster[1][0] = -0.8660254;
-		x_aster[1][2] = -6.66133815e-16;
-		y_aster[1][2] =  -1.73205081e+00;
-		x_aster[2][0] = 1.5;
-		y_aster[2][0] = 0.8660254;
-		x_aster[2][1] = 6.66133815e-16;
-		y_aster[2][1] = 1.73205081e+00;
+		multiagent.x_aster[0][1] = -1.5;
+		multiagent.y_aster[0][1] = 0.8660254;
+		multiagent.x_aster[0][2] = -1.5;
+		multiagent.y_aster[0][2] = -0.8660254;
+		multiagent.x_aster[1][0] = 1.5;
+		multiagent.y_aster[1][0] = -0.8660254;
+		multiagent.x_aster[1][2] = -6.66133815e-16;
+		multiagent.y_aster[1][2] =  -1.73205081e+00;
+		multiagent.x_aster[2][0] = 1.5;
+		multiagent.y_aster[2][0] = 0.8660254;
+		multiagent.x_aster[2][1] = 6.66133815e-16;
+		multiagent.y_aster[2][1] = 1.73205081e+00;
 	}	
 }
 

@@ -5,7 +5,7 @@
 using namespace std;
 
 montijano_state::montijano_state() : X(0),Y(0),Z(0),Yaw(0),Pitch(0),Roll(0),
-                      initialized(false),t(0),dt(0.025),Kv(1.0),Kw(1.0) {}
+                      initialized(false),updated(false),t(0),dt(0.025),Kv(1.0),Kw(1.0) {}
 
 std::pair<Eigen::VectorXd,float> montijano_state::update(const montijano_control &command) {
   this->t+=this->dt;

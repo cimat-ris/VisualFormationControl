@@ -73,14 +73,12 @@ int info[n],rec[n]; //neighbors comunicating the image description and receiving
 int n_info, n_rec=0; //number of neigbors communicating image info
 int n_neigh = 0; //amount of neighbors
 int actual; //the drone running this script
-// double multiagent.x_aster[n][n], multiagent.y_aster[n][n],z_aster[n][n],multiagent.yaw_aster[n][n]; //desired poses
 
 /*********************************************************************************** Declaring msg*/
 sensor_msgs::ImagePtr image_msg; //to get image
 montijano::image_description id; //for image description
 montijano::geometric_constraint gm[n];//to send homography
 Mat Hom[n],img; //to send homographies and get the actual image
-// sensor_msgs::ImagePtr matching[n]; // to send matching
 
 /*  state and control   */
 
@@ -89,8 +87,6 @@ multiagent_state multiagent;
 montijano_control control;
 
 int ite = 0;
-// int d[n][n];
-// double xc[n][n],yc[n][n],z[n][n],yaw[n][n];
 
 Ptr<ORB> orb;
 
@@ -219,10 +215,6 @@ int main(int argc, char **argv){
         control.Vz = p_d.at<double>(2,0);
         control.Vyaw = (double) angles[2];
         state.update(control);
-// 		state.X  += p_d.at<double>(0,0)*params.dt;
-// 		state.Y  += p_d.at<double>(1,0)*params.dt;
-// 		state.Z  += p_d.at<double>(2,0)*params.dt;
-// 		state.Yaw  += (double) angles[2];
 		
 		//create message for the pose
 		trajectory_msgs::MultiDOFJointTrajectory msg;
@@ -264,58 +256,9 @@ void geometricConstraintCallback(const montijano::geometric_constraint::ConstPtr
 
 		//invert matrix
 		Mat H = Mat(3, 3, CV_64F, GC).inv();
-
-        //  TODO Update: ii=msg->i,jj=msg->j
             multiagent.update( r,p, params, state,control,  H, ii,  jj);
 
         
-/*
-
-		//create rotation matrices to obtain the rectified matrix
-		Mat RXj = rotationX(r); Mat RXi = rotationX(state.Roll);
-		Mat RYj = rotationY(p); Mat RYi = rotationY(state.Pitch);
-		//rectification to agent i and agent j
-		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
-		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
-		//rectified matrix
-		Mat Hr = Hir*H*Hjr.inv();		*/
-
-// 		if(d[jj][ii] == 0){
-//             d[jj][ii]  =1;
-//             xc[jj][ii] = Hr.at<double>(1,2);
-//             yc[jj][ii] = Hr.at<double>(0,2);
-//                 //velocities from homography 		
-//             control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-multiagent.x_aster[jj][ii]);
-//             control.Vy +=  params.Kv*(state.Z*Hr.at<double>(0,2)-multiagent.y_aster[jj][ii]);		
-//             control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[jj][ii]);
-// 		}else{
-// 		
-//             vector<Mat> rotations;
-//             vector<Mat> translations;
-//             vector<Mat> normals;
-//             decomposeHomographyMat(H, params.K, rotations,translations, normals);
-// 
-//             double gg2[2],min=1e10;
-//             for(int i =0;i<4;i++){
-//                 double c[2],c2[2];
-//                 for(int j=0;j<2;j++){
-//                     c[j] = translations[i].at<double>(j,0);			
-//                 }c2[0] = xc[jj][ii]; c2[1] =yc[jj][ii]; 
-//                 double aux = c[1];
-//                 c[1] = c[0];
-//                 c[0] = aux;
-//                 double k = sqrt((c[0]-c2[0])*(c[0]-c2[0])+(c[1]-c2[1])*(c[1]-c2[1]));	
-//                 if(k < min){
-//                     min = k;
-//                     gg2[0] = c[0]; gg2[1]=c[1];
-//                 }
-//             }
-//             xc[jj][ii] = gg2[0];
-//             yc[jj][ii] = gg2[1];
-//             control.Vx += params.Kv*(state.Z*xc[jj][ii]-multiagent.x_aster[jj][ii]);
-//             control.Vy +=  params.Kv*(state.Z*yc[jj][ii]-multiagent.y_aster[jj][ii]);	
-//             control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[jj][ii]);
-// 		}
 		
 	}
 }
@@ -438,60 +381,9 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	gm[index] = cons;
 	H.copyTo(Hom[index]);
     
-    //  TODO: update: ii = autor, jj = actual
     double rollj = msg->roll, pitchj = msg->pitch;
-//     multiagent.update( msg, params,state, control,  H,  autor,  actual);
     multiagent.update( rollj, pitchj, params,state, control,  H,  autor,  actual);
-	/************************************************************* computing velocities */	
-// 	double rollj = msg->roll, pitchj = msg->pitch;//getting roll and pitch data from neighbor
 	
-// 		Mat RXj = rotationX(rollj);
-// 		Mat RXi = rotationX(state.Roll);
-// 		Mat RYj = rotationY(pitchj);
-// 		Mat RYi = rotationY(state.Pitch);
-// 		//rectify homography
-// 		Mat Hir = RXi.inv() * RYi.inv()*params.K.inv();
-// 		Mat Hjr = RXj.inv() * RYj.inv()*params.K.inv();
-// 		Mat Hr = Hir*H*Hjr.inv();
-        
-    
-// 	if(d[actual][autor]==0){
-//         d[actual][autor] = 1;
-//         xc[actual][autor] = Hr.at<double>(1,2); yc[actual][autor] = Hr.at<double>(0,2);
-//         //velocities from homography 	
-// 
-//         
-//         control.Vx += params.Kv*(state.Z*Hr.at<double>(1,2)-multiagent.x_aster[actual][autor]);
-//         control.Vy += params.Kv*(state.Z*Hr.at<double>(0,2)-multiagent.y_aster[actual][autor]);		
-//         control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[actual][autor]);//due to camera framework	
-// 	}else{
-// 		
-// 		vector<Mat> rotations;
-// 		vector<Mat> translations;
-// 		vector<Mat> normals;
-// 		decomposeHomographyMat(H, params.K, rotations,translations, normals);
-// 
-//         double gg2[2],min=1e10;
-// 		for(int i =0;i<4;i++){
-// 			double c[2],c2[2];
-// 			for(int j=0;j<2;j++){
-// 				c[j] = translations[i].at<double>(j,0);			
-// 			}c2[0] = xc[actual][autor]; c2[1] =yc[actual][autor]; 
-// 			double aux = c[1];
-// 			c[1] = c[0];
-// 			c[0] = aux;
-// 			double k = sqrt((c[0]-c2[0])*(c[0]-c2[0])+(c[1]-c2[1])*(c[1]-c2[1]));	
-// 			if(k < min){
-// 				min = k;
-// 				gg2[0] = c[0]; gg2[1]=c[1];
-// 			}
-// 		}
-// 		xc[actual][autor] = gg2[0];
-// 		yc[actual][autor] = gg2[1];
-// 		control.Vx += params.Kv*(state.Z*xc[actual][autor]-multiagent.x_aster[actual][autor]);
-// 		control.Vy +=  params.Kv*(state.Z*yc[actual][autor]-multiagent.y_aster[actual][autor]);	
-// 		control.Vyaw += params.Kw*(atan2(Hr.at<double>(1,0),Hr.at<double>(0,0))-multiagent.yaw_aster[actual][autor]);
-// 	}
 	
 }	
 
@@ -516,16 +408,6 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
         state.set_gains(params);
         state.initialize((float) msg->position.x,(float) msg->position.y,(float) msg->position.z,yaw);
 
-// 		//setting the position if its the first time 
-// 		state.X = msg->position.x;
-// 		state.Y = msg->position.y;
-// 		state.Z = msg->position.z;
-// 		state.Yaw = yaw;
-//         
-// 		state.updated = 1;
-// 		cout << "Init pose drone " << actual << endl << "X: " << state.X << endl << "Y: " << state.Y << endl << "Z: " << state.Z << endl;
-// 		cout << "Roll: " << state.Roll << endl << "Pitch: " << state.Pitch << endl << "Yaw: " << state.Yaw << endl ;
-// 		cout << "-------------" << endl;	
 	}	
 }
 

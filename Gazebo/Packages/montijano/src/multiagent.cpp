@@ -6,10 +6,8 @@ using namespace std;
 
  
  
-//  void multiagent_state::update(const montijano::geometric_constraint::ConstPtr& msg, const montijano_parameters&params, montijano_state &state ,  montijano_control &control, cv::Mat H, int ii, int jj){
  void multiagent_state::update(double rollj, double pitchj, const montijano_parameters&params, montijano_state &state ,  montijano_control &control, cv::Mat H, int ii, int jj){
 
-//      double rollj = msg->roll, pitchj = msg->pitch;
      
     Mat RXj = rotationX(rollj);
     Mat RXi = rotationX(state.Roll);

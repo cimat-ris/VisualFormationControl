@@ -27,7 +27,6 @@ public:
     int d[3][3];
     double xc[3][3],yc[3][3],z[3][3],yaw[3][3];
     
-//     void update(const montijano::geometric_constraint::ConstPtr& msg, const montijano_parameters&params, montijano_state &state , montijano_control &control, cv::Mat H, int ii, int jj);
     void update(double rollj, double pitchj, const montijano_parameters&params, montijano_state &state ,  montijano_control &control, cv::Mat H, int ii, int jj);
 };
 

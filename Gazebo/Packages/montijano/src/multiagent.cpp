@@ -31,8 +31,27 @@ using namespace std;
 						 istr >> this->z_aster[i/3][i%3];
 			}
 	}
-	cout << "[INF] Calibration Matrix " << endl << this->x_aster << endl;
-     
+	cout << "[INF] x desired: " << endl << this->x_aster[1][1] << endl;
+    
+    if (nh.hasParam("Laplacian")) {
+			nh.getParam("Laplacian", kConfig);
+			if (kConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
+			for (int i=0;i<9;i++) {
+						 std::ostringstream ostr;
+						 ostr << kConfig[i];
+						 std::istringstream istr(ostr.str());
+						 istr >> this->L[i/3][i%3];
+			}
+	}
+	cout << "[INF] Laplacian Matrix " << endl << this->L[1][1] << endl;
+    
+    	//search in the corresponding laplacian row
+	for(int i=0;i<this->n;i++)
+		if(this->L[this->actual][i]==-1){
+			this->neighbors[this->n_neigh]=i;
+			this->n_neigh++;
+		}
+
 }
  
  void multiagent_state::update(double rollj, double pitchj, const montijano_parameters&params, montijano_state &state ,  montijano_control &control, cv::Mat H, int ii, int jj){

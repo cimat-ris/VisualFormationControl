@@ -8,5 +8,4 @@
 	params: std:vector containing the info and file name
 */
 void writeFile(std::vector<float> &vec, const std::string& name);
-void readLaplacian(char *dir, int ** L , int n, int * neighbors, int* n_neig, int actual );
 

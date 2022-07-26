@@ -10,10 +10,14 @@ montijano_state::montijano_state() : X(0),Y(0),Z(0),Yaw(0),Pitch(0),Roll(0),
 std::pair<Eigen::VectorXd,float> montijano_state::update(const montijano_control &command) {
   this->t+=this->dt;
   // Integrating
-  this->X = this->X + this->Kv*command.Vx*this->dt;
-  this->Y = this->Y + this->Kv*command.Vy*this->dt;
-  this->Z = this->Z + this->Kv*command.Vz*this->dt;
-  this->Yaw = this->Yaw + this->Kw*command.Vyaw*this->dt;
+//   this->X = this->X + this->Kv*command.Vx*this->dt;
+//   this->Y = this->Y + this->Kv*command.Vy*this->dt;
+//   this->Z = this->Z + this->Kv*command.Vz*this->dt;
+//   this->Yaw = this->Yaw + this->Kw*command.Vyaw*this->dt;
+  this->X += command.Vx*this->dt;
+  this->Y += command.Vy*this->dt;
+  this->Z +=command.Vz*this->dt;
+  this->Yaw += command.Vyaw*this->dt;
   cout << "X: " << this->X << " Y:" << this->Y << " Z:" << this->Z << endl;
 
   Eigen::VectorXd position; position.resize(3);

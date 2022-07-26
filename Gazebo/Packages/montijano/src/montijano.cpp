@@ -60,17 +60,11 @@ montijano_parameters params ;
 /* declaring detector params */
 Mat descriptors; vector<KeyPoint> kp,kpm; //kp and descriptors for actual image for this drone
 
-/*********************************************************************************** Declaring neighbors params*/
-const int n = 3; //amount of drones in the system
-int info[n],rec[n]; //neighbors comunicating the image description and receiving homgraphy
-int n_info, n_rec=0; //number of neigbors communicating image info
-int actual; //the drone running this script
-
 /*********************************************************************************** Declaring msg*/
 sensor_msgs::ImagePtr image_msg; //to get image
 montijano::image_description id; //for image description
-montijano::geometric_constraint gm[n];//to send homography
-Mat Hom[n],img; //to send homographies and get the actual image
+montijano::geometric_constraint gm[3];//to send homography
+Mat Hom[3],img; //to send homographies and get the actual image
 
 /*  state and control   */
 
@@ -83,7 +77,16 @@ Ptr<ORB> orb;
 /* Main function */
 int main(int argc, char **argv){
     
-    int ite = 0;
+    /*  INPUT config    */
+    
+    if(argc == 1){//you havent named the quadrotor to use!
+		cout << "You did not name a hummingbird" <<endl;
+		return 0;
+	}
+	
+    string act(argv[1]);//actual neighbor in string, a value between 1 and n (inclusive)
+	multiagent.actual = atoi(argv[1]);//actual neighbor integer, a value between 1 and n (inclusive)
+	int ite = 0;
     
     /*  LOADING STUFF   */
     ros::init(argc,argv,"montijano");
@@ -96,23 +99,8 @@ int main(int argc, char **argv){
     params.load(nh);
      orb = ORB::create(params.nfeatures,params.scaleFactor,params.nlevels,params.edgeThreshold,params.firstLevel,params.WTA_K,params.scoreType,params.patchSize,params.fastThreshold);
      
-	/*********************************************************************************** Verify if the dron label has been set */
-	if(argc == 1){//you havent named the quadrotor to use!
-		cout << "You did not name a hummingbird" <<endl;
-		return 0;
-	}
-    
-	/*********************************************************************************** Defining neighbors */
 
-    string act(argv[1]);//actual neighbor in string, a value between 1 and n (inclusive)
-	actual = atoi(argv[1]);//actual neighbor integer, a value between 1 and n (inclusive)
-    
-    int neighbors[n]; //array with the neighbors
-    int n_neigh = 0; //amount of neighbors
-    int ** L;
-    readLaplacian(WORKSPACE "/src/montijano/src/Laplacian.txt", L, n, neighbors, &n_neigh, actual);
-
-	/*********************************************************************************** Pubs and subs for the actual drone */
+     /*********************************************************************************** Pubs and subs for the actual drone */
 	ros::Subscriber pos_sub = nh.subscribe<geometry_msgs::Pose>("/hummingbird"+act+"/ground_truth/pose",1,poseCallback);
 	image_transport::Subscriber image_sub = it.subscribe("/hummingbird"+act+"/camera_nadir/image_raw",1,imageCallback);
 	ros::Publisher pp = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("/hummingbird"+act+"/command/trajectory",1);
@@ -135,17 +123,17 @@ int main(int argc, char **argv){
 	vector<ros::Subscriber> subs_neighbors;
 	vector<ros::Publisher> pubs_constraint;
 
-	for(int i=0;i<n_neigh;i++){
-		info[i] = 0;	
-		rec[i] = 0;	
-		std::string name = std::to_string(neighbors[i]);		
-		if(neighbors[i] > actual){//if we get the image description, we will not send it ours but the geometric description				
+	for(int i=0;i<multiagent.n_neigh;i++){
+		multiagent.info[i] = 0;	
+		multiagent.rec[i] = 0;	
+		std::string name = std::to_string(multiagent.neighbors[i]);		
+		if(multiagent.neighbors[i] > multiagent.actual){//if we get the image description, we will not send it ours but the geometric description				
 			ros::Subscriber n_s = nh.subscribe<montijano::image_description>("/hummingbird"+name+"/image_description",1,imageDescriptionCallback);
 			subs_neighbors.push_back(n_s);
 			ros::Publisher gm_p = nh.advertise<montijano::geometric_constraint>("/hummingbird"+act+"/geometric_constraint"+name,1);
 			pubs_constraint.push_back(gm_p);
-			Hom[n_info] = rotationX(0);
-			info[n_info] = neighbors[i]; n_info++;					
+			Hom[multiagent.n_info] = rotationX(0);
+			multiagent.info[multiagent.n_info] = multiagent.neighbors[i]; multiagent.n_info++;					
 		}else{//if we send points (someone subscribe it, we will receive the geometric constraint
 			ros::Subscriber n_s = nh.subscribe<montijano::geometric_constraint>("/hummingbird"+name+"/geometric_constraint" + act, 1, geometricConstraintCallback);
 			subs_neighbors.push_back(n_s);		
@@ -166,24 +154,23 @@ int main(int argc, char **argv){
 		ros::spinOnce();
 		
 		//if we havent get the pose
-		if(state.updated == 0){rate.sleep(); continue;}
+		if(!state.updated ){rate.sleep(); continue;}
 		
 		//publish kp and descriptors
 		id_pub.publish(id);
 		//publish the geometric constraints obtained
-		for(int i=0;i<n_info;i++)
+		for(int i=0;i<multiagent.n_info;i++)
 			pubs_constraint[i].publish(gm[i]);
 
 		//reset the kp and descriptors calculation				
 		state.done = 0;
 
-		//add time
-// 		state.t+=params.dt;	
-
-		//do we stop?
-		if(state.t>10.0)
+        //do we stop?
+		if(state.t>10.0){
+            cout << "TIME OUT" << endl;
 			break;
-		printf("---->%d %f %f %f\n",actual,control.Vx,control.Vy,control.Vyaw);
+        }
+		printf("---->%d %f %f %f\n",multiagent.actual,control.Vx,control.Vy,control.Vyaw);
 		
 		/***********************************************MOVING THE DRONE*/		
 		//moving drone
@@ -194,7 +181,6 @@ int main(int argc, char **argv){
 		//change in rotation
 		Mat S = (Mat_<double>(3, 3) << 0,-control.Vyaw,0,control.Vyaw,0,0,0,0,0);
 		Mat R_d = Rz*S; Mat R = Rz+R_d*params.dt; Vec3f angles = rotationMatrixToEulerAngles(R);
-
         
         //  Update
         control.Vx = p_d.at<double>(0,0);
@@ -285,7 +271,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg ){
 		}
 		//add aditional data and say that you have calculated everything
 		state.done = 1;
-		id.autor = actual;
+		id.autor = multiagent.actual;
 		id.roll = state.Roll;
 		id.pitch = state.Pitch;
 
@@ -350,13 +336,13 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	
 	/************************************************************* preparing homography message */	
 	//find in which order needs to be published	
-	for(int i=0;i<n_info;i++) if(info[i]==autor) index = i;
+	for(int i=0;i<multiagent.n_info;i++) if(multiagent.info[i]==autor) index = i;
 
 	//create a geometric constraint and fill it
 	montijano::geometric_constraint cons;
 	cons.roll = state.Roll;
 	cons.pitch = state.Pitch;
-	cons.i = actual;
+	cons.i = multiagent.actual;
 	cons.j = autor;
 
 	//fill the homography matrix
@@ -367,7 +353,7 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	H.copyTo(Hom[index]);
     
     double rollj = msg->roll, pitchj = msg->pitch;
-    multiagent.update( rollj, pitchj, params,state, control,  H,  autor,  actual);
+    multiagent.update( rollj, pitchj, params,state, control,  H,  autor,  multiagent.actual);
 	
 	
 }	

@@ -209,7 +209,7 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(montijano src/montijano.cpp src/utils_geom.cpp src/utils_io.cpp src/utils_params.cpp src/utils_vc.cpp src/utils_img.cpp src/multiagent.cpp)
+add_executable(montijano src/montijano.cpp src/utils_geom.cpp src/utils_io.cpp src/utils_params.cpp src/utils_vc.cpp  src/multiagent.cpp)
 add_dependencies(montijano montijano_generate_messages_cpp)
 target_link_libraries(montijano ${catkin_LIBRARIES})
-target_compile_definitions(montijano PUBLIC WORKSPACE="/home/bloodfield/catkin_ws")
+

@@ -33,7 +33,6 @@ class montijano_state {
 		/* defining where the drone will move and integrating system*/
 		float X,Y,Z,Yaw,Pitch,Roll;
 		bool initialized;
-        bool updated;
         bool done;
 		float t,dt;
 		float Kv,Kw;

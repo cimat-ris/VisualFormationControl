@@ -5,6 +5,9 @@ This ROS code is used to connect rotors_simulator hummingbird's camera
 and process some homography-based montijano control.
 */
 
+//  TODO:
+//      Caso general para n agentes
+
 /*********************************************************************************** ROS libraries*/
 #include <ros/ros.h>
 #include "tf/transform_datatypes.h"
@@ -41,7 +44,7 @@ and process some homography-based montijano control.
 #include "utils_geom.h"
 #include "utils_io.h"
 #include "utils_vc.h"
-#include "utils_img.h"
+// #include "utils_img.h"
 #include "multiagent.h"
 
 /*********************************************************************************** Declaring namespaces*/
@@ -54,11 +57,17 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg);
 void poseCallback(const geometry_msgs::Pose::ConstPtr& msg);
 
+/* other functions  */
+
+
+Mat get_homography( float flann_ratio,Mat dn, vector<KeyPoint> k);
+
 /*********************************************************************************** Computer Vision Params */
 montijano_parameters params ;
 
 /* declaring detector params */
-Mat descriptors; vector<KeyPoint> kp,kpm; //kp and descriptors for actual image for this drone
+// Mat descriptors; vector<KeyPoint> kp,kpm; //kp and descriptors for actual image for this drone
+montijano_desired_configuration ref_configuration;
 
 /*********************************************************************************** Declaring msg*/
 sensor_msgs::ImagePtr image_msg; //to get image
@@ -154,7 +163,7 @@ int main(int argc, char **argv){
 		ros::spinOnce();
 		
 		//if we havent get the pose
-		if(!state.updated ){rate.sleep(); continue;}
+		if(!state.initialized ){rate.sleep(); continue;}
 		
 		//publish kp and descriptors
 		id_pub.publish(id);
@@ -246,27 +255,28 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg ){
 		img=cv_bridge::toCvShare(msg,"bgr8")->image;
 		
 		/************************************************************ Creatring ORB*/
-		kp.clear();
+		ref_configuration.kp.clear();
         
-        orb->detect(img, kp);
-		orb->compute(img, kp, descriptors);
+        orb->detect(img, ref_configuration.kp);
+		orb->compute(img, ref_configuration.kp,ref_configuration.descriptors);
 
 		/************************************************************ Prepare msg to publish descriptors*/
-		int rows = descriptors.rows, cols = descriptors.cols;
+		int rows = ref_configuration.descriptors.rows;
+        int cols = ref_configuration.descriptors.cols;
 		id.des.cols = cols; id.des.rows = rows; 
 		id.des.data.clear();//clear previous data
 		
 		for (int i=0; i<rows; i++)
 			for (int j=0; j<cols; j++)
-			    id.des.data.push_back(descriptors.at<unsigned char>(i,j));
+			    id.des.data.push_back(ref_configuration.descriptors.at<unsigned char>(i,j));
 
 		/************************************************************ Prepare msg to publish kp*/
 		id.kps.clear();
-		for(std::vector<KeyPoint>::size_type i = 0; i != kp.size(); i++){
+		for(std::vector<KeyPoint>::size_type i = 0; i != ref_configuration.kp.size(); i++){
 			montijano::key_point k;
-			k.angle = kp[i].angle; k.class_id = kp[i].class_id;k.octave = kp[i].octave;
-			k.pt[0] = kp[i].pt.x; k.pt[1] = kp[i].pt.y; 
-			k.response = kp[i].response; k.size=kp[i].size;
+			k.angle = ref_configuration.kp[i].angle; k.class_id = ref_configuration.kp[i].class_id;k.octave = ref_configuration.kp[i].octave;
+			k.pt[0] = ref_configuration.kp[i].pt.x; k.pt[1] = ref_configuration.kp[i].pt.y; 
+			k.response = ref_configuration.kp[i].response; k.size=ref_configuration.kp[i].size;
     			id.kps.push_back(k);
 		}
 		//add aditional data and say that you have calculated everything
@@ -290,11 +300,12 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
 	int cols = msg->des.cols, rows = msg->des.rows,autor = (int) msg->autor,index=0;
 	Mat dn(rows,cols,0); //matrix with the descriptors from neighbors
 	vector<KeyPoint> kn; //key points with the keypoints from neighbors
-	
+    
 	//fill the descriptors matrix
 	for(int i=0;i<rows;i++)
 		for(int j=0;j<cols;j++)		
 			dn.at<unsigned char>(i,j) = msg->des.data[i*cols + j];
+    
 	//fill the kp vector
 	for(std::vector<KeyPoint>::size_type i = 0; i != msg->kps.size(); i++){
 			KeyPoint k;
@@ -304,36 +315,11 @@ void imageDescriptionCallback(const montijano::image_description::ConstPtr& msg)
     			kn.push_back(k);
 	}
 	
-	/************************************************************* Using flann for matching*/
 	if(state.done==0) return; //if we dont have our own kp and descriptors
-
-	FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
-  	vector<vector<DMatch>> matches;
- 	matcher.knnMatch(descriptors,dn,matches,2);
-	
-	/************************************************************* Processing to get only goodmatches*/
-	vector<DMatch> goodMatches;
-
-	for(int i = 0; i < matches.size(); ++i){
-    	if (matches[i][0].distance < matches[i][1].distance * params.flann_ratio)
-        	goodMatches.push_back(matches[i][0]);
-	}
-
-	/************************************************************* Finding homography */
-	 //-- transforming goodmatches to points		
-	vector<Point2f> p1; vector<Point2f> p2; 
-    vector<int> mask;
-
-	for(int i = 0; i < goodMatches.size(); i++){
-		//-- Get the keypoints from the good matches
-		p1.push_back(kp[goodMatches[i].queryIdx].pt);
-		p2.push_back(kn[goodMatches[i].trainIdx].pt);
-		
-	}
-
-	Mat H = findHomography(p1, p2 ,RANSAC, 1,mask);
+	Mat H = get_homography(params.flann_ratio, dn,kn);
 	
 	
+
 	/************************************************************* preparing homography message */	
 	//find in which order needs to be published	
 	for(int i=0;i<multiagent.n_info;i++) if(multiagent.info[i]==autor) index = i;
@@ -374,7 +360,7 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	//saving the data obtained
 	state.Roll = roll; state.Pitch = pitch; 
 	
-	if(!state.updated ){
+	if(!state.initialized ){
         
         state.set_gains(params);
         state.initialize((float) msg->position.x,(float) msg->position.y,(float) msg->position.z,yaw);
@@ -382,5 +368,36 @@ void poseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 	}	
 }
 
+Mat get_homography( float flann_ratio, Mat dn, vector<KeyPoint> kn){
 
 
+    /************************************************************* Using flann for matching*/
+//         if(state.done==0) return; //if we dont have our own kp and descriptors
+
+        FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
+        vector<vector<DMatch>> matches;
+        matcher.knnMatch(ref_configuration.descriptors,dn,matches,2);
+        
+        /************************************************************* Processing to get only goodmatches*/
+        vector<DMatch> goodMatches;
+
+        for(int i = 0; i < matches.size(); ++i){
+            if (matches[i][0].distance < matches[i][1].distance * flann_ratio)
+                goodMatches.push_back(matches[i][0]);
+        }
+
+        /************************************************************* Finding homography */
+        //-- transforming goodmatches to points		
+        vector<Point2f> p1; vector<Point2f> p2; 
+        vector<int> mask;
+
+        for(int i = 0; i < goodMatches.size(); i++){
+            //-- Get the keypoints from the good matches
+            p1.push_back(ref_configuration.kp[goodMatches[i].queryIdx].pt);
+            p2.push_back(kn[goodMatches[i].trainIdx].pt);
+            
+        }
+
+        Mat H = findHomography(p1, p2 ,RANSAC, 1,mask);
+        return H;
+}

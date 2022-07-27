@@ -31,7 +31,9 @@ using namespace std;
 						 istr >> this->z_aster[i/3][i%3];
 			}
 	}
-	cout << "[INF] x desired: " << endl << this->x_aster[1][1] << endl;
+	
+	// TODO: Simplificar, no se utiliza el Laplaciano
+// 	cout << "[INF] x desired: " << endl << this->x_aster[1][1] << endl;
     
     if (nh.hasParam("Laplacian")) {
 			nh.getParam("Laplacian", kConfig);
@@ -43,7 +45,7 @@ using namespace std;
 						 istr >> this->L[i/3][i%3];
 			}
 	}
-	cout << "[INF] Laplacian Matrix " << endl << this->L[1][1] << endl;
+// 	cout << "[INF] Laplacian Matrix " << endl << this->L[1][1] << endl;
     
     	//search in the corresponding laplacian row
 	for(int i=0;i<this->n;i++)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(montijano)
+project(formation_control)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,6 +8,7 @@ project(montijano)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 set(OpenCV_DIR "/opt/ros/kinetic/share/OpenCV-3.3.1-dev")
+
 find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport
@@ -61,6 +62,7 @@ add_message_files(
 	key_point.msg
 	descriptors.msg
 	geometric_constraint.msg
+	gamma.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -208,6 +210,6 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(montijano src/montijano.cpp)
-add_dependencies(montijano montijano_generate_messages_cpp)
-target_link_libraries(montijano ${catkin_LIBRARIES})
+add_executable(formation_control src/formation_control.cpp src/libraries/Formation.cpp src/libraries/Auxiliar.cpp  src/libraries/Agent.cpp src/libraries/Geometry.cpp src/libraries/Processor.cpp src/libraries/Controller.cpp src/libraries/DirectedGraph.cpp)
+add_dependencies(formation_control formation_control_generate_messages_cpp)
+target_link_libraries(formation_control ${catkin_LIBRARIES})

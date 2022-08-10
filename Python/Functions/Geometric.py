@@ -76,13 +76,12 @@ def Rodrigues(R):
 """
 def euler_to_rotmat(rot_x,rot_y,rot_z):
 	
-	Rx = np.array([[1.0,0.0,0.0],[0.0,cos(rot_x),-sin(rot_x)],[0.0,sin(rot_x),cos(rot_x)]])
+	Rx = np.array([[cos(rot_z),-sin(rot_z),0.0],[sin(rot_z),cos(rot_z),0.0],[0.0,0.0,1.0]])
 	Ry = np.array([[cos(rot_y),0.0,sin(rot_y)],[0.0,1.0,0.0],[-sin(rot_y),0.0,cos(rot_y)]])
-	Rz = np.array([[cos(rot_z),-sin(rot_z),0.0],[sin(rot_z),cos(rot_z),0.0],[0.0,0.0,1.0]])
+	Rz = np.array([[1.0,0.0,0.0],[0.0,cos(rot_x),-sin(rot_x)],[0.0,sin(rot_x),cos(rot_x)]])
 	R = np.dot(Rz,np.dot(Ry,Rx))
 	
 	return R
-
 
 """ 
 	function: H_from_points
@@ -94,7 +93,7 @@ def euler_to_rotmat(rot_x,rot_y,rot_z):
 	returns:
 		H: Homography
 """
-def H_from_points(fp,tp):        
+def H_from_points(fp,tp,normalized=True):        
     if fp.shape != tp.shape:
         raise RuntimeError('number of points do not match')
         
@@ -105,7 +104,8 @@ def H_from_points(fp,tp):
     C1 = np.diag([1/maxstd, 1/maxstd, 1]) 
     C1[0][2] = -m[0]/maxstd
     C1[1][2] = -m[1]/maxstd
-    fp = np.vstack([fp[0,:],fp[1,:],[1,1,1,1]])
+    leng  =len(fp[0,:])
+    fp = np.vstack([fp[0,:],fp[1,:],np.ones(leng)])
     fp = np.dot(C1,fp)
     
     # --to points--
@@ -114,7 +114,7 @@ def H_from_points(fp,tp):
     C2 = np.diag([1/maxstd, 1/maxstd, 1])
     C2[0][2] = -m[0]/maxstd
     C2[1][2] = -m[1]/maxstd
-    tp = np.vstack([tp[0,:],tp[1,:],[1,1,1,1]])
+    tp = np.vstack([tp[0,:],tp[1,:],np.ones(leng)])
     tp = np.dot(C2,tp)
     
     # create matrix for linear method, 2 rows for each correspondence pair
@@ -133,7 +133,10 @@ def H_from_points(fp,tp):
     H = np.dot(np.linalg.inv(C2),np.dot(H,C1))
     
     # normalize and return
-    return H / H[2,2]
+    if normalized:
+        return H/H[2,2]
+
+    return H
 
 """
 	function: scale_estimation_essential
@@ -147,15 +150,22 @@ def H_from_points(fp,tp):
 		tij: relative translation between agent i and j
 	returns:
 		s: depth of reconstructed 3D point
+		r_e: reconstruction error for this pair of P and points
 """
 def scale_estimation_essential(Ki,Kj,qi,qj,yaw,tij):
-	#########################################triangulation																
 	Rz = np.array([[cos(yaw),-sin(yaw),0.0],[sin(yaw),cos(yaw),0.0],[0.0,0.0,1.0]])#rotation matrix						
 	Pj = np.dot(Kj,np.concatenate((Rz.T,-np.dot(Rz.T,tij).reshape((3,1))),axis=1))#camera matrix
 	Pi = np.dot(Ki,np.eye(3,4))#camera matrix	
 	rec = triangulate(Pi,Pj,qi,qj)										
-	s = -rec[2] #due camera framework	
-	return s	
+	s = -rec[2] #due camera framework
+	##############for error
+	xi = np.dot(Pi,rec)
+	xi /=xi[2]
+	xj = np.dot(Pj,rec)
+	xj /=xj[2]
+	r_e = sqrt((xi[0]-qi[0])*(xi[0]-qi[0])+(xi[1]-qi[1])*(xi[1]-qi[1]))
+	r_e += sqrt((xj[0]-qj[0])*(xj[0]-qj[0])+(xj[1]-qj[1])*(xj[1]-qj[1]))	
+	return s, r_e/2.0	
 
 """
 	function: triangulate
@@ -178,10 +188,7 @@ def triangulate(P1,P2,p1,p2):
 	A.append(p2[0]*P2[2]-P2[0])
 	A.append(p2[1]*P2[2]-P2[1])
 	A = np.array(A)
-	
-	point3D = np.array([0,0,0,0])
 
-	
 	u,s,vt = np.linalg.svd(A)
 	point3D = vt[3]		
 	point3D = point3D / point3D[3]	

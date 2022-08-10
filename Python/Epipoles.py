@@ -2,23 +2,23 @@
 	Saturday September 22, 22:25:12 2018
 	@author: robotics lab (Patricia Tavares)
 	@email: patricia.tavares@cimat.mx
-	version: 3.0
-	This code uses homography decomposition to achieve a formation.
+	version: 2.0
+	This code uses essential matrix elements to achieve a formation using
+	scale information.
 """
 """
 	Import section: from python and robotics.
 """
-
-from Functions.Formation import line_formation, circle_formation, get_L_radius, get_bearings
-from Functions.Initialize import verified_random_restricted, copy_cameras, order_cameras
-from Functions.Control import HDC
+from Functions.Formation import line_formation, circle_formation, get_L_radius, get_bearings, get_relative, get_A
+from Functions.Initialize import verified_random_restricted, copy_cameras, order_cameras,find_nearest
+from Functions.Control import EC
 from Functions.Geometric import move_wf, rigidity_function, RMF
 #######################################ALWAYS NEEDED
 import numpy as np
 from math import pi
 from random import  seed
 from Functions.PlanarCamera import PlanarCamera
-from Functions.Plot import plot_all,run_info,plot_3D
+from Functions.Plot import plot_all,run_info, plot_3D
 from Functions.Error import get_error, transform_to_frame, distances, filter_error
 
 """
@@ -44,16 +44,18 @@ np.random.seed(seed_p) # to initialize image noise
 
 #===================================================================init cameras
 n_cameras = 5
-sd = 1.5 #standar deviation noise for cameras
+sd = 1.5#standar deviation noise for cameras
 init_cameras, init_poses = verified_random_restricted(n_cameras,0.5,[0.,2.,0.5,1.5,1.,3.,0.,0.,0.,0.,-pi/2.,pi/2.],sd)
-desired_cameras, desired_poses = line_formation(n_cameras,[0.,2])#circle_formation(n_cameras,1.,[1.,1.])####
+desired_cameras, desired_poses = circle_formation(n_cameras,1.,[1.,1.],scaled=0.5)#line_formation(n_cameras,[0,2.])
 init_cameras, init_poses = order_cameras(n_cameras, init_cameras,init_poses, desired_poses)
 copy = copy_cameras(n_cameras,init_poses)
 copy_poses = init_poses.copy()
+#choosing the point closest to the center
+cloud_center = np.array([1.0,1.0,-0.5]) #center of the cloud
+spindex = find_nearest(n_points,w_points,cloud_center) #index of the point
 
 #===================================getting Laplacian and desired relative poses
 L = get_L_radius(n_cameras,init_poses,1.4)
-L = np.loadtxt('L.txt')
 p_aster,R_aster = get_bearings(n_cameras,desired_cameras,L)
 #transform translations to cameras 1 frame
 p_n_a = transform_to_frame(desired_cameras[0].R,p_aster,desired_cameras)
@@ -65,20 +67,20 @@ dist_aster = distances(n_cameras, desired_cameras)
 lambdav         = 2.
 lambdaw         = 6.
 # Timing parameters
-dt = 0.01 # Time Delta, seconds.
+dt = 0.01   # Time Delta, seconds.
 ite = 0 #iterations
-max_ite = 1000#max iterations
+max_ite = 1000 #max iterations
 # Error parameters
-threshold = 0.04 #threshold for errors
+threshold = 0.05 #threshold for errors
 e_t = 10000 #actual error for translation
 e_psi = 10000 #actual error for rotation
-p = {} #for relative positions filter
-
+p = {} #for filter
+R = {} #for filter
 #=============================================================plotting variables
 t_arr = [] #time array
 err_t = [] #average error in translation
 err_psi = [] #average error in rotation
-err_s = [] #error for scale
+err_s = [] #average error in scale
 errors_t = [] #to filter traslation error in a window
 errors_psi = [] #to filter rotation error in a window
 window = 10 #amount of iterations to take as a window to filter errors
@@ -87,15 +89,16 @@ v = [] #velocity
 x = [] #pos x for every camera
 y = [] #pos y for every camera
 z = [] #pos z for every camera
-dists = {} #for distances
+dists = {} #for informative purposes
 for i in range(n_cameras):
 	x.append([])
 	y.append([])
 	z.append([])
+
 for (i,j) in dist_aster:
 	dists[(i,j)] = []
 
-#Verify the formation, it has to be rigid
+#Verify the formation
 rf_aster = rigidity_function(p_aster)
 J = RMF(rf_aster,n_cameras,L,desired_cameras,p_aster,R_aster)
 rank = np.linalg.matrix_rank(J)
@@ -103,20 +106,21 @@ u,s,vt = np.linalg.svd(J)
 sixth = s[s.shape[0]-6]
 
 #=================================================================init algorithm
-while (e_t > threshold or e_psi > threshold) and ite < max_ite:# and rank >= 4*n_cameras-5:
+while (e_t > threshold or e_psi > threshold) and ite < max_ite and rank >= 4*n_cameras-5:
 	#Compute velocities
-	p, R, vi, wi = HDC(n_cameras,init_cameras,w_points,n_points,R_aster,p_aster,lambdaw,lambdav,L,p)
+	p, R, vi, wi = EC(n_cameras,init_cameras,w_points,n_points,R_aster,p_aster,lambdaw,lambdav,L,p,R,150.)
 	#compute error
 	p_n = transform_to_frame(init_cameras[0].R,p,init_cameras)#transform to camera 1 frame
 	dist = distances(n_cameras,init_cameras)#computing real distances for simulation purposes
 	e_t, e_psi, e_s = get_error(p_n,p_n_a,R,R_aster,init_cameras,desired_cameras, dist, dist_aster)
+
 	e_t, errors_t = filter_error(e_t,errors_t,window)
 	e_psi, errors_psi = filter_error(e_psi,errors_psi,window)
-	e_t-=0.005
-
+	e_t-=0.015
 	err_t.append(e_t)
 	err_psi.append(e_psi)
 	err_s.append(e_s)
+
 
 	#getting back to world frame with those velocities
 	init_poses = move_wf(n_cameras,init_cameras,vi,wi,dt)
@@ -127,13 +131,10 @@ while (e_t > threshold or e_psi > threshold) and ite < max_ite:# and rank >= 4*n
 		z[i].append(init_poses[i][2])
 		init_cameras[i].set_position(init_poses[i][0],init_poses[i][1],init_poses[i][2],init_poses[i][3],init_poses[i][4],init_poses[i][5])
 
-	#compute new distances
 	for (i,j) in dist:
 		dists[(i,j)].append(dist[(i,j)])
 
-	#to make a video
 	plot_3D(xx,yy,zz,n_cameras,x,y,z,init_cameras,init_cameras,desired_cameras,init_poses,desired_poses,ite,-1)
-
 	#save info for plots
 	v.append(sum(vi)/n_cameras)
 	w.append(sum(np.abs(wi))/n_cameras)
@@ -141,10 +142,10 @@ while (e_t > threshold or e_psi > threshold) and ite < max_ite:# and rank >= 4*n
 
 	#Next
 	ite+=1
+	print('{} Translation error: {} Rotation error: {}'.format(ite,e_t,e_psi))
 
-	print("{} Translation error: {} Rotation error: {}".format(ite,e_t,e_psi))
+print("*********************\nLaplacian is {}\n".format(L))
 
-print("*********************\nLaplacian is{}\n".format(L))
 #=================================================================================================================================plotting
 #converting to numpy
 v = np.array(v)
@@ -154,6 +155,6 @@ err_t = np.array(err_t)
 err_psi = np.array(err_psi)
 err_s = np.array(err_s)
 
-#plot everything
-plot_all('Position-based formation control using Homography Decomposition without scale estimation',xx,yy,zz,n_cameras,x,y,z,copy,init_cameras,desired_cameras,init_poses,desired_poses,ite,t_arr,err_s,[],v,w,err_t,err_psi,dists)
-run_info('Position-based formation control using Homography Decomposition without scale estimation',seed_r,seed_p,ite,dt,threshold,n_cameras,rank,sixth,e_t,e_psi,sd,L,p_aster,R_aster,copy_poses,init_poses,err_s[ite-1])
+
+plot_all('Formation control using Epipoles',xx,yy,zz,n_cameras,x,y,z,copy,init_cameras,desired_cameras,init_poses,desired_poses,ite,t_arr,err_s,[],v,w,err_t,err_psi,dists)
+run_info('Formation control using epipoles',seed_r,seed_p,ite,dt,threshold,n_cameras,rank,sixth,e_t,e_psi,sd,L,p_aster,R_aster,copy_poses,init_poses,e_s)

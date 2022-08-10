@@ -10,7 +10,7 @@
 	Implementation of a simple camera.
 """
 import numpy as np
-from math import cos, sin, pi
+from math import cos, sin, pi,sqrt
 from Utils import Rotations
 from Utils import Arrow3D
 
@@ -32,7 +32,7 @@ class PlanarCamera:
 		#Extrinsic camera parameter		
 		self.R = None #rotation
 		self.t = None #traslation
-		self.P = None #projection Matrix
+		self.P = None
 
 		#noise
 		self.noise = False
@@ -49,7 +49,7 @@ class PlanarCamera:
 	def set_position(self,x,y,z,rot_x,rot_y,rot_z):		
 		self.t = np.array([x,y,z])
 		self.R = self.euler_to_rotmat(rot_x,rot_y,rot_z)
-		self.P = np.dot(self.K,np.concatenate((self.R.T, np.dot(-self.R.T,self.t).reshape(3,1)),axis=1))		
+		self.P = np.dot(self.K,np.concatenate((self.R.T, np.dot(-self.R.T,self.t).reshape(3,1)),axis=1))
 		
 	"""
 		function: set_noise
@@ -78,8 +78,7 @@ class PlanarCamera:
 	"""
 	def projection(self, Xs, n):		
 		#to save the results
-		points = np.zeros((2,n))
-		
+		points = np.zeros((2,n))		
 		#project every point
 		for i in range(n):
 			#get the 3D point in projective coordinates X = [x,y,z,1]
@@ -89,9 +88,9 @@ class PlanarCamera:
 			points[1][i]= x[1]/x[2] #y
 		
 		if self.noise:
-			noise_matrix = np.random.normal(0.,self.sigma_noise,size=points.shape)
-			points+=noise_matrix
-
+			noise_matrix = np.random.normal(0.,sqrt(self.sigma_noise),size=points.shape)
+			points+=noise_matrix	
+			
 		#return the projected points
 		return points
 
@@ -117,6 +116,10 @@ class PlanarCamera:
 			points[0][i]= x[0]/x[2] - self.pp[0] #x
 			points[1][i]= self.pp[1] - x[1]/x[2] #y
 		
+		if self.noise:
+			noise_matrix = np.random.normal(0.,sqrt(self.sigma_noise),size=points.shape)
+			points+=noise_matrix
+		
 		#return the projected points
 		return points
 
@@ -130,8 +133,7 @@ class PlanarCamera:
 		returns:
 			R: rotation matrix
 	"""
-	def euler_to_rotmat(self,rot_x,rot_y,rot_z):
-	
+	def euler_to_rotmat(self,rot_x,rot_y,rot_z):	
 		Rx = np.array([[1.0,0.0,0.0],[0.0,cos(rot_x),-sin(rot_x)],[0.0,sin(rot_x),cos(rot_x)]])
 		Ry = np.array([[cos(rot_y),0.0,sin(rot_y)],[0.0,1.0,0.0],[-sin(rot_y),0.0,cos(rot_y)]])
 		Rz = np.array([[cos(rot_z),-sin(rot_z),0.0],[sin(rot_z),cos(rot_z),0.0],[0.0,0.0,1.0]])
@@ -147,7 +149,7 @@ class PlanarCamera:
 			color: color of the camera
 			scale: scale of the camera
 	"""
-	def draw_camera(self, ax, color='cyan', scale=1.0):
+	def draw_camera(self, ax, color='cyan', scale=1.0,linestyle='solid',alpha=0.):
 		#CAmera points: to be expressed in the camera frame;
 		CAMup=scale*np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1 ],[ 1, 1,  1, 1, 1.5, 1.5, 1, 1 ],[ 2,-2, -2, 2,   3,   3, 2, 2 ],])
 		Ri2w    = np.dot(Rotations.rotox(pi), self.R)
@@ -157,14 +159,14 @@ class PlanarCamera:
 		CAMdwnTRASF     = Ri2w.dot( CAMdwn ) + trasl
 		CAMupTRASFm     = CAMupTRASF
 		CAMdwnTRASFm    = CAMdwnTRASF
-		ax.plot(CAMupTRASFm[0,:],CAMupTRASFm[1,:],CAMupTRASFm[2,:],c=color)
-		ax.plot(CAMdwnTRASFm[0,:],CAMdwnTRASFm[1,:],CAMdwnTRASFm[2,:],c=color)
-		ax.plot([CAMupTRASFm[0,0],CAMdwnTRASFm[0,0]],[CAMupTRASFm[1,0],CAMdwnTRASFm[1,0]],[CAMupTRASFm[2,0],CAMdwnTRASFm[2,0]],c=color)
-		ax.plot([CAMupTRASFm[0,1],CAMdwnTRASFm[0,1]],[CAMupTRASFm[1,1],CAMdwnTRASFm[1,1]],[CAMupTRASFm[2,1],CAMdwnTRASFm[2,1]],c=color)
-		ax.plot([CAMupTRASFm[0,2],CAMdwnTRASFm[0,2]],[CAMupTRASFm[1,2],CAMdwnTRASFm[1,2]],[CAMupTRASFm[2,2],CAMdwnTRASFm[2,2]],c=color)
-		ax.plot([CAMupTRASFm[0,3],CAMdwnTRASFm[0,3]],[CAMupTRASFm[1,3],CAMdwnTRASFm[1,3]],[CAMupTRASFm[2,3],CAMdwnTRASFm[2,3]],c=color)
-		ax.plot([CAMupTRASFm[0,4],CAMdwnTRASFm[0,4]],[CAMupTRASFm[1,4],CAMdwnTRASFm[1,4]],[CAMupTRASFm[2,4],CAMdwnTRASFm[2,4]],c=color)
-		ax.plot([CAMupTRASFm[0,5],CAMdwnTRASFm[0,5]],[CAMupTRASFm[1,5],CAMdwnTRASFm[1,5]],[CAMupTRASFm[2,5],CAMdwnTRASFm[2,5]],c=color)
+		ax.plot(CAMupTRASFm[0,:],CAMupTRASFm[1,:],CAMupTRASFm[2,:],c=color,ls=linestyle)
+		ax.plot(CAMdwnTRASFm[0,:],CAMdwnTRASFm[1,:],CAMdwnTRASFm[2,:],c=color,ls=linestyle)
+		ax.plot([CAMupTRASFm[0,0],CAMdwnTRASFm[0,0]],[CAMupTRASFm[1,0],CAMdwnTRASFm[1,0]],[CAMupTRASFm[2,0],CAMdwnTRASFm[2,0]],c=color,ls=linestyle)
+		ax.plot([CAMupTRASFm[0,1],CAMdwnTRASFm[0,1]],[CAMupTRASFm[1,1],CAMdwnTRASFm[1,1]],[CAMupTRASFm[2,1],CAMdwnTRASFm[2,1]],c=color,ls=linestyle)
+		ax.plot([CAMupTRASFm[0,2],CAMdwnTRASFm[0,2]],[CAMupTRASFm[1,2],CAMdwnTRASFm[1,2]],[CAMupTRASFm[2,2],CAMdwnTRASFm[2,2]],c=color,ls=linestyle)
+		ax.plot([CAMupTRASFm[0,3],CAMdwnTRASFm[0,3]],[CAMupTRASFm[1,3],CAMdwnTRASFm[1,3]],[CAMupTRASFm[2,3],CAMdwnTRASFm[2,3]],c=color,ls=linestyle)
+		ax.plot([CAMupTRASFm[0,4],CAMdwnTRASFm[0,4]],[CAMupTRASFm[1,4],CAMdwnTRASFm[1,4]],[CAMupTRASFm[2,4],CAMdwnTRASFm[2,4]],c=color,ls=linestyle)
+		ax.plot([CAMupTRASFm[0,5],CAMdwnTRASFm[0,5]],[CAMupTRASFm[1,5],CAMdwnTRASFm[1,5]],[CAMupTRASFm[2,5],CAMdwnTRASFm[2,5]],c=color,ls=linestyle)
 
 	"""
 		function: draw_frame

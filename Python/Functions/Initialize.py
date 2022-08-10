@@ -28,6 +28,7 @@ from Functions.Geometric import Rodrigues
 			be a list or an np array (12 elements);
 			[xlower, xupper,ylower,yupper,zlower,zupper, 
 			rolllower, rollupper,pitchlower,pitchupper,yawlower,yawupper]
+		noise: noise for the cameras images, defaults to 0 pixels
 	returns: 
 		cameras: a list of cameras (PlanarCamera) with random pose.
 		poses: poses of all the cameras created. This is a numpy array
@@ -35,7 +36,7 @@ from Functions.Geometric import Rodrigues
 			x,y,z,roll,pitch,yaw
 		that is the init pose of the i-th camera.
 """
-def simple_random(n, bounds):
+def simple_random(n, bounds,noise=None):
 	#to store cameras and poses 
 	cameras = []
 	poses = []	
@@ -50,6 +51,7 @@ def simple_random(n, bounds):
 		yaw = bounds[10] + random()*(bounds[11]-bounds[10])
 		#create camera
 		camera = PlanarCamera()
+		camera.set_noise(noise)
 		#set position with params
 		camera.set_position(x,y,z,roll,pitch,yaw)
 		#add to the list
@@ -67,6 +69,7 @@ def simple_random(n, bounds):
 		n: how many cameras do you want?
 		min_distance: min distance between two cameras.
 		bounds: limits for every axis [xlower,xupper,ylower,yupper,zlower,zupper]
+		noise: camera noise, defaults to 0 pixels
 	returns: 
 		cameras: a list of cameras Planaramera with random pose.
 		poses: poses of all the cameras created. This is a numpy array
@@ -75,13 +78,14 @@ def simple_random(n, bounds):
 		that is the init pose of the i-th camera. Because we only have yaw movements
 		the roll and pitch are 0.
 """
-def verified_random_restricted(n,min_distance,bounds):
+def verified_random_restricted(n,min_distance,bounds,noise=None):
 	#to store cameras and poses 
 	cameras = []
 	poses = []
 	
 	for i in range(n):
 		camera = PlanarCamera()
+		camera.set_noise(noise)
 		while(1):
 			#get random params for camera
 			x = bounds[0] + random()*(bounds[1]-bounds[0])
@@ -122,6 +126,7 @@ def verified_random_restricted(n,min_distance,bounds):
 		for epipolar visual servo.		
 	params: 
 		n: how many cameras do you want?
+		noise: camera noise, defaults to 0.
 	returns: 
 		cameras: a list of cameras Planaramera with random pose.
 		poses: poses of all the cameras created. This is a numpy array
@@ -130,13 +135,14 @@ def verified_random_restricted(n,min_distance,bounds):
 		that is the init pose of the i-th camera. Because we only have yaw movements
 		the roll and pitch are 0.
 """
-def random_evs(n):
+def random_evs(n,noise=None):
 	#to store cameras and poses 
 	cameras = []
 	poses = []
 	
 	for i in range(n):
 		camera = PlanarCamera()
+		camera.set_noise(2.)
 		while(1):
 			#get random params for camera
 			x = random()*2.
@@ -189,7 +195,7 @@ def copy_cameras(n,poses):
 	cameras = []
 	for i in range(n):
 		#create camera
-		camera = PlanarCamera()
+		camera = PlanarCamera()		
 		#position 
 		camera.set_position(poses[i][0],poses[i][1],poses[i][2],poses[i][3],poses[i][4],poses[i][5])
 		#add camera
@@ -252,7 +258,6 @@ def order_cameras(n,cameras,poses,desired_poses):
 		index: the index of the point closest to the center in the point cloud.
 """
 def find_nearest(nPoints, points, center):
-	center = np.array([1.0,1.0,-0.5]) #because of the limits given in rand.py
 	min = 1e20 #to obtain the point with minimun distance to the center
 	index = 0
 	for i in range(nPoints):

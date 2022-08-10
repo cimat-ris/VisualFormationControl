@@ -60,7 +60,7 @@ def get_error(p_n,p_n_a,R,R_aster,cameras,desired_cameras, dist, dist_aster):
 		error_tr += np.linalg.norm(p_n[(i,j)]-p_n_a[(i,j)])		
 		if R != None:
 			arg =  (np.trace(R[(i,j)].dot(R_aster[(i,j)].T))-1.)/2.			
-			error_rot += acos(clip(arg,-1.,1.))	
+			error_rot += abs(acos(clip(arg,-1.,1.)))
 		n+=1.
 	
 	#return error
@@ -130,3 +130,24 @@ def transform_to_frame(Rf,p,cameras):
 		p_n[(i,j)] = np.dot(Rf.T,p_n[(i,j)])
 
 	return p_n 
+
+"""
+	function: filter_error
+	description: filters the error using the average of a window of iterations
+	params:
+		e: actual error
+		errors: previous error (list)
+		window: iterations to take in count
+	returns:
+		e: new error filtered
+		errors: the new list to take in count for next iteration
+"""		
+def filter_error(e,errors,window):
+	if len(errors) == window:
+		errors.pop(0)
+		errors.append(e)
+	else:
+		errors.append(e)
+
+	return np.average(errors), errors
+

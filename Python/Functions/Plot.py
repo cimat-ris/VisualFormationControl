@@ -187,7 +187,7 @@ def plot_3D(xx,yy,zz,n_cameras,x,y,z,init_cameras,final_cameras,desired_cameras,
 	#plotting every section
 	fig = plt.figure(figsize=(12,6))
 	ax = fig.add_subplot(1,2,1,projection = '3d')
-	ax = fig.gca(projection='3d')
+	ax = fig.gca()
 	size  = 7
 	for tick in ax.xaxis.get_major_ticks():
                 tick.label.set_fontsize(size)
@@ -206,7 +206,7 @@ def plot_3D(xx,yy,zz,n_cameras,x,y,z,init_cameras,final_cameras,desired_cameras,
 	ax.axes.set_zticks([])
 	ax.set_zlabel("")
 	ax = fig.add_subplot(1,2,2,projection = '3d')
-	ax = fig.gca(projection='3d')
+	ax = fig.gca()
 	ax,fig = plot_all_cameras(ax,fig,n_cameras,final_cameras,desired_cameras,init_cameras,final_poses,desired_poses,x,y,z,0.5,0.09,bounds)
 	ax.plot(xx,yy,zz,'o', alpha=0.2,color='k') #plot points
 	if spi!=-1:

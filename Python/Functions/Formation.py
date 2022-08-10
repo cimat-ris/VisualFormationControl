@@ -16,35 +16,40 @@
 
 from Functions.PlanarCamera import PlanarCamera
 from math import cos, sin, pi
-import numpy as np 
+import numpy as np
+import cv2
+from Functions.Geometric import homog_to_rt, Rodrigues, H_from_points
+from Functions.Aux import closer_element
 
 """
 	function: line_formation
-	description: creates cameras type PlanarCamera with a fixed pose, in 
+	description: creates cameras type PlanarCamera with a fixed pose, in
 	the end al cameras should be formed in a line.
-	params: 
+	params:
 		n: how many cameras do you have?
 		bounds: the bounds for every param of the camera. It can
 			be a list or an np array (2 elements);
-			[xlower, xupper], for facility, we don't consider them to have a 
+			[xlower, xupper], for facility, we don't consider them to have a
 			rotation in the final formation and also, we dont need
 			x and y bounds since it is a line.
-	returns: 
+		noise: the noise for the images of the camera (pixels) defaults 0
+	returns:
 		cameras: a list of cameras (PlanarCamera) with de desired pose.
 		poses: poses of all the cameras created. This is a numpy array
 		with the shape (n,6). The i-th row has the following form:
 			x,y,z,yaw,pitch,roll
-		that is the init pose of the i-th camera. Because we want 
-		the cameras to be facing the "ground", roll and yaw are 0 for every 
+		that is the init pose of the i-th camera. Because we want
+		the cameras to be facing the "ground", roll and yaw are 0 for every
 		camera.
 """
-def line_formation(n,bounds):
+def line_formation(n,bounds,noise=None):
 	#list of cameras and poses
 	cameras = []
-	poses = []	
+	poses = []
 	for i in range(n):
 		#create camera
 		camera = PlanarCamera()
+		camera.set_noise(noise)
 		#position to have a line for this camera
 		camera.set_position(bounds[0]+i*((bounds[1]-bounds[0])/(n-1)),1,1,0,0,0)
 		#add camera
@@ -55,46 +60,49 @@ def line_formation(n,bounds):
 
 """
 	function: circle_formation
-	description: creates cameras type PlanarCamera with a fixed pose, in 
+	description: creates cameras type PlanarCamera with a fixed pose, in
 	the end al cameras should be formed in a circle.
-	params: 
+	params:
 		n: how many cameras do you have?
 		radius: the radius of the formation (float)
-		center: the coordinates of the center of the circle (list or 
+		center: the coordinates of the center of the circle (list or
 			array, 2 elements) [cx,cy]
-	returns: 
+		scaled: if we want a 3D formation, defaults to no
+		noise: the noise for the images of the camera (pixels) defaults 0
+	returns:
 		cameras: a list of cameras (PlanarCamera) with de desired pose.
 		poses: poses of all the cameras created. This is a numpy array
 		with the shape (n,6). The i-th row has the following form:
 			x,y,z,yaw,pitch,roll
-		that is the init pose of the i-th camera. Because we want 
-		the cameras to be facing the "ground", roll and yaw are 0 for every 
+		that is the init pose of the i-th camera. Because we want
+		the cameras to be facing the "ground", roll and yaw are 0 for every
 		camera.
 """
-def circle_formation(n,radius,center):
+def circle_formation(n,radius,center,scaled=0.,noise =None):
 	#list of cameras and poses
 	cameras = []
 	poses = []
 	for i in range(n):
 		#create camera
 		camera = PlanarCamera()
+		camera.set_noise(noise)
 		#position to have a line for this camera
-		camera.set_position(center[0]+radius*cos((2*pi/n)*i),center[1]+radius*sin((2*pi/n)*i),1.,0,0,0)
+		camera.set_position(center[0]+radius*cos((2*pi/n)*i),center[1]+radius*sin((2*pi/n)*i),1+scaled*i,0,0,0)
 		#add camera
 		cameras.append(camera)
-		poses.append([center[0]+radius*cos((2*pi/n)*i),center[1]+radius*sin((2*pi/n)*i),1.,0,0,0])
+		poses.append([center[0]+radius*cos((2*pi/n)*i),center[1]+radius*sin((2*pi/n)*i),1+scaled*i,0,0,0])
 	#return what you did
 	return cameras,np.array(poses)
 
 """
 	function: get_L_radius
-	description: computes a Laplacian. Is makes connections with the 
+	description: computes a Laplacian. Is makes connections with the
 	neighbors inside a spicified sphere.
-	params: 
+	params:
 		n_cameras: how many cameras do you have?
 		poses: poses of the cameras.
 		r: radius of the sphere.
-	returns: 
+	returns:
 		L: Laplacian
 """
 def get_L_radius(n_cameras,poses,r):
@@ -103,7 +111,7 @@ def get_L_radius(n_cameras,poses,r):
 		c = 0 #counting adyacenes
 		p1 = poses[i,:2]
 		for j in range(n_cameras):
-			p2 = poses[j,:2]			
+			p2 = poses[j,:2]
 			if np.linalg.norm(p1-p2)<r and i!=j:
 				L[i][j] = 1
 				c = c+1
@@ -114,10 +122,10 @@ def get_L_radius(n_cameras,poses,r):
 	function: get_A
 	description: computes the doubly stochastic matrix A for scale consensus as seen in paper
 	Fast linear iterations for distributed averaging.
-	params: 
+	params:
 		n_cameras: how many cameras do you have?
 		L: Laplacian
-	returns: 
+	returns:
 		A: the doubly stochastic matrix A
 """
 def get_A(n_cameras,L):
@@ -125,7 +133,7 @@ def get_A(n_cameras,L):
 
 	u,s,V = np.linalg.svd(L)
 	alpha = 2.0/(s[0]**2+s[n_cameras-2]**2)
-
+	print(L)
 	for i in range(n_cameras):
 		for j in range(n_cameras):
 			if L[i][j]==1 and i!=j:
@@ -138,16 +146,16 @@ def get_A(n_cameras,L):
 	function: get_relative
 	description: computes the relative position and relative Rotation
 	between the cameras, using a laplacian.
-	params: 
+	params:
 		n: how many cameras do you have?
 		cameras: list of cameras to be computed
 		L: Laplacian matrix showing how the graph is connected.
-	returns: 
-		p: a dictionary with al the relative positions, if you 
-		call p[(i,j)] it returns the relative position between 
+	returns:
+		p: a dictionary with al the relative positions, if you
+		call p[(i,j)] it returns the relative position between
 		camera i and camera j.
-		R: a dictionary with al the relative rotations, if you 
-		call R[(i,j)] it returns the relative rotarion between 
+		R: a dictionary with al the relative rotations, if you
+		call R[(i,j)] it returns the relative rotarion between
 		camera i and camera j.
 """
 def get_relative(n,cameras,L,normalize=False):
@@ -158,9 +166,9 @@ def get_relative(n,cameras,L,normalize=False):
 	for i in range(n):
 		for j in range(n):
 			if L[i][j]==1 and j!=i:
-				#compute Rij and pij	
+				#compute Rij and pij
 				p[(i,j)] = cameras[i].R.T.dot(cameras[j].t-cameras[i].t)
-				R[(i,j)] = cameras[i].R.T.dot(cameras[j].R)	
+				R[(i,j)] = cameras[i].R.T.dot(cameras[j].R)
 	#return results
 	return p,R
 
@@ -174,14 +182,17 @@ def get_relative(n,cameras,L,normalize=False):
 		L: Laplacian
 	returns.
 		e: dict with the epipoles between pairs
+		R: relative rotation between pairs
 """
 def get_bearings(n,cameras,L):
-	B = {}	
+	B = {}
+	R = {}
 
 	for i in range(n):
-		for j in range(n):						
-			if L[i][j]==1 and i!=j:	
+		for j in range(n):
+			if L[i][j]==1 and i!=j:
+				R[(i,j)] = cameras[i].R.T.dot(cameras[j].R)
 				b = cameras[i].R.T.dot(cameras[j].t-cameras[i].t)
-				b = b / np.linalg.norm(b)				
+				b = b / np.linalg.norm(b)
 				B[(i,j)]= b
-	return B
+	return B, R

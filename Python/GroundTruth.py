@@ -15,7 +15,7 @@ from Functions.Geometric import move_wf
 #######################################ALWAYS NEEDED
 import numpy as np
 from math import pi
-import shutil, os, logging, argparse
+import shutil, os
 from random import  seed
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -31,14 +31,6 @@ from Functions.Error import get_error, transform_to_frame, distances
 	description: example of how to use the functions and the consensus
 	algorithm for control with relative positions and rotations.
 """
-# Parser arguments
-parser = argparse.ArgumentParser(description='example of how to use the functions and the consensus algorithm for control with relative positions and rotations')
-parser.add_argument('--log_level',type=int, default=20,help='Log level (default: 20)')
-parser.add_argument('--log_file',default='',help='Log file (default: standard output)')
-args = parser.parse_args()
-
-# Loggin format
-logging.basicConfig(format='%(levelname)s: %(message)s',level=args.log_level)
 
 #===================================================================init cameras
 #seed(40200) #init seed for comparision purposes
@@ -59,7 +51,7 @@ dist_aster = distances(n_cameras, desired_cameras)
 #==================================================================define params
 # Define the gain
 lambdav         = 2.
-lambdaw         = 6.
+lambdaw         = 2.
 # Timing parameters
 dt = 0.01   # Time Delta, seconds.
 ite = 0 #iterations
@@ -113,9 +105,9 @@ while (e_t > threshold or e_psi > threshold) and ite < max_ite:
 	t_arr.append(ite*dt)
 	#Next
 	ite+=1
-	logging.info('{} Translation error: {:.4f} Rotation error: {:.4f} '.format(ite,e_t ,e_psi))
+	print('{} Translation error: {} Rotation error: {}'.format(ite,e_t,e_psi))
 
-logging.info("*********************\nLaplacian is {}\n".format(L))
+print("*********************\nLaplacian is {}\n".format(L))
 #=======================================================================plotting
 #converting to numpy
 v = np.array(v)
@@ -131,5 +123,18 @@ if 'graphs' in dirs:
 	shutil.rmtree("graphs")
 os.mkdir('graphs')
 
-# Plot and save results
-plot_consensus_results(n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,v,w,None,None,None,t_arr,err_t,err_psi,None,legend='Position-based control using Ground Truth')
+#plotting
+rows = 3
+cols = 2
+ax,fig = configure_plot(3,2,15,20,'Position-based control using Ground Truth')
+bounds = [min(-1.0,np.min(x)-0.2,np.min(y)-0.2,np.min(z)-0.2),max(2.5,np.max(x)+0.2,np.max(y)+0.2,np.max(z)+0.2)]
+ax,fig = plot_all_cameras(ax,fig,n_cameras,init_cameras,desired_cameras,copy,init_poses,desired_poses,x,y,z,0.5,0.09,bounds)
+ax,fig = plot_quarter(ax,fig,[rows,cols,2],t_arr,err_s,'Actual formation average scale',ite,None,['Time (s)','Actual formation average scale'],4)
+ax,fig = plot_quarter(ax,fig,[rows,cols,3],t_arr,v,['$v_x$','$v_y$','$v_z$'],ite,None,['Time (s)','Average linear velocity (m/s)'])
+ax,fig = plot_quarter(ax,fig,[rows,cols,4],t_arr,w,['$\omega_x$','$\omega_y$','$\omega_z$'],ite,None,['Time (s)','Average absolute angular velocity (rad/s)'])
+ax,fig = plot_quarter(ax,fig,[rows,cols,5],t_arr,err_t,'Evaluation error in translation ($e_t$)',ite,None,['Time (s)','Evaluation error in translation (m)'])
+ax,fig = plot_quarter(ax,fig,[rows,cols,6],t_arr,err_psi,'Evaluation error in translation ($e_\psi$)',ite,None,['Time (s)','Evaluation error in rotation (rad)'])
+
+#save and show
+plt.savefig('graphs/complete.pdf',bbox_inches='tight')
+plt.show()

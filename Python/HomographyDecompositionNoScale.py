@@ -142,7 +142,7 @@ while (e_t > threshold or e_psi > threshold) and ite < max_ite:# and rank >= 4*n
 	#Next
 	ite+=1
 
-	print("{} Translation error: {} Rotation error: {}".format(ite,e_t,e_psi))
+	print('[{:0>4}] Translation error: {:.4f} Rotation error: {:.4f}'.format(ite,e_t, e_psi))
 
 print("*********************\nLaplacian is{}\n".format(L))
 #=================================================================================================================================plotting

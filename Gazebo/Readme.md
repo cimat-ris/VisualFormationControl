@@ -106,6 +106,66 @@ In a fourth terminal,
 > roslaunch vc_controller  homography.launch
 ```
 
+#   test formation_control
+
+In terminal 1: Launch gazebo whit drones:
+```bash
+roslaunch rotors_gazebo multiple_hummingbird_nodes.launch
+```
+
+In terminal 2: Launch thecontrol:
+```bash
+roslaunch formation_control controllers.launch
+```
+
+The second controll has a default set of arguments in the file `controllers.launch`
+However, the control can be changed in the launch command:
+
+```bash
+roslaunch formation_control controllers.launch control:=1
+```
+
+Such controllers are:
+
+case 1: PBFCHD(matches,label,j,GC); break;
+Position based using homography decomposition
+
+case 2: PBFCED(matches,label,j,GC,R,t); break;
+Position based using essential decomposition
+
+case 3: PBFCHDSA(matches,label, j, GC); break;
+PBFCHD + escale aware
+
+case 4: PBFCEDSA(matches,label,j,GC,R,t); break; (NOT_IMPLEMENTED yet)
+PBFCED + escale aware
+
+case 5: RBFCHD(matches,label,j,GC); break; (NOT_IMPLEMENTED yet)
+Rigidity based using homography decomposition
+
+case 6: RBFCED(matches,label,j,GC,R,t); break; (NOT_IMPLEMENTED yet)
+Rigidity based using essential decomposition
+
+
+case 7: IBFCH(matches,label,j,GC); break;
+Image-Based Formation Homography
+
+case 8: IBFCE(matches,label,j,GC,R,t); break; (NOT_IMPLEMENTED yet)
+Image-Based Formation Essential
+
+case 9: EBFC(matches, label, j, GC); break;
+Epipole Based 
+
+
+Formation type can be changed in the same manner:
+
+```bash
+roslaunch formation_control controllers.launch desired_formation:=1
+```
+
+case 0: circle
+case 1: line
+case 2: 3D circle 
+
 How to use:
 https://www.overleaf.com/read/zqzqrrgbwrqc
 

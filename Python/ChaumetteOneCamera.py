@@ -29,7 +29,7 @@ def Interation_Matrix(points,Z):
     L[:,8]  =   points[1,:]/Z
     L[:,9]  =   1+points[1,:]**2
     L[:,10] =   -points[0,:]*points[1,:]
-    L[:,11] =   points[0,:]
+    L[:,11] =   -points[0,:]
     return L.reshape((2*n,6))
 
 def Inv_Moore_Penrose(L):
@@ -56,10 +56,10 @@ p_target = target_camera.projection(w_points, n_points) # Project the points for
 #=============================================================current camera
 init_x     = 1.5
 init_y     = 1.5
-init_z     = 1.5
+init_z     = 1.0
 init_pitch   = np.deg2rad(0.0)
 init_roll    = np.deg2rad(0.0)
-init_yaw     = np.deg2rad(18.0)
+init_yaw     = np.deg2rad(0.0)
 moving_camera = PlanarCamera() # Set the init camera
 moving_camera.set_position(init_x, init_y, init_z,init_roll, init_pitch, init_yaw)
 p_moving = moving_camera.projection(w_points,n_points)
@@ -68,7 +68,7 @@ p_moving = moving_camera.projection(w_points,n_points)
 dt = 0.01   # Time Delta, seconds.
 t0 = 0      # Start time of the simulation
 ite = 0 #iterations
-steps = 10#00 #max iterations
+steps = 1000 #max iterations
 t1 = steps*dt
 
 #==================================================variables to use and plot
@@ -84,21 +84,7 @@ positionArray       = np.zeros((3,steps))           # Matrix to save  camera pos
 I              = np.eye(3, 3)
 lamb = 1.0
 Z_estimada = 1.0
-
-lambdav         = 2.
-lambdaw         = 6.
-Gain            = np.zeros((6,1))
-Gain[0]         = lambdav
-Gain[1]         = lambdav
-Gain[2]         = lambdav
-Gain[3]         = lambdaw
-Gain[4]         = lambdaw
-Gain[5]         = lambdaw
 t       = t0
-K1      = target_camera.K
-K2      = moving_camera.K
-K1_inv  = np.linalg.inv(K1)
-K2_inv  = np.linalg.inv(K2)
 
 #=========================================================auxiliar variables
 x_pos = init_x
@@ -109,11 +95,10 @@ pitch   = init_pitch
 yaw     = init_yaw
 p20 = []
 j = 0
-error_e = 1
 err_pix = 10 #error in pixels
 #to use a filter on the decomposition
-R_filter = []
-tr_filter = []
+
+#L = Interation_Matrix(p_target, Z_estimada)
 
 #=============================================================init algorithm
 while( j<steps and err_pix > 1e-2):
@@ -122,62 +107,26 @@ while( j<steps and err_pix > 1e-2):
     x_pos     +=  dt * U[0, 0]
     y_pos     +=  dt * U[1, 0] # Note the velocities change due the camera framework
     z_pos     +=  dt * U[2, 0]
-    roll    +=  dt * U[3, 0]
-    pitch       +=  dt * U[4, 0]
-    yaw      +=  dt * U[5, 0]
+    #roll    +=  dt * U[3, 0]
+    #pitch       +=  dt * U[4, 0]
+    #yaw      +=  dt * U[5, 0]
+    
 
     moving_camera.set_position(x_pos, y_pos, z_pos,roll, pitch, yaw)
     p_moving = moving_camera.projection(w_points,n_points)
-
-    # =================================== Fundamental and Essential =======================================
-    #F, mask = cv2.findFundamentalMat(p_moving.T,p_target.T,cv2.FM_LMEDS)
-    #E = np.dot(target_camera.K.T,np.dot(F,moving_camera.K))
-    ## =================================== Decomposing and chosing decomposition =======================================
-    #if j == 0:
-        #R1, R2, tr = cv2.decomposeEssentialMat(E)
-        #R_filter = moving_camera.R.T.dot(target_camera.R)
-        #t_filter = moving_camera.R.T.dot(target_camera.t-moving_camera.t)
-        #t_filter = t_filter / np.linalg.norm(t_filter)
-        #if np.linalg.norm(R1-R_filter) < np.linalg.norm(R2-R_filter):
-            #R = R1
-        #else:
-            #R = R2
-        #if np.linalg.norm(-tr-tr_filter) < np.linalg.norm(tr-tr_filter):
-            #tr =  -tr
-
-        #tr_filter = tr.flatten()
-        #R_filter = R
-    #else:
-        #R1, R2, tr = cv2.decomposeEssentialMat(E)
-        #if np.linalg.norm(R1-R_filter) < np.linalg.norm(R2-R_filter):
-            #R = R1
-        #else:
-            #R = R2
-        #if np.linalg.norm(-tr-tr_filter) < np.linalg.norm(tr-tr_filter):
-            #tr =  -tr
-        #R_filter = R
-        #tr_filter = tr.flatten()
-    #u = Rodrigues(R).T
-
+    
     # ==================================== CONTROL COMPUTATION =======================================
-    #i used toscale the error, making it to be less than 10, but this fails when there are rotations
-    #because of the unity vector tr. So i decided to use the pose, in the end this is a position based method
-    #err  = np.linalg.norm(moving_camera.t[0]-target_camera.t[0])
-    #ev       = R.T.dot(tr*err)
-    #ew       = u.reshape((3,1))
-    #e        = np.vstack((ev,ew))
-    #U        = -Gain*e.reshape((6,1))
-    #error_e  = np.linalg.norm(e)
-    ##Avoiding numerical error
-    #U[np.abs(U) < 1.0e-9] = 0.0
+    # Chaumette Part I versión for v = -\lambda \ḩat \L^+_e (s^* -s )
     
     err = p_target-p_moving
     L = Interation_Matrix(p_moving, Z_estimada)
     L_e = Inv_Moore_Penrose(L)
-    print(L.shape)
+    #print(L.shape)
     #print(L_e.shape)
     #print(err.shape)
-    U = -lamb*L_e@err.reshape((120,1))
+    U = -lamb*L_e@err.reshape((2*n_points,1))
+    #Avoiding numerical error
+    U[np.abs(U) < 1.0e-9] = 0.0
     
     # Copy data for plot
     UArray[:, j]    = U.reshape((6,))
@@ -208,7 +157,7 @@ ax = fig.gca()
 ax.plot(xx, yy, zz, 'o')
 ax.plot(positionArray[0,0:j],positionArray[1,0:j],positionArray[2,0:j]) # Plot camera trajectory
 axis_scale      = 0.5
-camera_scale    = 0.09
+camera_scale    = 0.02
 target_camera.draw_camera(ax, scale=camera_scale, color='red')
 target_camera.draw_frame(ax, scale=axis_scale, c='black')
 moving_camera.set_position(x_pos, y_pos, z_pos,roll,pitch,yaw)

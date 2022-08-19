@@ -54,12 +54,12 @@ target_camera.set_position(target_x, target_y, target_z,target_roll, target_pitc
 p_target = target_camera.projection(w_points, n_points) # Project the points for camera 1
 
 #=============================================================current camera
-init_x     = 1.5
-init_y     = 1.5
+init_x     = 2
+init_y     = 2
 init_z     = 1.0
 init_pitch   = np.deg2rad(0.0)
 init_roll    = np.deg2rad(0.0)
-init_yaw     = np.deg2rad(0.0)
+init_yaw     = np.deg2rad(10.0)
 moving_camera = PlanarCamera() # Set the init camera
 moving_camera.set_position(init_x, init_y, init_z,init_roll, init_pitch, init_yaw)
 p_moving = moving_camera.projection(w_points,n_points)
@@ -68,7 +68,7 @@ p_moving = moving_camera.projection(w_points,n_points)
 dt = 0.01   # Time Delta, seconds.
 t0 = 0      # Start time of the simulation
 ite = 0 #iterations
-steps = 1000 #max iterations
+steps = 10000 #max iterations
 t1 = steps*dt
 
 #==================================================variables to use and plot
@@ -99,6 +99,7 @@ err_pix = 10 #error in pixels
 #to use a filter on the decomposition
 
 #L = Interation_Matrix(p_target, Z_estimada)
+#L_e = Inv_Moore_Penrose(L)
 
 #=============================================================init algorithm
 while( j<steps and err_pix > 1e-2):
@@ -107,9 +108,9 @@ while( j<steps and err_pix > 1e-2):
     x_pos     +=  dt * U[0, 0]
     y_pos     +=  dt * U[1, 0] # Note the velocities change due the camera framework
     z_pos     +=  dt * U[2, 0]
-    #roll    +=  dt * U[3, 0]
-    #pitch       +=  dt * U[4, 0]
-    #yaw      +=  dt * U[5, 0]
+    roll    +=  dt * U[3, 0]
+    pitch       +=  dt * U[4, 0]
+    yaw      +=  -dt * U[5, 0]
     
 
     moving_camera.set_position(x_pos, y_pos, z_pos,roll, pitch, yaw)
@@ -146,8 +147,8 @@ while( j<steps and err_pix > 1e-2):
 
     t += dt
     j += 1
-    print(j-1,averageErrorArray[j-1])
-
+    #print(j-1,averageErrorArray[j-1])
+print("Finished at: "+str(j))
 # ======================================  Draw cameras ========================================
 
 fig = plt.figure(figsize=(15,10))

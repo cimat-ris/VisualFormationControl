@@ -33,7 +33,12 @@ def Interation_Matrix(points,Z):
     return L.reshape((2*n,6))
 
 def Inv_Moore_Penrose(L):
-    return inv(L.T@L) @ L.T
+    A = L.T@L
+    if np.linalg.det(A) < 1.0e-9:
+        return None
+    #print(np.linalg.det(A))
+    #print(A)
+    return inv(A) @ L.T
 
 #================================================================point cloud
 xx       = np.loadtxt('cloud/x.data')
@@ -54,8 +59,8 @@ target_camera.set_position(target_x, target_y, target_z,target_roll, target_pitc
 p_target = target_camera.projection(w_points, n_points) # Project the points for camera 1
 
 #=============================================================current camera
-init_x     = 2
-init_y     = 2
+init_x     = 2.0
+init_y     = 2.0
 init_z     = 1.0
 init_pitch   = np.deg2rad(0.0)
 init_roll    = np.deg2rad(0.0)
@@ -109,7 +114,7 @@ while( j<steps and err_pix > 1e-2):
     y_pos     +=  dt * U[1, 0] # Note the velocities change due the camera framework
     z_pos     +=  dt * U[2, 0]
     roll    +=  dt * U[3, 0]
-    pitch       +=  dt * U[4, 0]
+    pitch       +=  -dt * U[4, 0]
     yaw      +=  -dt * U[5, 0]
     
 
@@ -122,6 +127,9 @@ while( j<steps and err_pix > 1e-2):
     err = p_target-p_moving
     L = Interation_Matrix(p_moving, Z_estimada)
     L_e = Inv_Moore_Penrose(L)
+    if L_e is None:
+        print("Err: state: "+str(x_pos)+" "+str(y_pos)+" "+str(z_pos))
+        quit() 
     #print(L.shape)
     #print(L_e.shape)
     #print(err.shape)
@@ -147,7 +155,7 @@ while( j<steps and err_pix > 1e-2):
 
     t += dt
     j += 1
-    #print(j-1,averageErrorArray[j-1])
+    print(j-1,averageErrorArray[j-1])
 print("Finished at: "+str(j))
 # ======================================  Draw cameras ========================================
 

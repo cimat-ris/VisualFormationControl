@@ -27,7 +27,9 @@ class PlanarCamera:
 		self.focal = 0.002
 		self.rho = np.array([1.e-5,1.e-5]) #pixel dimensions
 		self.pp = np.array([self.width/2,self.height/2]) #principal point
-		self.K = np.array([[self.focal/self.rho[0], 0.0, self.pp[0]],[0.0, self.focal/self.rho[1],self.pp[1]],[0.0, 0.0, 1.0]]) #calibration matrix
+		self.K = np.array([[self.focal/self.rho[0], 0.0, self.pp[0]],
+                        [0.0, self.focal/self.rho[1],self.pp[1]],
+                        [0.0, 0.0, 1.0]]) #calibration matrix
 
 		#Extrinsic camera parameter		
 		self.R = None #rotation
@@ -49,7 +51,7 @@ class PlanarCamera:
 	def set_position(self,x,y,z,rot_x,rot_y,rot_z):		
 		self.t = np.array([x,y,z])
 		self.R = self.euler_to_rotmat(rot_x,rot_y,rot_z)
-		self.P = np.dot(self.K,np.concatenate((self.R.T, np.dot(-self.R.T,self.t).reshape(3,1)),axis=1))
+		self.P = np.dot(self.K,np.concatenate((self.R, np.dot(-self.R,self.t).reshape(3,1)),axis=1))
 		
 	"""
 		function: set_noise

@@ -18,7 +18,23 @@ from Functions.Geometric import Rodrigues
 
 #================================================================Functions
 
-def Interation_Matrix(points,Z):
+def tr(in_points):
+    #return in_points
+    cv = 480.0/2
+    cu = 640.0/2
+    f = 200.0
+    
+    points = in_points.copy()
+    points[0,:] -= cv
+    points[1,:] -= cu
+    points /= f
+    
+    return points
+
+def Interation_Matrix(in_points,Z):
+    points = tr(in_points)
+    #points = in_points
+    
     n = points.shape[1]
     L = np.zeros((n,12))
     L[:,0]  =   L[:,7] = -1/Z
@@ -30,7 +46,9 @@ def Interation_Matrix(points,Z):
     L[:,9]  =   1+points[1,:]**2
     L[:,10] =   -points[0,:]*points[1,:]
     L[:,11] =   -points[0,:]
-    return L.reshape((2*n,6))
+    #L[:,[0,1,2,5,6,7,8,11]] *= 200
+    #L[:,[3,4,9,10]] *= 200#40000
+    return L.reshape((2*n,6))  
 
 def Inv_Moore_Penrose(L):
     A = L.T@L
@@ -59,12 +77,12 @@ target_camera.set_position(target_x, target_y, target_z,target_roll, target_pitc
 p_target = target_camera.projection(w_points, n_points) # Project the points for camera 1
 
 #=============================================================current camera
-init_x     = 2.0
+init_x     = 1.0
 init_y     = 2.0
 init_z     = 1.0
 init_pitch   = np.deg2rad(0.0)
 init_roll    = np.deg2rad(0.0)
-init_yaw     = np.deg2rad(10.0)
+init_yaw     = np.deg2rad(0.0)
 moving_camera = PlanarCamera() # Set the init camera
 moving_camera.set_position(init_x, init_y, init_z,init_roll, init_pitch, init_yaw)
 p_moving = moving_camera.projection(w_points,n_points)
@@ -84,10 +102,10 @@ U = np.zeros((6,1))
 UArray              = np.zeros((6,steps))           # Matrix to save controls history
 tArray              = np.zeros(steps)               # Matrix to save the time steps
 pixelCoordsArray    = np.zeros((2*n_points,steps))   # List to save points positions on the image
-averageErrorArray   = np.zeros(steps)               # Matrix to save error points positions
+ErrorArray   = np.zeros((2,steps))               # Matrix to save error points positions
 positionArray       = np.zeros((3,steps))           # Matrix to save  camera positions
 I              = np.eye(3, 3)
-lamb = 1.0
+lamb = 0.25
 Z_estimada = 1.0
 t       = t0
 
@@ -113,9 +131,9 @@ while( j<steps and err_pix > 1e-2):
     x_pos     +=  dt * U[0, 0]
     y_pos     +=  dt * U[1, 0] # Note the velocities change due the camera framework
     z_pos     +=  dt * U[2, 0]
-    roll    +=  dt * U[3, 0]
-    pitch       +=  -dt * U[4, 0]
-    yaw      +=  -dt * U[5, 0]
+    roll      +=  dt * U[3, 0]
+    pitch     +=  dt * U[4, 0]
+    yaw       +=  dt * U[5, 0]
     
 
     moving_camera.set_position(x_pos, y_pos, z_pos,roll, pitch, yaw)
@@ -124,8 +142,11 @@ while( j<steps and err_pix > 1e-2):
     # ==================================== CONTROL COMPUTATION =======================================
     # Chaumette Part I versión for v = -\lambda \ḩat \L^+_e (s^* -s )
     
-    err = p_target-p_moving
-    L = Interation_Matrix(p_moving, Z_estimada)
+    err = tr(p_target)-tr(p_moving)
+    #err = p_target-p_moving
+    
+    L =  Interation_Matrix(p_moving, Z_estimada)
+    #print(L)
     L_e = Inv_Moore_Penrose(L)
     if L_e is None:
         print("Err: state: "+str(x_pos)+" "+str(y_pos)+" "+str(z_pos))
@@ -146,16 +167,17 @@ while( j<steps and err_pix > 1e-2):
     positionArray[2, j] = z_pos
 
     # =================================== Average feature error ======================================
-    pixel_error             = p_moving-p_target
-    err_pix                 = np.mean(np.linalg.norm(pixel_error.reshape((2* n_points,1), order='F')))
-    averageErrorArray[j]    = err_pix
+    pixel_error             = np.max(abs(err),axis = 1)
+    ErrorArray[:,j]         = pixel_error
+    err_pix                 = np.mean(np.linalg.norm(err.reshape((2* n_points,1), order='F')))
+    #ErrorArray[j]    = err_pix
     # ==================================== verifying error =======================================
     #if j == 1 and averageErrorArray[j] > averageErrorArray[j-1] and j == 1:
         #tr_filter = -tr_filter
 
     t += dt
     j += 1
-    print(j-1,averageErrorArray[j-1])
+    print(j-1,pixel_error)
 print("Finished at: "+str(j))
 # ======================================  Draw cameras ========================================
 
@@ -209,14 +231,22 @@ ax.grid(True)
 ax.legend(loc=0)
 
 # ======================================  Plot the pixels position ===================================
+#ax = fig.add_subplot(2, 2, 4)
+#ax.plot(tArray[0:j], averageErrorArray[0:j], label='Average error')
+#ax.grid(True)
+#ax.legend(loc=0)
 ax = fig.add_subplot(2, 2, 4)
-ax.plot(tArray[0:j], averageErrorArray[0:j], label='Average error')
+ax.plot(tArray[0:j], ErrorArray[0, 0:j], label='$err_x$')
+ax.plot(tArray[0:j], ErrorArray[1, 0:j], label='$err_y$')
+
 ax.grid(True)
 ax.legend(loc=0)
+
+
 #deleting previous data
-dirs = os.listdir('.')
-if 'graphs' in dirs:
-    shutil.rmtree("graphs")
-os.mkdir('graphs')
-plt.savefig('graphs/complete.png',bbox_inches='tight')
+#dirs = os.listdir('.')
+#if 'graphs' in dirs:
+    #shutil.rmtree("graphs")
+#os.mkdir('graphs')
+#plt.savefig('graphs/complete.png',bbox_inches='tight')
 plt.show()

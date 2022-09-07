@@ -77,12 +77,12 @@ target_camera.set_position(target_x, target_y, target_z,target_roll, target_pitc
 p_target = target_camera.projection(w_points, n_points) # Project the points for camera 1
 
 #=============================================================current camera
-init_x     = 1.0
+init_x     = 2.0
 init_y     = 2.0
 init_z     = 1.0
 init_pitch   = np.deg2rad(0.0)
 init_roll    = np.deg2rad(0.0)
-init_yaw     = np.deg2rad(0.0)
+init_yaw     = np.deg2rad(10.0)
 moving_camera = PlanarCamera() # Set the init camera
 moving_camera.set_position(init_x, init_y, init_z,init_roll, init_pitch, init_yaw)
 p_moving = moving_camera.projection(w_points,n_points)
@@ -121,9 +121,14 @@ j = 0
 err_pix = 10 #error in pixels
 #to use a filter on the decomposition
 
+#   Caso 1
 #L = Interation_Matrix(p_target, Z_estimada)
 #L_e = Inv_Moore_Penrose(L)
 
+#   CASO 3
+#L_in = L_e
+
+print()
 #=============================================================init algorithm
 while( j<steps and err_pix > 1e-2):
 
@@ -145,16 +150,22 @@ while( j<steps and err_pix > 1e-2):
     err = tr(p_target)-tr(p_moving)
     #err = p_target-p_moving
     
+    #   CASO 2 y 3
     L =  Interation_Matrix(p_moving, Z_estimada)
     #print(L)
     L_e = Inv_Moore_Penrose(L)
+    
+    #   CASO 3
+    #L_e = (L_e+L_in)/2
+    
+    #print(L_e)
     if L_e is None:
         print("Err: state: "+str(x_pos)+" "+str(y_pos)+" "+str(z_pos))
         quit() 
     #print(L.shape)
     #print(L_e.shape)
     #print(err.shape)
-    U = -lamb*L_e@err.reshape((2*n_points,1))
+    U = -lamb*L_e @ err.T.reshape((2*n_points,1))
     #Avoiding numerical error
     U[np.abs(U) < 1.0e-9] = 0.0
     
@@ -177,7 +188,9 @@ while( j<steps and err_pix > 1e-2):
 
     t += dt
     j += 1
-    print(j-1,pixel_error)
+    print(pixel_error,U[:,0])
+    #print(j-1,pixel_error,end='\r')
+print()
 print("Finished at: "+str(j))
 # ======================================  Draw cameras ========================================
 

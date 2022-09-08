@@ -20,14 +20,12 @@ from Functions.Geometric import Rodrigues
 
 def tr(Camera, in_points):
     #return in_points
-    # TODO: use PlanarCamera Class -> f,cv,cu
-    cu = Camera.width/2
-    cv = Camera.height/2
+    
     f = Camera.focal/Camera.rho
     
     points = in_points.copy()
-    points[0,:] -= cu
-    points[1,:] -= cv
+    points[0,:] -= Camera.pp[0]#cu
+    points[1,:] -= Camera.pp[1]#cv
     points[0,:] /= f[0]
     points[1,:] /= f[1]
     
@@ -70,7 +68,7 @@ xx = np.array([0, 2, 2 , 0],dtype=float)
 yy = np.array([0,0,2,2],dtype=float)
 zz = np.array([0,0,0,0],dtype=float)
 n_points = 4
-w_points = np.array([[1, 2, 2 , 1],[1,1,2,2],[0,0,0,0]],dtype = float)
+w_points = np.vstack([xx, yy, zz])
 
 #==============================================================target camera
 target_x        = 1.0
@@ -196,8 +194,8 @@ while( j<steps and err_pix > 1e-2):
 
     t += dt
     j += 1
-    print(pixel_error,U[:,0])
-    #print(j-1,pixel_error,end='\r')
+    #print(pixel_error,U[:,0])
+    print(j-1,pixel_error,end='\r')
 print()
 print("Finished at: "+str(j))
 # ======================================  Draw cameras ========================================

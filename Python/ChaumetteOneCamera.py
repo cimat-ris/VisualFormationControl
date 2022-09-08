@@ -18,21 +18,23 @@ from Functions.Geometric import Rodrigues
 
 #================================================================Functions
 
-def tr(in_points):
+def tr(Camera, in_points):
     #return in_points
-    cv = 480.0/2
-    cu = 640.0/2
-    f = 200.0
+    # TODO: use PlanarCamera Class -> f,cv,cu
+    cu = Camera.width/2
+    cv = Camera.height/2
+    f = Camera.focal/Camera.rho
     
     points = in_points.copy()
-    points[0,:] -= cv
-    points[1,:] -= cu
-    points /= f
+    points[0,:] -= cu
+    points[1,:] -= cv
+    points[0,:] /= f[0]
+    points[1,:] /= f[1]
     
     return points
 
-def Interation_Matrix(in_points,Z):
-    points = tr(in_points)
+def Interation_Matrix(Camera,in_points,Z):
+    points = tr(Camera,in_points)
     #points = in_points
     
     n = points.shape[1]
@@ -59,11 +61,16 @@ def Inv_Moore_Penrose(L):
     return inv(A) @ L.T
 
 #================================================================point cloud
-xx       = np.loadtxt('cloud/x.data')
-yy       = np.loadtxt('cloud/y.data')
-zz       = np.loadtxt('cloud/z.data')
-n_points = len(xx)
-w_points = np.vstack([xx, yy, zz])
+#xx       = np.loadtxt('cloud/x.data')
+#yy       = np.loadtxt('cloud/y.data')
+#zz       = np.loadtxt('cloud/z.data')
+#n_points = len(xx)
+#w_points = np.vstack([xx, yy, zz])
+xx = np.array([0, 2, 2 , 0],dtype=float)
+yy = np.array([0,0,2,2],dtype=float)
+zz = np.array([0,0,0,0],dtype=float)
+n_points = 4
+w_points = np.array([[1, 2, 2 , 1],[1,1,2,2],[0,0,0,0]],dtype = float)
 
 #==============================================================target camera
 target_x        = 1.0
@@ -77,12 +84,12 @@ target_camera.set_position(target_x, target_y, target_z,target_roll, target_pitc
 p_target = target_camera.projection(w_points, n_points) # Project the points for camera 1
 
 #=============================================================current camera
-init_x     = 2.0
-init_y     = 2.0
-init_z     = 1.0
+init_x     = 1.0
+init_y     = 1.0
+init_z     = 2.0
 init_pitch   = np.deg2rad(0.0)
 init_roll    = np.deg2rad(0.0)
-init_yaw     = np.deg2rad(10.0)
+init_yaw     = np.deg2rad(0.0)
 moving_camera = PlanarCamera() # Set the init camera
 moving_camera.set_position(init_x, init_y, init_z,init_roll, init_pitch, init_yaw)
 p_moving = moving_camera.projection(w_points,n_points)
@@ -106,7 +113,7 @@ ErrorArray   = np.zeros((2,steps))               # Matrix to save error points p
 positionArray       = np.zeros((3,steps))           # Matrix to save  camera positions
 I              = np.eye(3, 3)
 lamb = 0.25
-Z_estimada = 1.0
+Z_estimada = 2.0
 t       = t0
 
 #=========================================================auxiliar variables
@@ -147,11 +154,12 @@ while( j<steps and err_pix > 1e-2):
     # ==================================== CONTROL COMPUTATION =======================================
     # Chaumette Part I versión for v = -\lambda \ḩat \L^+_e (s^* -s )
     
-    err = tr(p_target)-tr(p_moving)
+    err = tr(moving_camera,p_target)-tr(moving_camera,p_moving)
     #err = p_target-p_moving
     
     #   CASO 2 y 3
-    L =  Interation_Matrix(p_moving, Z_estimada)
+    L =  Interation_Matrix(moving_camera,p_moving, Z_estimada)
+    Z_estimada +=  dt * U[2, 0]
     #print(L)
     L_e = Inv_Moore_Penrose(L)
     

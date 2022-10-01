@@ -206,5 +206,16 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(vc_controller src/vc_controller.cpp src/utils_geom.cpp src/utils_io.cpp src/utils_params.cpp src/utils_vc.cpp src/utils_img.cpp)
+add_executable(vc_controller src/vc_controller.cpp 
+src/vc_state/camera_norm.cpp  
+src/vc_state/compute_descriptors.cpp
+src/vc_state/Moore_Penrose_PInv.cpp 
+src/vc_state/chaumette.cpp
+src/vc_state/interaction_Mat.cpp
+src/vc_state/compute_homography.cpp  
+src/vc_state/homograpy.cpp
+src/vc_state/rotationMatrixToEulerAngles.cpp 
+src/vc_state/select_decomposition.cpp 
+src/vc_state/vc_state.cpp)
 target_link_libraries(vc_controller ${catkin_LIBRARIES})
+

@@ -1,4 +1,0 @@
-<launch>
-  <node name="vc_controller_node" type="vc_controller" pkg="vc_controller" output="screen"/>
-  <rosparam command="load" file="$(find vc_controller)/config/params.yaml"/>
-</launch>

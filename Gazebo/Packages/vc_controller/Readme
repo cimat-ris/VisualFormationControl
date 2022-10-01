@@ -21,7 +21,7 @@ Este paquete permite el control basado en posicion de un dron utilizando la homo
 
 5. Se ejecuta el controlador.
 
-		rosrun homography homography
+		roslaunch vc_controller vc_controller.launch
 
 	En la ventana de rqt_image_view se seleciona /matching, nos muestra el matcheo de las características detectadas conforme el dron se mueve. Al final ambas imagenes mostradas deben ser casi iguales. 
 

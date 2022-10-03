@@ -45,8 +45,14 @@ int compute_descriptors(const Mat&img,
 		//-- Get the keypoints from the good matches
 // 		result.p1.push_back(Mat(desired_configuration.kp[goodMatches[i].queryIdx].pt));
 // 		result.p2.push_back(Mat(kp[goodMatches[i].trainIdx].pt));
-		result.p1.row(i)=Mat(desired_configuration.kp[goodMatches[i].queryIdx].pt);
-		result.p2.row(i) = Mat(kp[goodMatches[i].trainIdx].pt);
+        
+        int idx = goodMatches[i].queryIdx;
+		
+        Mat tmp = Mat(desired_configuration.kp[idx].pt).t();
+        tmp.copyTo(result.p1.row(i));
+        tmp.release();
+        tmp = Mat(kp[idx].pt).t();
+		tmp.copyTo(result.p2.row(i));
 	}
 //     result.p1 = result.p1.reshape(goodMatches.size(),2);
 //     result.p2 = result.p2.reshape(goodMatches.size(),2);

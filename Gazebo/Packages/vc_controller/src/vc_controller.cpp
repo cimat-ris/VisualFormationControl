@@ -112,7 +112,7 @@ int main(int argc, char **argv){
 	}
 
 	//save data
-	string file_folder = "/src/homography/src/data/";
+	string file_folder = "/src/vc_controller/src/data/";
 	writeFile(errors, workspace+file_folder+"errors.txt");
 	writeFile(time, workspace+file_folder+"time.txt");
 	writeFile(vel_x, workspace+file_folder+"Vx.txt");
@@ -142,10 +142,13 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
             return;
     
 		if(state.initialized)
-		  cout << "---------------->\nVx: " << state.Vx << 
+		  cout << "---------------->\n" << 
+		  " Vx: " << state.Vx << 
 		  " Vy: " << state.Vy <<
 		  " Vz: " << state.Vz << 
-		  " Wz: " << state.Vyaw <<
+		  " Vroll: " << state.Vroll <<
+		  " Vpitch: " << state.Vpitch << 
+		  " Wyaw: " << state.Vyaw <<
 		  " average error: " << matching_result.mean_feature_error <<  endl;
 
 	}catch (cv_bridge::Exception& e){

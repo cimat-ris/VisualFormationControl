@@ -38,8 +38,8 @@ int compute_descriptors(const Mat&img,
 	//-- transforming goodmatches to points
 	result.p1.release();
 	result.p2.release();
-	result.p1 = Mat(goodMatches.size(),2,CV_32F);
-	result.p2 = Mat(goodMatches.size(),2,CV_32F);
+	result.p1 = Mat(goodMatches.size(),2,CV_64F);
+	result.p2 = Mat(goodMatches.size(),2,CV_64F);
     cout << "n good matches " << goodMatches.size() << endl;
 	for(int i = 0; i < goodMatches.size(); i++){
 		//-- Get the keypoints from the good matches

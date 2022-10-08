@@ -6,8 +6,8 @@ using namespace std;
 
 int chaumette(Mat img,
                vc_state & state,
-               vc_homograpy_matching_result & matching_result,
-               sensor_msgs::ImagePtr image_msg
+               vc_homograpy_matching_result & matching_result
+//                sensor_msgs::ImagePtr image_msg
               ){
     cout << "DB1" << endl;
     
@@ -15,21 +15,18 @@ int chaumette(Mat img,
       return -1;
     
     
-		/************************************************************* Prepare message */
-		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,matching_result.img_matches).toImageMsg();
-		image_msg->header.frame_id = "matching_image";
-		 image_msg->width = matching_result.img_matches.cols;
-		image_msg->height = matching_result.img_matches.rows;
-		image_msg->is_bigendian = false;
-		image_msg->step = sizeof(unsigned char) * matching_result.img_matches.cols*3;
-		image_msg->header.stamp = ros::Time::now();
-        
+//         
         cout << "DB2" << endl;
 		// Descriptor control
         double lambda = 1.0;
-       camera_norm(state.params, matching_result);
-//         cout << "Before p " << matching_result.p1 << endl << matching_result.p2 << endl;
+        cout << "Before norm P1 " << matching_result.p1 << endl;
+        cout << "Before norm P2 " << matching_result.p2 << endl;
         Mat err = matching_result.p1-matching_result.p2;
+                cout << "err = " << err << endl;
+       camera_norm(state.params, matching_result);
+        cout << "After norm P1 " << matching_result.p1 << endl; // << matching_result.p2 << endl;
+        cout << "After norm P2 " << matching_result.p2 << endl;
+        err = matching_result.p1-matching_result.p2;
 //         cout << "err = " << err << endl;
         cout << "DB2.1" << endl;
 //         camera_norm(state.params, matching_result);

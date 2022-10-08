@@ -61,22 +61,19 @@ class vc_state {
 
 int homography(cv::Mat img,
                vc_state & state,
-               vc_homograpy_matching_result & matching_result,
-               sensor_msgs::ImagePtr
+               vc_homograpy_matching_result & matching_result
               );
 
 int chaumette(cv::Mat img,
                vc_state & state,
-               vc_homograpy_matching_result & matching_result,
-               sensor_msgs::ImagePtr image_msg
+               vc_homograpy_matching_result & matching_result
               );
 
 // Controller selection array only for vc_controller.h
 #ifdef VC_CONTROLLER_H
 typedef int (*funlist) (cv::Mat img,
                         vc_state & state,
-                        vc_homograpy_matching_result & matching_result,
-                        sensor_msgs::ImagePtr
+                        vc_homograpy_matching_result & matching_result
                        );
 funlist controllers[] = {&homography,&chaumette};
 #endif

@@ -38,7 +38,7 @@ int contr_sel = 1;
 int main(int argc, char **argv){
 
 	/***************************************************************************************** INIT */
-	ros::init(argc,argv,"homography");
+	ros::init(argc,argv,"vc_controller");
 	ros::NodeHandle nh;
 	state.load(nh);
 
@@ -138,9 +138,19 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 //         funlist controllers[1] = {&homography};
         
-        if (controllers[contr_sel](img, state, matching_result,image_msg)< 0)
+        if (controllers[contr_sel](img, state, matching_result)< 0)
             return;
     
+        /************************************************************* Prepare message */
+		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,matching_result.img_matches).toImageMsg();
+		image_msg->header.frame_id = "matching_image";
+		 image_msg->width = matching_result.img_matches.cols;
+		image_msg->height = matching_result.img_matches.rows;
+		image_msg->is_bigendian = false;
+		image_msg->step = sizeof(unsigned char) * matching_result.img_matches.cols*3;
+		image_msg->header.stamp = ros::Time::now();
+        
+        
 		if(state.initialized)
 		  cout << "---------------->\n" << 
 		  " Vx: " << state.Vx << 

@@ -51,6 +51,7 @@ int compute_descriptors(const Mat&img,
         Mat tmp = Mat(desired_configuration.kp[idx].pt).t();
         tmp.copyTo(result.p1.row(i));
         tmp.release();
+        idx = goodMatches[i].trainIdx;
         tmp = Mat(kp[idx].pt).t();
 		tmp.copyTo(result.p2.row(i));
 	}

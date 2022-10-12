@@ -50,12 +50,12 @@ int chaumette(Mat img,
 		/**********Updating velocities in the axis*/
         //velocities from homography decomposition
 //         cout << "L  = \n" << L <<  endl;
-		state.Vx = (float) U.at<double>(0,0);
-		state.Vy = (float) U.at<double>(1,0);
+		state.Vx = (float) U.at<double>(1,0);
+		state.Vy = (float) U.at<double>(0,0);
 		state.Vz = (float) U.at<double>(2,0);
 //         state.Vroll = (float) U.at<double>(3,0);
 //         state.Vpitch = (float) U.at<double>(4,0);
-// 		state.Vyaw = (float) U.at<double>(5,0);
+		state.Vyaw = (float) U.at<double>(5,0);
 		cout << "DB4" << endl;
 		return 0;
 }

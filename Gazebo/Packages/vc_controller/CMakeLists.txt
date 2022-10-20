@@ -219,3 +219,4 @@ src/vc_state/select_decomposition.cpp
 src/vc_state/vc_state.cpp)
 target_link_libraries(vc_controller ${catkin_LIBRARIES})
 
+target_compile_definitions(vc_controller PUBLIC WORKSPACE="/home/edgarchavez/catkin_ws")

@@ -9,7 +9,7 @@ Mat interaction_Mat(vc_homograpy_matching_result& result,
     Mat p1 = Mat(result.p1); Mat p2 = Mat(result.p2);
     
     int n = p2.rows;
-//     std::cout << "interaction_Mat: p2.size  = " << p2.size << std::endl;
+    std::cout << "interaction_Mat: p2.size  = " << p2.size << std::endl;
 //     std::cout << "p2 = " << p2 << std::endl;
 //     std::cout << "DB2.1.a" << std::endl;
 //     camera_norm(params, result);
@@ -17,7 +17,7 @@ Mat interaction_Mat(vc_homograpy_matching_result& result,
     Mat L= Mat::zeros(n,12,CV_64F) ;
     
     //  Calculos
-//     std::cout << "DB2.1.1" << std::endl;
+    std::cout << "DB2.1.1" << std::endl;
     //   -1/Z
     L.col(0) = -Mat::ones(n,1,CV_64F)/Z;
 //     L.col(1) =
@@ -46,6 +46,6 @@ Mat interaction_Mat(vc_homograpy_matching_result& result,
     //  -p[0,:]
 //     p2.col(0).copyTo(L.col(11));
     L.col(11) = -1.0 * p2.col(0);
-//     std::cout << "L = " << L << std::endl;
+    std::cout << "L = " << L << std::endl;
     return L.reshape(1,2*n);
 }

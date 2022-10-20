@@ -34,8 +34,9 @@ int compute_homography(const Mat&img,
 	/************************************************************* Findig homography */
     
 	//-- transforming goodmatches to points
-	result.p1.release();
-	result.p2.release();
+	result.p1.clear();
+	result.p2.clear();
+
 	for(int i = 0; i < goodMatches.size(); i++){
 		//-- Get the keypoints from the good matches
 		result.p1.push_back(desired_configuration.kp[goodMatches[i].queryIdx].pt);
@@ -45,7 +46,7 @@ int compute_homography(const Mat&img,
 	//computing error
 	
 	Mat a = Mat(result.p1); Mat b = Mat(result.p2);
-	result.mean_feature_error = norm(a,b)/(double)result.p1.rows;
+	result.mean_feature_error = norm(a,b)/(double)result.p1.size();
 	// Finding homography
 	result.H = findHomography(result.p1, result.p2 ,RANSAC, 0.5);
 	if (result.H.rows==0)

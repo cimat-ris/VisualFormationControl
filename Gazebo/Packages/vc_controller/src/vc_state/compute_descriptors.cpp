@@ -36,31 +36,40 @@ int compute_descriptors(const Mat&img,
     
     //  TODO comparar con compute homography
 	//-- transforming goodmatches to points
-	result.p1.release();
-	result.p2.release();
-	result.p1 = Mat(goodMatches.size(),2,CV_64F);
-	result.p2 = Mat(goodMatches.size(),2,CV_64F);
-    cout << "n good matches " << goodMatches.size() << endl;
+	result.p1.clear();
+	result.p2.clear();
+
 	for(int i = 0; i < goodMatches.size(); i++){
 		//-- Get the keypoints from the good matches
-// 		result.p1.push_back(Mat(desired_configuration.kp[goodMatches[i].queryIdx].pt));
-// 		result.p2.push_back(Mat(kp[goodMatches[i].trainIdx].pt));
-        
-        int idx = goodMatches[i].queryIdx;
-		
-        Mat tmp = Mat(desired_configuration.kp[idx].pt).t();
-        tmp.copyTo(result.p1.row(i));
-        tmp.release();
-        idx = goodMatches[i].trainIdx;
-        tmp = Mat(kp[idx].pt).t();
-		tmp.copyTo(result.p2.row(i));
+		result.p1.push_back(desired_configuration.kp[goodMatches[i].queryIdx].pt);
+		result.p2.push_back(kp[goodMatches[i].trainIdx].pt);
 	}
+	
+// 	result.p1.release();
+// 	result.p2.release();
+// 	result.p1 = Mat(goodMatches.size(),2,CV_64F);
+// 	result.p2 = Mat(goodMatches.size(),2,CV_64F);
+//     cout << "n good matches " << goodMatches.size() << endl;
+// 	for(int i = 0; i < goodMatches.size(); i++){
+// 		//-- Get the keypoints from the good matches
+// // 		result.p1.push_back(Mat(desired_configuration.kp[goodMatches[i].queryIdx].pt));
+// // 		result.p2.push_back(Mat(kp[goodMatches[i].trainIdx].pt));
+//         
+//         int idx = goodMatches[i].queryIdx;
+// 		
+//         Mat tmp = Mat(desired_configuration.kp[idx].pt).t();
+//         tmp.copyTo(result.p1.row(i));
+//         tmp.release();
+//         idx = goodMatches[i].trainIdx;
+//         tmp = Mat(kp[idx].pt).t();
+// 		tmp.copyTo(result.p2.row(i));
+// 	}
 //     result.p1 = result.p1.reshape(goodMatches.size(),2);
 //     result.p2 = result.p2.reshape(goodMatches.size(),2);
 	//computing error
 	
 	Mat a = Mat(result.p1); Mat b = Mat(result.p2);
-	result.mean_feature_error = norm(a,b)/((double)result.p1.rows);
+	result.mean_feature_error = norm(a,b)/((double)result.p1.size());
 	// Finding homography
 // 	result.H = findHomography(result.p1, result.p2 ,RANSAC, 0.5);
 // 	if (result.H.rows==0)

@@ -31,7 +31,7 @@ vc_state state;
 vc_homograpy_matching_result matching_result;
 
 //  Selector de control 
-int contr_sel = 1;
+int contr_sel = 0;
 // TODO: añadirlo a los argumentos o yaml
 
 /* Main function */

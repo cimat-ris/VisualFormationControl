@@ -34,7 +34,6 @@ int compute_descriptors(const Mat&img,
 
 	/************************************************************* Getting descriptors */
     
-    //  TODO comparar con compute homography
 	//-- transforming goodmatches to points
 	result.p1.release();
 	result.p2.release();

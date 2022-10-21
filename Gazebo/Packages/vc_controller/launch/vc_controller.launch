@@ -1,7 +1,7 @@
 <launch>
   <node name="vc_controller_node" type="vc_controller" pkg="vc_controller" output="screen"/>
   <rosparam command="load" file="$(find vc_controller)/config/params.yaml"/>
-  <arg name="select" value="1" />
+  <arg name="select" default="0" />
   
   
   <param name="select" value="$(arg select)"/>

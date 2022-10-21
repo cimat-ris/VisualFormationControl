@@ -39,8 +39,6 @@
 typedef struct vc_homograpy_matching_result{
 		cv::Mat H;
 		cv::Mat img_matches;
-// 		std::vector<cv::Point2f> p1;
-// 		std::vector<cv::Point2f> p2;
 		cv::Mat p1;
 		cv::Mat p2;
 		double mean_feature_error=1e10;

@@ -22,7 +22,6 @@ sensor_msgs::ImagePtr image_msg;
 /* Workspace definition from CMake */
 string workspace = WORKSPACE;
 
-
 // Visual control state
 vc_state state;
 
@@ -32,7 +31,6 @@ vc_homograpy_matching_result matching_result;
 
 //  Selector de control 
 int contr_sel = 0;
-// TODO: añadirlo a los argumentos o yaml
 
 /* Main function */
 int main(int argc, char **argv){
@@ -90,7 +88,6 @@ int main(int argc, char **argv){
     vel_yaw.push_back(state.Vyaw);
 
 		// Do we continue?
-// 		if(matching_result.mean_feature_error < params.feature_threshold)
         if(matching_result.mean_feature_error < state.params.feature_threshold)
 			break;
 

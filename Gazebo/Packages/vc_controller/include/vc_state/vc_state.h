@@ -19,8 +19,6 @@ class vc_state {
 		/* defining where the drone will move and integrating system*/
 		float X= 0.0,Y= 0.0,Z= 0.0,Yaw= 0.0,Pitch= 0.0,Roll= 0.0;
 		bool initialized=false;
-// 		float t,dt;
-// 		float Kv,Kw;
         
         /* Control parameters  */
         float Vx=0.0,Vy=0.0,Vz=0.0;
@@ -52,7 +50,7 @@ class vc_state {
                         const float &y,
                         const float &z,
                         const float &yaw);
-//         int (*controller )[1];
+
 };
 
 

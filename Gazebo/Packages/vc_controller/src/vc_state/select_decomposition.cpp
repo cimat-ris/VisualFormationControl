@@ -15,10 +15,12 @@ int select_decomposition(const vector<Mat> &Rs,
 			double th = 0.1, nz = 1.0; //max value for z in the normal plane
 			// Preparing the points for the test
 			vector<Point2f> pp1; vector<Point2f> pp2;
-//             Mat pp1; Mat pp2;
-			pp1.push_back(matching_result.p1[0]);
-			pp2.push_back(matching_result.p2[0]);
-
+//             Mat pp1; Mat     pp2;
+			pp1.push_back(Point2f(matching_result.p1.at<float>(0,0),
+                                  matching_result.p1.at<float>(0,1)));
+			pp2.push_back(Point2f(matching_result.p2.at<float>(0,0),
+                                  matching_result.p2.at<float>(0,1)));
+			
 			// For every rotation matrix
 			for(int i=0;i<Rs.size();i++){
 				// Constructing the extrinsic parameters matrix for the desired image

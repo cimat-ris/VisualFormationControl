@@ -31,7 +31,7 @@ vc_state state;
 vc_homograpy_matching_result matching_result;
 
 //  Selector de control 
-int contr_sel = 1;
+int contr_sel = 0;
 // TODO: añadirlo a los argumentos o yaml
 
 /* Main function */
@@ -41,7 +41,8 @@ int main(int argc, char **argv){
 	ros::init(argc,argv,"vc_controller");
 	ros::NodeHandle nh;
 	state.load(nh);
-
+    
+    nh.getParam("/vc_controller_node/select", contr_sel);
 
 	image_transport::ImageTransport it(nh);
 

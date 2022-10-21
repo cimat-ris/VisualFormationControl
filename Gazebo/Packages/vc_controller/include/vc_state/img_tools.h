@@ -36,23 +36,14 @@
      
 } vc_parameters;
 
-typedef class vc_homograpy_matching_result{
-public:
+typedef struct vc_homograpy_matching_result{
 		cv::Mat H;
 		cv::Mat img_matches;
-		std::vector<cv::Point2f> p1;
-		std::vector<cv::Point2f> p2;
-// 		cv::Mat p1;
-// 		cv::Mat p2;
+// 		std::vector<cv::Point2f> p1;
+// 		std::vector<cv::Point2f> p2;
+		cv::Mat p1;
+		cv::Mat p2;
 		double mean_feature_error=1e10;
-        std::vector<cv::Point2f> diff(){
-            std::vector<cv::Point2f> ret;
-            int n = p1.size();
-            for (int i = 0; i < n; i++)
-                ret.push_back(p1[i]-p2[i]);
-            
-            return ret;
-        }
 } vc_homograpy_matching_result;
 
 typedef struct vc_desired_configuration {

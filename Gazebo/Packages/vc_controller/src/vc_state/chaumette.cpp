@@ -19,14 +19,15 @@ int chaumette(Mat img,
         cout << "DB2" << endl;
 		// Descriptor control
         double lambda = 1.0;
-//         cout << "Before norm P1 " << matching_result.p1 << endl;
-//         cout << "Before norm P2 " << matching_result.p2 << endl;
-//         Mat err(matching_result.diff());
-//                 cout << "err = " << err << endl;
+        cout << "Before norm P1 " << matching_result.p1 << endl;
+        cout << "Before norm P2 " << matching_result.p2 << endl;
+        Mat err = matching_result.p1-matching_result.p2;
+                cout << "err = " << err << endl;
        camera_norm(state.params, matching_result);
-//         cout << "After norm P1 " << matching_result.p1 << endl; // << matching_result.p2 << endl;
-//         cout << "After norm P2 " << matching_result.p2 << endl;
-        Mat err(matching_result.diff());
+        cout << "After norm P1 " << matching_result.p1 << endl; // << matching_result.p2 << endl;
+        cout << "After norm P2 " << matching_result.p2 << endl;
+        err = matching_result.p1-matching_result.p2;
+//         cout << "err = " << err << endl;
         cout << "DB2.1" << endl;
 //         camera_norm(state.params, matching_result);
         Mat L = interaction_Mat(matching_result,1.0);
@@ -37,8 +38,8 @@ int chaumette(Mat img,
         if (det < 1e-6)
             return -1;
         cout << "DB2.3" << endl;
-//         cout << "check before: " << err.at<double>(0,0) << " " << err.at<double>(0,1)
-//                     << " after: " << err.reshape(1,L.cols).at<double>(0,0) << " " << err.reshape(1,L.cols).at<double>(1,0) << endl;
+        cout << "check before: " << err.at<double>(0,0) << " " << err.at<double>(0,1)
+                    << " after: " << err.reshape(1,L.cols).at<double>(0,0) << " " << err.reshape(1,L.cols).at<double>(1,0) << endl;
 //         cout << "err = " << err << endl;
 //         cout << "After p " << matching_result.p1 << endl << matching_result.p2 << endl;
         Mat U = -1.0 * lambda * L*err.reshape(1,L.cols); 

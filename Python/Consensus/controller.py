@@ -2,7 +2,7 @@ import numpy as np
 from numpy import sin, cos, pi
 from numpy.linalg import matrix_rank, inv
 
-def Interation_Matrix(in_points,Z):
+def Interaction_Matrix(in_points,Z):
     
     n = points.shape[1]
     L = np.zeros((n,12))
@@ -17,3 +17,9 @@ def Interation_Matrix(in_points,Z):
     L[:,11] =   -points[0,:]
     
     return L.reshape((2*n,6))  
+
+def Inv_Moore_Penrose(L):
+    A = L.T@L
+    if np.linalg.det(A) < 1.0e-9:
+        return None
+    return inv(A) @ L.T

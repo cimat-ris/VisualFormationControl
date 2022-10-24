@@ -54,7 +54,6 @@ def main():
     n_agents = p0.shape[1] #Number of agents
     
     pd = ip.circle(n_agents,0.6,1.2)  #   Desired pose in a circle
-    print(pd)
     
     #   Parameters
     
@@ -63,7 +62,7 @@ def main():
     depthOp=1 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
     case_controlable=1 #1-All (6), 2-Horizontal (4)
     
-    #   TODO: Qué es esto
+    #   TODO: Qué es esto?
     mar=0; p0m=0;  
     
     #   Random inital positions?
@@ -109,7 +108,7 @@ def main():
         
     #   TODO: verify points in FOV
     
-    
+    #   TODO: Z estimation
     
     
     

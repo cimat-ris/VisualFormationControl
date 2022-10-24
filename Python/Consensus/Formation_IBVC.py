@@ -4,18 +4,25 @@
     @author: E Chávez Aparicio (Bloodfield)
     @email: edgar.chavez@cimat.mx
     version: 1.0
-    This code cointains a position based control
-    of a camera using the Essential Matrix.
+    This code cointains a visual based control
+    of a camera using the descriptors
 """
+
+#   Math
 import numpy as np
 from numpy.linalg import inv, svd
 from numpy import sin, cos, pi
 
+#   Plot
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+
+#   Image
 import cv2
 import shutil, os
 import csv
+
+#   Custom
 import graph as gr
 import camera as cm
 import initial_params as ip
@@ -36,26 +43,24 @@ def ReadF(filename):
     f.close()
     return listWords
 
-def graph(Mat):
-    
-    np.array()
-
 def main():
     
     #   Data
-    P = np.array(ip.P)
-    p0 = np.array(ip.p0)
+    P = np.array(ip.P)      #   Scene points
+    p0 = np.array(ip.p0)    #   init positions
+    p_desired = np.array(ip.pd)
+    print(p_desired)
     
     #   Parameters
     
-    n_ag=4 #Number of agents
-    n_case = 1  #   Case selector if needed
+    n_agents = p0.shape[1] #Number of agents
+    case_n = 1  #   Case selector if needed
     directed = False
     n_points = P.shape[1] #Number of image points
     depthOp=1 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
+    case_controlable=1 #1-All (6), 2-Horizontal (4)
     
     #   TODO: Qué es esto
-    fcntl=1 #1-IBC, 2-HBC
     mar=0; p0m=0;  
     
     #   Random inital positions?
@@ -67,16 +72,15 @@ def main():
     zmax=1.8
     angsmin=-30
     angsmax=30
-    Ldown=180*pi/180;
     
-    #   Read data
+    #   Read more data
     
-    name = 'data/ad_mat_'+str(n_ag)
+    name = 'data/ad_mat_'+str(n_agents)
     if directed:
         name += 'd_'
     else:
         name += 'u_'
-    name += str(n_case)+'.dat'
+    name += str(case_n)+'.dat'
     A_ad = ReadF(name)
     if A_ad is None:
         print('File ',name,' does not exist')
@@ -92,10 +96,21 @@ def main():
     lam_n=S[0]
     lam_2=S[-2]
     alpha=2/(lam_n+lam_2)
-    A_ds=np.ones(n_ag)-alpha*L
+    A_ds=np.ones(n_agents)-alpha*L
     print(A_ds)
     
+    Cameras = []
+    for i in range(n_agents):
+        Cameras.append(cm.camera())
+        Cameras[-1].pose(p0[:,i])
+        
+    #   TODO: verify points in FOV
     
+    #   Desired pose
+    Objective = []
+    for i in range(n_agents):
+        Objective.append(cm.camera())
+        Cameras[-1].pose(p_desired[i].T)
     
     
 if __name__ ==  "__main__":

@@ -1,4 +1,5 @@
-from numpy import pi
+import numpy as np
+from numpy import sin, cos, pi
 
 #p0=[[0.878282522914492,-0.175701001146909,-0.609958850671150],
 #[-0.593222358497610,0.869103362509112,0.464602376389354],
@@ -232,16 +233,14 @@ P=[[-0.5, -0.5, 0.5, 0.5],
 [0, 0.2, 0.3, -0.1]]
 
 Ldown=180*pi/180;
-    
-# x1=[-0.5, -0.5, 1.2, Ldown+0*pi/180, 0*pi/180, -20*pi/180]';
-# x2=[0.0, -0.0, 1.2, Ldown-0*pi/180, 0*pi/180, 20*pi/180]';
-# x3=[0.7, -0.5, 1.2, Ldown+0*pi/180, 0*pi/180, 0*pi/180]';
-# x1=[-0.5, -0.5, 1.0, Ldown+0*pi/180, 0*pi/180, 0*pi/180]';
-# x2=[0.0, -0.0, 1.2, Ldown-0*pi/180, 0*pi/180, 0*pi/180]';
-# x3=[-0.7, 0.5, 1.4, Ldown+0*pi/180, 0*pi/180, 0*pi/180]';
-# x1=[-0.6, -0.6, 1.2, Ldown+0*pi/180, 0*pi/180, 0*pi/180]
-# x2=[0.5, -0.0, 1.2, Ldown-0*pi/180, 0*pi/180, 0*pi/180]
-# x3=[-0.6, 0.6, 1.2, Ldown+0*pi/180, 0*pi/180, 0*pi/180]
-# pd=[x1, x2, x3]
 
 
+def circle(n_agents,r,h):
+    Objective = np.zeros((6,n_agents))
+    step = 2*pi/n_agents
+    ang_arange = np.arange(0,2*pi,step)-step/2.0
+    Objective[0,:] = r*cos(ang_arange)
+    Objective[1,:] = r*sin(ang_arange)
+    Objective[2,:] = h
+    Objective[3,:] = pi
+    return Objective

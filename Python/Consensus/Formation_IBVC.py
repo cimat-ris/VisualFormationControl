@@ -47,16 +47,19 @@ def main():
     
     #   Data
     P = np.array(ip.P)      #   Scene points
+    n_points = P.shape[1] #Number of image points
+    P = np.r_[P,np.zeros((1,n_points))] # change to homogeneous
+    
     p0 = np.array(ip.p0)    #   init positions
-    p_desired = np.array(ip.pd)
-    print(p_desired)
+    n_agents = p0.shape[1] #Number of agents
+    
+    pd = ip.circle(n_agents,0.6,1.2)  #   Desired pose in a circle
+    print(pd)
     
     #   Parameters
     
-    n_agents = p0.shape[1] #Number of agents
     case_n = 1  #   Case selector if needed
     directed = False
-    n_points = P.shape[1] #Number of image points
     depthOp=1 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
     case_controlable=1 #1-All (6), 2-Horizontal (4)
     
@@ -106,11 +109,8 @@ def main():
         
     #   TODO: verify points in FOV
     
-    #   Desired pose
-    Objective = []
-    for i in range(n_agents):
-        Objective.append(cm.camera())
-        Cameras[-1].pose(p_desired[i].T)
+    
+    
     
     
 if __name__ ==  "__main__":

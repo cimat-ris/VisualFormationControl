@@ -28,6 +28,7 @@ class camera:
     
     
     foco=0.002; #Focal de la camara
+    rho = np.array([1.e-5,1.e-5])
     iMsize=[1024, 1024]; #Not working change this
     pPrinc=[iMsize[0]/2.0, iMsize[1]/2.0]; #Not working change this
 
@@ -64,5 +65,17 @@ class camera:
                       [ 0.0,  0.0,       1.0]])
         self.P = np.c_[ self.R.T, -self.R.T @ self.p ]
         P = K@P
+    
+    def normalize(self, in_points):
         
+        f = self.foco/self.rho
+        
+        points = in_points.copy()
+        points[0,:] -= self.pPrinc[0]#cu
+        points[1,:] -= self.pPrinc[1]#cv
+        points[0,:] /= f[0]
+        points[1,:] /= f[1]
+        
+        return points
+
        

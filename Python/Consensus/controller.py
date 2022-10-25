@@ -1,7 +1,8 @@
 import numpy as np
 from numpy import sin, cos, pi
 from numpy.linalg import matrix_rank, inv
-
+import camera as cm
+ 
 def Interaction_Matrix(in_points,Z):
     
     n = points.shape[1]
@@ -16,7 +17,7 @@ def Interaction_Matrix(in_points,Z):
     L[:,10] =   -points[0,:]*points[1,:]
     L[:,11] =   -points[0,:]
     
-    return L.reshape((2*n,6))  
+    return L.reshape((2*n,6)) 
 
 def Inv_Moore_Penrose(L):
     A = L.T@L

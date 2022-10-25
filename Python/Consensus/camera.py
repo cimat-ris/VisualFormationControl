@@ -26,24 +26,27 @@ def rot(ang,ax):
     
 class camera:
     
-    
-    foco=0.002; #Focal de la camara
-    rho = np.array([1.e-5,1.e-5])
-    iMsize=[1024, 1024]; #Not working change this
-    pPrinc=[iMsize[0]/2.0, iMsize[1]/2.0]; #Not working change this
-
-    xymin=-0.9
-    xymax=0.9
-    zmin=0.8
-    zmax=1.8
-    angsmin=-30
-    angsmax=30
-    Ldown=180*pi/180
-    p = np.zeros((3,1))
-    roll = 0.0
-    pitch = 0.0
-    yaw = 0.0
-    T = np.eye(4)
+    def __init__(self):
+        self.foco=0.002; #Focal de la camara
+        self.rho = np.array([1.e-5,1.e-5])
+        self.iMsize=[1024, 1024]; #Not working change this
+        self.pPrinc=[self.iMsize[0]/2.0, self.iMsize[1]/2.0]; #Not working change this
+        
+        self.xymin=-0.9
+        self.xymax=0.9
+        self.zmin=0.8
+        self.zmax=1.8
+        self.angsmin=-30
+        self.angsmax=30
+        self.Ldown=180*pi/180
+        self.p = np.zeros((3,1))
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+        self.T = np.eye(4)
+        self.K = np.array( [[self.foco,       0.0, self.pPrinc[0]],
+                            [      0.0, self.foco, self.pPrinc[1]],
+                            [      0.0,       0.0,            1.0]])
     
     def pose(self,p):
        
@@ -58,13 +61,20 @@ class camera:
        tmp = np.c_[ self.R, self.p ]
        print(tmp)
        self.T = np.r_[ tmp, [[0.0,0.0,0.0,1.0]] ]
+       self.P = np.c_[ self.R.T, -self.R.T @ self.p ]
        
     def project(self,p):
-        K = np.array([[foco,  0.0, pPrinc[0]],
-                      [ 0.0, foco, pPrinc[1]],
-                      [ 0.0,  0.0,       1.0]])
-        self.P = np.c_[ self.R.T, -self.R.T @ self.p ]
-        P = K@P
+        
+        n = p.shape[1]
+        res = np.zeros((4,n))
+        if p.shape[0] ==3:
+            res = np.r_[p,np.ones((1,n))]
+        else:
+            p.copy(res)
+        
+        res = self.P@res
+        
+        return res
     
     def normalize(self, in_points):
         
@@ -78,4 +88,4 @@ class camera:
         
         return points
 
-       
+

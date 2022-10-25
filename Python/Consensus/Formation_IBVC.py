@@ -26,6 +26,7 @@ import csv
 import graph as gr
 import camera as cm
 import initial_params as ip
+import controller as ctr
 
 def ReadF(filename):
     
@@ -98,10 +99,11 @@ def main():
     A_ds=np.ones(n_agents)-alpha*L
     print(A_ds)
     
-    Cameras = []
+    cameras = []
     for i in range(n_agents):
-        Cameras.append(cm.camera())
-        Cameras[-1].pose(p0[:,i])
+        cameras.append(cm.camera())
+        cameras[-1].pose(p0[:,i]) #TODO
+    #   TODO: set references X,p
         
     #   TODO: verify points in FOV
     
@@ -112,14 +114,22 @@ def main():
     t=0.0
     dt = 0.05
     t_end = 10.0
-    steps = (t_end-t)/dt + 1.0
+    steps = int((t_end-t)/dt + 1.0)
     lamb = 1.5*np.ones(6)
     
-    dotPnVec=np.zeros((2*n_points,n_agents));
+    d_s_norm=np.zeros((2*n_points,n_agents));
     t_array = np.arange(t,t_end,dt)
+    
+    #   Storage variables
+    
+    err_arr = np.zeros((n_points,steps))
     
     #   LOOP
     for i in range(steps):
+        
+        #   Error:
+        
+        
         
         #   Image based formation
         

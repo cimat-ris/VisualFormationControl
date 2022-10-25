@@ -62,9 +62,6 @@ def main():
     depthOp=1 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
     case_controlable=1 #1-All (6), 2-Horizontal (4)
     
-    #   TODO: Qué es esto?
-    mar=0; p0m=0;  
-    
     #   Random inital positions?
     init_rand =False
     #   If True:
@@ -110,7 +107,30 @@ def main():
     
     #   TODO: Z estimation
     
+    #   INIT LOOP
     
+    t=0.0
+    dt = 0.05
+    t_end = 10.0
+    steps = (t_end-t)/dt + 1.0
+    lamb = 1.5*np.ones(6)
+    
+    dotPnVec=np.zeros((2*n_points,n_agents));
+    t_array = np.arange(t,t_end,dt)
+    
+    #   LOOP
+    for i in range(steps):
+        
+        #   Image based formation
+        
+        
+        
+        #   Homography based
+        
+        
+        #   Update
+        t += dt
+        
     
 if __name__ ==  "__main__":
     main() 

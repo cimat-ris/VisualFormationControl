@@ -49,7 +49,7 @@ def main():
     #   Data
     P = np.array(ip.P)      #   Scene points
     n_points = P.shape[1] #Number of image points
-    P = np.r_[P,np.zeros((1,n_points))] # change to homogeneous
+    P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
     
     p0 = np.array(ip.p0)    #   init positions
     n_agents = p0.shape[1] #Number of agents
@@ -130,13 +130,13 @@ def main():
     #   LOOP
     for i in range(steps):
         
-        print("loop")
+        print("loop",i)
         
         #   Error:
         
         error = np.zeros((n_agents,2*n_points))
         for j in range(n_agents):
-            error[i,:] = agents[j].error
+            error[j,:] = agents[j].error
         
         error = -L @ error
         

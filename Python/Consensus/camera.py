@@ -44,8 +44,8 @@ class camera:
         self.pitch = 0.0
         self.yaw = 0.0
         self.T = np.eye(4)
-        self.K = np.array( [[self.foco,       0.0, self.pPrinc[0]],
-                            [      0.0, self.foco, self.pPrinc[1]],
+        self.K = np.array( [[self.foco/self.rho[0],       0.0, self.pPrinc[0]],
+                            [      0.0, self.foco/self.rho[1], self.pPrinc[1]],
                             [      0.0,       0.0,            1.0]])
     
     def pose(self,p):
@@ -77,9 +77,10 @@ class camera:
             res = np.r_[p,np.ones((1,n))]
         else:
             res = p.copy()
-        
-        res = self.P@res
-        res = res[0:3,:]
+        print(res)
+        res = self.P @ res
+        print(res)
+        #res = res[0:3,:]
         res = res/res[2,:]
         res = res[0:2,:]
         print(res)

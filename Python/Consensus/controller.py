@@ -42,7 +42,7 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.error = self.s_current - self.s_ref
+        self.error = self.s_current_n - self.s_ref_n
         self.error = self.error.reshape((1,2*self.n_points))
         
         
@@ -61,10 +61,12 @@ class agent:
     
     def update(self,U,dt, points):
         
-        self.p_current += dt*U
-        self.camera.pose(p_current)
-        self.s_ref = self.project(points)
+        p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
+        p += dt*U
+        self.camera.pose(p) 
+        
+        self.s_ref = self.camera.project(points)
         self.s_ref_n = self.camera.normalize(self.s_ref)
         
-        self.error = self.s_current - self.s_ref
-        self.error = self.error.reshape((2*self.n_points,1))
+        self.error = self.s_current_n - self.s_ref_n
+        self.error = self.error.reshape((1,2*self.n_points))

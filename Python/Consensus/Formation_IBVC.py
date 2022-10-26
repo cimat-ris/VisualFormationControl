@@ -16,6 +16,7 @@ from numpy import sin, cos, pi
 #   Plot
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from numpy.random import rand, randint
 
 #   Image
 import cv2
@@ -27,6 +28,7 @@ import graph as gr
 import camera as cm
 import initial_params as ip
 import controller as ctr
+import myplots as mp
 
 def ReadF(filename):
     
@@ -107,7 +109,7 @@ def main():
     #   TODO: set references X,p
     
     
-        
+    
     #   TODO: verify points in FOV
     
     #   TODO: Z estimation
@@ -121,11 +123,11 @@ def main():
     lamb = 1.5*np.ones(6)
     
     d_s_norm=np.zeros((2*n_points,n_agents));
-    t_array = np.arange(t,t_end,dt)
     
     #   Storage variables
-    
-    err_array = np.zeros((n_points,steps))
+    t_array = np.arange(t,t_end+dt,dt)
+    err_array = np.zeros((n_agents,2*n_points,steps))
+    U_array = np.zeros((n_agents,6,steps))
     
     #   LOOP
     for i in range(steps):
@@ -137,10 +139,11 @@ def main():
         error = np.zeros((n_agents,2*n_points))
         for j in range(n_agents):
             error[j,:] = agents[j].error
-        
         error = -L @ error
-        
         print(error)
+        err_array[:,:,i] = error
+        
+        
         ####   Image based formation
         
         #   Get control
@@ -149,6 +152,7 @@ def main():
             if U is None:
                 print("Invalid Ls matrix")
                 return None
+            U_array[j,:,i] = U
             agents[j].update(U,dt,P)
         
         #   Homography based
@@ -157,6 +161,43 @@ def main():
         #   Update
         t += dt
         
+    ####   Plot
+    
+    # Colors setup
+    
+    #        RANDOM X_i
+    colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
+    
+    
+    #   Conectivity graph
+    
+    
+    
+    #   Descriptores (init, end, ref) x agente
+    
+    
+    
+    #   Camera positions (init, end, ref) 
+    
+    
+    #   Errores 
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    err_array[i,:,:],
+                    colors,
+                    name = "Descriptors_Error_"+str(i),
+                    label = "Descriptors Error")
+    
+    #   Velocidaes x agente
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    U_array[i,:,:],
+                    colors,
+                    name = "Velocidades_"+str(i),
+                    label = "Velocidades",
+                    labels = ["X","Y","Z","Wx","Wy","Wz"])
+    
+    
     
 if __name__ ==  "__main__":
     main() 

@@ -49,8 +49,8 @@ class camera:
                             [      0.0,       0.0,            1.0]])
     
     def pose(self,p):
-       print("--- begin pose")
-       print(p)
+       #print("--- begin pose")
+       #print(p)
        self.p = p[0:3]
        self.roll = p[3]
        self.pitch = p[4]
@@ -58,46 +58,46 @@ class camera:
        self.R = rot(self.yaw,'z') 
        self.R = self.R @ rot(self.pitch,'y')
        self.R = self.R @ rot(self.roll,'x')
-       print(self.R)
+       #print(self.R)
        tmp = np.c_[ self.R, self.p ]
        #print(tmp)
        self.T = np.r_[ tmp, [[0.0,0.0,0.0,1.0]] ]
        self.P = np.c_[ self.R.T, -self.R.T @ self.p ]
        self.P = self.K @ self.P
-       print(self.P)
+       #print(self.P)
        
-       print("--- begin pose")
+       #print("--- begin pose")
        
     def project(self,p):
-        print("--- begin project")
-        print(p)
+        #print("--- begin project")
+        #print(p)
         n = p.shape[1]
         res = np.zeros((4,n))
         if p.shape[0] ==3:
             res = np.r_[p,np.ones((1,n))]
         else:
             res = p.copy()
-        print(res)
+        #print(res)
         res = self.P @ res
-        print(res)
+        #print(res)
         #res = res[0:3,:]
         res = res/res[2,:]
         res = res[0:2,:]
-        print(res)
-        print("--- begin project")
+        #print(res)
+        #print("--- begin project")
         return res
     
     def normalize(self, in_points):
-        print("--- begin normalize")
+        #print("--- begin normalize")
         f = self.foco/self.rho
-        print(in_points)
+        #print(in_points)
         points = in_points.copy()
         points[0,:] -= self.pPrinc[0]#cu
         points[1,:] -= self.pPrinc[1]#cv
         points[0,:] /= f[0]
         points[1,:] /= f[1]
-        print(points)
-        print("--- end normalize")
+        #print(points)
+        #print("--- end normalize")
         
         return points
 

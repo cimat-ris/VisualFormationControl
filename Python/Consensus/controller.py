@@ -47,14 +47,16 @@ class agent:
         
         
     def get_control(self, error, deg ):
-        
+        #   TODO: Z calculada
+        #   TODO: restricción de movimiento
+        #   TODO: Restricción de minimo de descriptores
         Ls = Interaction_Matrix(self.s_current_n,1.0)
-        print(Ls)
+        #print(Ls)
         Ls = Inv_Moore_Penrose(Ls) 
         if Ls is None:
             return None
-        print(error.T)
-        print(Ls)
+        #print(error.T)
+        #print(Ls)
         U = (Ls @ error.T) / deg
         
         return U

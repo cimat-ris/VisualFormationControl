@@ -99,11 +99,14 @@ def main():
     A_ds=np.ones(n_agents)-alpha*L
     print(A_ds)
     
-    cameras = []
+    agents = []
     for i in range(n_agents):
-        cameras.append(cm.camera())
-        cameras[-1].pose(p0[:,i]) #TODO
+        cam = cm.camera()
+        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P))
+        
     #   TODO: set references X,p
+    
+    
         
     #   TODO: verify points in FOV
     
@@ -122,18 +125,31 @@ def main():
     
     #   Storage variables
     
-    err_arr = np.zeros((n_points,steps))
+    err_array = np.zeros((n_points,steps))
     
     #   LOOP
     for i in range(steps):
         
+        print("loop")
+        
         #   Error:
         
+        error = np.zeros((n_agents,2*n_points))
+        for j in range(n_agents):
+            error[i,:] = agents[j].error
         
+        error = -L @ error
         
-        #   Image based formation
+        print(error)
+        ####   Image based formation
         
-        
+        #   Get control
+        for j in range(n_agents):
+            U = agents[j].get_control(error[j,:],G.deg[j])
+            if U is None:
+                print("Invalid Ls matrix")
+                return None
+            agents[j].update(U,dt,P)
         
         #   Homography based
         

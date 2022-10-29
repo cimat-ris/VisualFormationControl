@@ -94,6 +94,11 @@ def main():
     L = G.laplacian()
     print(L)
     
+    #   Conectivity graph
+    print('plot')
+    G.plot()
+    
+    
     [U,S,V]=svd(L)
     lam_n=S[0]
     lam_2=S[-2]
@@ -167,9 +172,6 @@ def main():
     
     #        RANDOM X_i
     colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
-    
-    
-    #   Conectivity graph
     
     
     

@@ -133,6 +133,7 @@ def main():
     t_array = np.arange(t,t_end+dt,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
     U_array = np.zeros((n_agents,6,steps))
+    desc_arr = np.zeros((n_agents,2*n_points,steps))
     
     #   LOOP
     for i in range(steps):
@@ -145,7 +146,9 @@ def main():
         for j in range(n_agents):
             error[j,:] = agents[j].error
         error = -L @ error
-        print(error)
+        
+        #   save data
+        #print(error)
         err_array[:,:,i] = error
         
         
@@ -153,12 +156,15 @@ def main():
         
         #   Get control
         for j in range(n_agents):
-            U = agents[j].get_control(error[j,:],G.deg[j])
+            U = agents[j].get_control(error[j,:],G.deg[j],0.1)
             if U is None:
                 print("Invalid Ls matrix")
-                return None
+                break
             U_array[j,:,i] = U
             agents[j].update(U,dt,P)
+            
+            #   save data 
+            desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
         
         #   Homography based
         
@@ -180,7 +186,12 @@ def main():
     
     
     #   Camera positions (init, end, ref) 
-    
+    for i in range(n_agents):
+        cm.plot_descriptors(desc_arr[i,:,:],
+                            agents[i].camera.iMsize,
+                            colors,
+                            name = "Descriptors_Projections_"+str(i),
+                            label = "Descriptors")
     
     #   Errores 
     for i in range(n_agents):

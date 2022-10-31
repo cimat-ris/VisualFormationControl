@@ -3,6 +3,7 @@ from numpy import sin, cos, pi
 from numpy.linalg import matrix_rank, inv
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 
 def rot(ang,ax):
     
@@ -101,4 +102,36 @@ class camera:
         
         return points
 
-
+def plot_descriptors(descriptors_array,
+                     camera_iMsize,
+                    colors,
+                    name="time_plot", 
+                    label="Variable"):
+    
+    n = descriptors_array.shape[0]/2
+    #print(n)
+    n = int(n)
+    fig, ax = plt.subplots()
+    fig.suptitle(label)
+    plt.xlim([0,camera_iMsize[0]])
+    plt.ylim([0,camera_iMsize[1]])
+    
+    symbols = []
+    for i in range(n):
+        ax.plot(descriptors_array[2*i,0],descriptors_array[2*i+1,0],
+                '*',color=colors[i])
+        ax.plot(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1],
+                'o',color=colors[i])
+        ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
+                color=colors[i])
+    
+    
+    symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
+               mlines.Line2D([0],[0],marker='o',color='k'),
+               mlines.Line2D([0],[0],linestyle='-',color='k')]
+    labels = ["Start","End","trayectory"]
+    fig.legend(symbols,labels, loc=2)
+    
+    plt.tight_layout()
+    plt.savefig(name+'.png',bbox_inches='tight')
+    #plt.show()

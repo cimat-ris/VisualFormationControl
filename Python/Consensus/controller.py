@@ -42,11 +42,11 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.error = self.s_current_n - self.s_ref_n
-        self.error = self.error.reshape((1,2*self.n_points))
+        self.error =  self.s_current_n - self.s_ref_n
+        self.error = self.error.T.reshape((1,2*self.n_points))
         
         
-    def get_control(self, error, deg ):
+    def get_control(self, error, deg,lamb ):
         #   TODO: Z calculada
         #   TODO: restricción de movimiento
         #   TODO: Restricción de minimo de descriptores
@@ -57,18 +57,21 @@ class agent:
             return None
         #print(error.T)
         #print(Ls)
-        U = (Ls @ error.T) / deg
+        U = lamb*(Ls @ error) / deg
         
         return U
     
     def update(self,U,dt, points):
         
         p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
+        
         p += dt*U
         self.camera.pose(p) 
         
-        self.s_ref = self.camera.project(points)
-        self.s_ref_n = self.camera.normalize(self.s_ref)
+        self.s_current = self.camera.project(points)
+        self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.error = self.s_current_n - self.s_ref_n
-        self.error = self.error.reshape((1,2*self.n_points))
+        self.error =  self.s_current_n  - self.s_ref_n
+        #print(self.error)
+        self.error = self.error.T.reshape((1,2*self.n_points))
+        #print(self.error)

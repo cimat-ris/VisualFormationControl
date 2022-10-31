@@ -59,7 +59,7 @@ class agent:
         #print(Ls)
         U = lamb*(Ls @ error) / deg
         
-        return U
+        return self.camera.R @ U
     
     def update(self,U,dt, points):
         

@@ -146,7 +146,7 @@ def main():
         for j in range(n_agents):
             error[j,:] = agents[j].error
         error = -L @ error
-        
+        print(error)
         #   save data
         #print(error)
         err_array[:,:,i] = error
@@ -160,6 +160,8 @@ def main():
             if U is None:
                 print("Invalid Ls matrix")
                 break
+            
+            print('U= ',U)
             U_array[j,:,i] = U
             agents[j].update(U,dt,P)
             
@@ -179,16 +181,14 @@ def main():
     #        RANDOM X_i
     colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
     
+    #   Camera positions (init, end, ref) 
     
     
     #   Descriptores (init, end, ref) x agente
-    
-    
-    
-    #   Camera positions (init, end, ref) 
     for i in range(n_agents):
         cm.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
+                            agents[i].s_ref,
                             colors,
                             name = "Descriptors_Projections_"+str(i),
                             label = "Descriptors")

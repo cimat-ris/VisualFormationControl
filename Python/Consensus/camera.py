@@ -104,6 +104,7 @@ class camera:
 
 def plot_descriptors(descriptors_array,
                      camera_iMsize,
+                     s_ref,
                     colors,
                     name="time_plot", 
                     label="Variable"):
@@ -124,12 +125,14 @@ def plot_descriptors(descriptors_array,
                 'o',color=colors[i])
         ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
                 color=colors[i])
+        ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i])
     
     
     symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
                mlines.Line2D([0],[0],marker='o',color='k'),
+               mlines.Line2D([0],[0],marker='^',color='k'),
                mlines.Line2D([0],[0],linestyle='-',color='k')]
-    labels = ["Start","End","trayectory"]
+    labels = ["Start","End","reference","trayectory"]
     fig.legend(symbols,labels, loc=2)
     
     plt.tight_layout()

@@ -134,6 +134,7 @@ def main():
     err_array = np.zeros((n_agents,2*n_points,steps))
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
+    pos_arr = np.zeros((n_agents,3,steps))
     
     #   LOOP
     for i in range(steps):
@@ -156,7 +157,7 @@ def main():
         
         #   Get control
         for j in range(n_agents):
-            U = agents[j].get_control(error[j,:],G.deg[j],0.1)
+            U = agents[j].get_control(error[j,:],G.deg[j],0.5)
             if U is None:
                 print("Invalid Ls matrix")
                 break
@@ -167,6 +168,7 @@ def main():
             
             #   save data 
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
+            pos_arr[j,:,i] = agents[j].camera.p
         
         #   Homography based
         
@@ -182,11 +184,22 @@ def main():
     colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
     
     #   Camera positions (init, end, ref) 
-    
+    lfact = 1.1
+    x_min = lfact*pos_arr[:,0,:].min()
+    x_max = lfact*pos_arr[:,0,:].max()
+    y_min = lfact*pos_arr[:,1,:].min()
+    y_max = lfact*pos_arr[:,1,:].max()
+    sizes = [[x_min,x_max],[y_min,y_max]]
+    mp.plot_position(pos_arr,
+                    pd,
+                    sizes,
+                    colors,
+                    name = "Cameras_trayectories",
+                    label = "Positions")
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
-        cm.plot_descriptors(desc_arr[i,:,:],
+        mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
                             colors,

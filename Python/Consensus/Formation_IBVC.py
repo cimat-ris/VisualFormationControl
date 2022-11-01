@@ -57,7 +57,7 @@ def main():
     n_agents = p0.shape[1] #Number of agents
     
     pd = ip.circle(n_agents,0.6,1.2)  #   Desired pose in a circle
-    
+    #p0 = pd
     #   Parameters
     
     case_n = 1  #   Case selector if needed
@@ -157,7 +157,7 @@ def main():
         
         #   Get control
         for j in range(n_agents):
-            U = agents[j].get_control(error[j,:],G.deg[j],0.5)
+            U = agents[j].get_control(error[j,:],G.deg[j],1.0)
             if U is None:
                 print("Invalid Ls matrix")
                 break
@@ -185,14 +185,9 @@ def main():
     
     #   Camera positions (init, end, ref) 
     lfact = 1.1
-    x_min = lfact*pos_arr[:,0,:].min()
-    x_max = lfact*pos_arr[:,0,:].max()
-    y_min = lfact*pos_arr[:,1,:].min()
-    y_max = lfact*pos_arr[:,1,:].max()
-    sizes = [[x_min,x_max],[y_min,y_max]]
     mp.plot_position(pos_arr,
                     pd,
-                    sizes,
+                    lfact,
                     colors,
                     name = "Cameras_trayectories",
                     label = "Positions")

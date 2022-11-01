@@ -76,7 +76,7 @@ def plot_descriptors(descriptors_array,
 
 def plot_position(position_array,
                     desired_position,
-                    sizes,
+                    lfact,
                     colors,
                     name="Trayectories", 
                     label="Positions"):
@@ -86,8 +86,14 @@ def plot_position(position_array,
     n = int(n)
     fig, ax = plt.subplots()
     fig.suptitle(label)
-    plt.xlim(sizes[0])
-    plt.ylim(sizes[1])
+    
+    x_min = lfact*position_array[:,0,:].min()
+    x_max = lfact*position_array[:,0,:].max()
+    y_min = lfact*position_array[:,1,:].min()
+    y_max = lfact*position_array[:,1,:].max()
+    sizes = [min(x_min,y_min),max(x_max,y_max)]
+    plt.xlim(sizes)
+    plt.ylim(sizes)
     
     symbols = []
     for i in range(n):

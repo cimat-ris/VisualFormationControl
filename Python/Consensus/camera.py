@@ -109,20 +109,22 @@ class camera:
                     linestyle='solid',
                     alpha=0.):
         #CAmera points: to be expressed in the camera frame;
-        CAMup=scale*np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1 ],
-                              [ 1, 1,  1, 1, 1.5, 1.5, 1, 1 ],
-                              [ 2,-2, -2, 2,   3,   3, 2, 2 ],
-                              [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
+        CAMup=np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1 ],
+                        [ 1, 1,  1, 1, 1.5, 1.5, 1, 1 ],
+                        [ 2,-2, -2, 2,   3,   3, 2, 2 ],
+                        [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
+        CAMup[0:3,:] = scale * CAMup[0:3,:] 
         #Ri2w    = np.dot(Rotations.rotox(pi), self.R)
         #trasl   = self.t.reshape(3, -1)
-        CAMupTRASF = self.T @CAMup # Ri2w.dot(CAMup) + trasl;
-        CAMdwn=scale*np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1  ],
-                               [ -1,-1, -1,-1,-1.5,-1.5,-1,-1 ],
-                               [  2,-2, -2, 2,   3,   3, 2, 2 ],
-                               [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
+        CAMupTRASF = self.T @ CAMup # Ri2w.dot(CAMup) + trasl;
+        CAMdwn=np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1  ],
+                        [ -1,-1, -1,-1,-1.5,-1.5,-1,-1 ],
+                        [  2,-2, -2, 2,   3,   3, 2, 2 ],
+                        [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
+        CAMdwn[0:3,:] = scale * CAMdwn[0:3,:] 
         CAMdwnTRASF     = self.T @ CAMdwn #Ri2w.dot( CAMdwn ) + trasl
-        CAMupTRASFm     = CAMupTRASF
-        CAMdwnTRASFm    = CAMdwnTRASF
+        CAMupTRASFm     = CAMupTRASF.copy()
+        CAMdwnTRASFm    = CAMdwnTRASF.copy()
         ax.plot(CAMupTRASFm[0,:],
                 CAMupTRASFm[1,:],
                 CAMupTRASFm[2,:],
@@ -170,24 +172,24 @@ class camera:
         a1 = Arrow3D.Arrow3D([Oc1[0,0],Xc1[0,0]],
                              [Oc1[1,0],Xc1[1,0]],
                              [Oc1[2,0],Xc1[2,0]],
-                             mutation_scale=20,
+                             mutation_scale=5,
                              lw=1, arrowstyle="-|>",
                              color='k')
         a2 = Arrow3D.Arrow3D([Oc1[0,0],Yc1[0,0]],
                              [Oc1[1,0],Yc1[1,0]],
                              [Oc1[2,0],Yc1[2,0]],
-                             mutation_scale=20, 
+                             mutation_scale=5, 
                              lw=1, arrowstyle="-|>", 
                              color='k')
         a3 = Arrow3D.Arrow3D([Oc1[0,0],Zc1[0,0]],
                              [Oc1[1,0],Zc1[1,0]],
                              [Oc1[2,0],Zc1[2,0]],
-                             mutation_scale=20, 
+                             mutation_scale=5, 
                              lw=1, arrowstyle="-|>",
                              color='k')
         ax.add_artist(a1)
         ax.add_artist(a2)
         ax.add_artist(a3)
-        ax.text(Xc1[0,0], Xc1[1,0], Xc1[2,0], (r'$X_{cam}$'))
-        ax.text(Yc1[0,0], Yc1[1,0], Yc1[2,0], (r'$Y_{cam}$'))
-        ax.text(Zc1[0,0], Zc1[1,0], Zc1[2,0], (r'$Z_{cam}$'))
+        #ax.text(Xc1[0,0], Xc1[1,0], Xc1[2,0], (r'$X_{cam}$'))
+        #ax.text(Yc1[0,0], Yc1[1,0], Yc1[2,0], (r'$Y_{cam}$'))
+        #ax.text(Zc1[0,0], Zc1[1,0], Zc1[2,0], (r'$Z_{cam}$'))

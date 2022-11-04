@@ -50,34 +50,23 @@ def plot_3Dcam(ax, camera,
                positionArray,
                init_configuration,
                desired_configuration,
-               #name = "3Dplot",
-               #label = "World setting",
-               #axis_scale      = 0.5,
+               color,
                camera_scale    = 0.02):
     
-    #ax = fig.add_subplot(2, 2, 1, projection='3d')
-    #ax = fig.gca()
-    #ax.plot(points[0,:], points[1,:], points[2,:], 'o')
-    ax.plot(positionArray[0,:],positionArray[1,:],positionArray[2,:]) # Plot camera trajectory
+    ax.plot(positionArray[0,:],
+            positionArray[1,:],
+            positionArray[2,:],
+            color = color) # Plot camera trajectory
     
     camera.draw_camera(ax, scale=camera_scale, color='red')
-    #target_camera.draw_frame(ax, scale=axis_scale, c='black')
-    #moving_camera.set_position(x_pos, y_pos, z_pos,roll,pitch,yaw)
     camera.pose(desired_configuration)
     camera.draw_camera(ax, scale=camera_scale, color='brown')
-    #moving_camera.draw_frame(ax, scale=axis_scale, c='black')
-    #moving_camera.set_position(init_x, init_y, init_z,init_roll, init_pitch, init_yaw)
     camera.pose(init_configuration)
     camera.draw_camera(ax, scale=camera_scale, color='blue')
-    #moving_camera.draw_frame(ax, scale=axis_scale, c='black')
-    #limit_x = 1.0
-    #limit_y = 1.0
-    #limit_z = 1.0
     ax.set_xlabel("$w_x$")
     ax.set_ylabel("$w_y$")
     ax.set_zlabel("$w_z$")
     ax.grid(True)
-    #ax.set_title('World setting')
     
     
 def main():
@@ -237,6 +226,7 @@ def main():
                 pos_arr[i,:,:],
                 p0[:,i],
                 pd[:,i],
+                color = colors[i],
                 camera_scale    = 0.02)
     plt.savefig(name+'.png',bbox_inches='tight')
     
@@ -246,16 +236,16 @@ def main():
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
                             colors,
-                            name = "Descriptors_Projections_"+str(i),
-                            label = "Descriptors")
+                            name = "Image_Features_"+str(i),
+                            label = "Image Features")
     
     #   Errores 
     for i in range(n_agents):
         mp.plot_time(t_array,
                     err_array[i,:,:],
                     colors,
-                    name = "Descriptors_Error_"+str(i),
-                    label = "Descriptors Error")
+                    name = "Features_Error_"+str(i),
+                    label = "Features Error")
     
     #   Velocidaes x agente
     for i in range(n_agents):

@@ -3,6 +3,8 @@ from numpy import sin, cos, pi
 from numpy.linalg import matrix_rank, inv
 import matplotlib.pyplot as plt
 
+import Arrow3D
+
 
 def rot(ang,ax):
     
@@ -100,3 +102,92 @@ class camera:
         #print("--- end normalize")
         
         return points
+    
+    def draw_camera(self, ax,
+                    color='cyan', 
+                    scale=1.0,
+                    linestyle='solid',
+                    alpha=0.):
+        #CAmera points: to be expressed in the camera frame;
+        CAMup=scale*np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1 ],
+                              [ 1, 1,  1, 1, 1.5, 1.5, 1, 1 ],
+                              [ 2,-2, -2, 2,   3,   3, 2, 2 ],
+                              [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
+        #Ri2w    = np.dot(Rotations.rotox(pi), self.R)
+        #trasl   = self.t.reshape(3, -1)
+        CAMupTRASF = self.T @CAMup # Ri2w.dot(CAMup) + trasl;
+        CAMdwn=scale*np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1  ],
+                               [ -1,-1, -1,-1,-1.5,-1.5,-1,-1 ],
+                               [  2,-2, -2, 2,   3,   3, 2, 2 ],
+                               [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
+        CAMdwnTRASF     = self.T @ CAMdwn #Ri2w.dot( CAMdwn ) + trasl
+        CAMupTRASFm     = CAMupTRASF
+        CAMdwnTRASFm    = CAMdwnTRASF
+        ax.plot(CAMupTRASFm[0,:],
+                CAMupTRASFm[1,:],
+                CAMupTRASFm[2,:],
+                c=color,ls=linestyle)
+        ax.plot(CAMdwnTRASFm[0,:],
+                CAMdwnTRASFm[1,:],
+                CAMdwnTRASFm[2,:],
+                c=color,ls=linestyle)
+        ax.plot([CAMupTRASFm[0,0],CAMdwnTRASFm[0,0]],
+                [CAMupTRASFm[1,0],CAMdwnTRASFm[1,0]],
+                [CAMupTRASFm[2,0],CAMdwnTRASFm[2,0]],
+                c=color,ls=linestyle)
+        ax.plot([CAMupTRASFm[0,1],CAMdwnTRASFm[0,1]],
+                [CAMupTRASFm[1,1],CAMdwnTRASFm[1,1]],
+                [CAMupTRASFm[2,1],CAMdwnTRASFm[2,1]],
+                c=color,ls=linestyle)
+        ax.plot([CAMupTRASFm[0,2],CAMdwnTRASFm[0,2]],
+                [CAMupTRASFm[1,2],CAMdwnTRASFm[1,2]],
+                [CAMupTRASFm[2,2],CAMdwnTRASFm[2,2]],
+                c=color,ls=linestyle)
+        ax.plot([CAMupTRASFm[0,3],CAMdwnTRASFm[0,3]],
+                [CAMupTRASFm[1,3],CAMdwnTRASFm[1,3]],
+                [CAMupTRASFm[2,3],CAMdwnTRASFm[2,3]],
+                c=color,ls=linestyle)
+        ax.plot([CAMupTRASFm[0,4],CAMdwnTRASFm[0,4]],
+                [CAMupTRASFm[1,4],CAMdwnTRASFm[1,4]],
+                [CAMupTRASFm[2,4],CAMdwnTRASFm[2,4]],
+                c=color,ls=linestyle)
+        ax.plot([CAMupTRASFm[0,5],CAMdwnTRASFm[0,5]],
+                [CAMupTRASFm[1,5],CAMdwnTRASFm[1,5]],
+                [CAMupTRASFm[2,5],CAMdwnTRASFm[2,5]],
+                c=color,ls=linestyle)
+        
+        scale *= 10.0
+        
+        Oc = np.array([[0.,0,0,1]]).T
+        Xc = np.array([[scale,0,0,1]]).T
+        Yc = np.array([[0.,scale,0,1]]).T
+        Zc = np.array([[0.,0,scale,1]]).T
+        
+        Oc1     = self.T @ Oc
+        Xc1     = self.T @ Xc
+        Yc1     = self.T @ Yc
+        Zc1     = self.T @ Zc
+        a1 = Arrow3D.Arrow3D([Oc1[0,0],Xc1[0,0]],
+                             [Oc1[1,0],Xc1[1,0]],
+                             [Oc1[2,0],Xc1[2,0]],
+                             mutation_scale=20,
+                             lw=1, arrowstyle="-|>",
+                             color='k')
+        a2 = Arrow3D.Arrow3D([Oc1[0,0],Yc1[0,0]],
+                             [Oc1[1,0],Yc1[1,0]],
+                             [Oc1[2,0],Yc1[2,0]],
+                             mutation_scale=20, 
+                             lw=1, arrowstyle="-|>", 
+                             color='k')
+        a3 = Arrow3D.Arrow3D([Oc1[0,0],Zc1[0,0]],
+                             [Oc1[1,0],Zc1[1,0]],
+                             [Oc1[2,0],Zc1[2,0]],
+                             mutation_scale=20, 
+                             lw=1, arrowstyle="-|>",
+                             color='k')
+        ax.add_artist(a1)
+        ax.add_artist(a2)
+        ax.add_artist(a3)
+        ax.text(Xc1[0,0], Xc1[1,0], Xc1[2,0], (r'$X_{cam}$'))
+        ax.text(Yc1[0,0], Yc1[1,0], Yc1[2,0], (r'$Y_{cam}$'))
+        ax.text(Zc1[0,0], Zc1[1,0], Zc1[2,0], (r'$Z_{cam}$'))

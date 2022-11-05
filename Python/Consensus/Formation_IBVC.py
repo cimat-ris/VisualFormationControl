@@ -67,7 +67,27 @@ def plot_3Dcam(ax, camera,
     ax.set_ylabel("$w_y$")
     ax.set_zlabel("$w_z$")
     ax.grid(True)
-    
+
+def Z_select(depthOp, agents, P, Z_set):
+    Z = np.ones((1,P.shape[1]))
+    if depthOp ==1:
+        Z = agents[j].camera.p[2]*Z
+        Z = Z-P[2,:]
+    elif depthOp ==2:
+        Z = p0[2,j]*Z
+        Z = Z-P[2,:]
+    elif depthOp == 3:
+        Z = pd[2,j]*Z
+        Z = Z-P[2,:]
+    elif depthOp == 4:
+        Z = Z*Z_set
+    elif depthOp == 5:
+        tmp = agents[j].camera.p[2]-np.mean(P[2,:])
+        Z = Z*tmp
+    else:
+        print("Invalid depthOp")
+        return None
+    return Z
     
 def main():
     
@@ -80,16 +100,23 @@ def main():
     n_agents = p0.shape[1] #Number of agents
     
     pd = ip.circle(n_agents,0.6,1.2)  #   Desired pose in a circle
-    #p0 = pd
+    
+    
     #   Parameters
     
     case_n = 1  #   Case selector if needed
     directed = False
     
-    depthOp=4 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
+    #Depth estimation for interaction matrix
+    #   1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
+    depthOp=4 
     Z_set = 1.0
     
-    case_controlable=1 #1-All (6), 2-Horizontal (4)
+    #   interaction matrix used for the control
+    #   1- computed each step 2- Computed at the end 3- average
+    case_interactionM = 1
+    
+    case_controlable=2 #1-All (6), 2-Horizontal (4)
     
     #   Random inital positions?
     init_rand =False
@@ -132,15 +159,12 @@ def main():
     A_ds=np.ones(n_agents)-alpha*L
     print(A_ds)
     
+    #   Agents array
     agents = []
     for i in range(n_agents):
         cam = cm.camera()
         agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P))
         
-    #   TODO: set references X,p
-    
-    
-    
     #   INIT LOOP
     
     t=0.0
@@ -149,7 +173,14 @@ def main():
     steps = int((t_end-t)/dt + 1.0)
     lamb = 1.5*np.ones(6)
     
-    d_s_norm=np.zeros((2*n_points,n_agents));
+    #   case selections
+    if case_interactionM > 1:
+        for i in range(n_agents):
+            #   Depth calculation
+            Z = Z_select(depthOp, agents, P,Z_set)
+            if Z is None:
+                return
+            agents[i].set_interactionMat(Z)
     
     #   Storage variables
     t_array = np.arange(t,t_end+dt,dt)
@@ -157,8 +188,6 @@ def main():
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,3,steps))
-    
-    #   TODO: Ls+ options
     
     #   LOOP
     for i in range(steps):
@@ -183,33 +212,22 @@ def main():
         for j in range(n_agents):
             
             #   Depth calculation
-            Z = np.ones((1,P.shape[1]))
-            if depthOp ==1:
-                Z = agents[j].camera.p[2]*Z
-                Z = Z-P[2,:]
-            elif depthOp ==2:
-                Z = p0[2,j]*Z
-                Z = Z-P[2,:]
-            elif depthOp == 3:
-                Z = pd[2,j]*Z
-                Z = Z-P[2,:]
-            elif depthOp == 4:
-                Z = Z*Z_set
-            elif depthOp == 5:
-                tmp = agents[j].camera.p[2]-np.mean(P[2,:])
-                Z = Z*tmp
-            else:
-                print("Invalid depthOp")
+            Z = Z_select(depthOp, agents, P,Z_set)
+            if Z is None:
                 return
             
             #   Control
             U = agents[j].get_control(error[j,:],
                                       G.deg[j],
-                                      Z = Z)
+                                      Z = Z,
+                                      control_sel = case_interactionM)
             
             if U is None:
                 print("Invalid U control")
                 break
+            
+            if case_controlable == 2:
+                U[3:5] = 0.0
             
             print('U= ',U)
             U_array[j,:,i] = U
@@ -220,12 +238,10 @@ def main():
             pos_arr[j,:,i] = agents[j].camera.p
         
         #   TODO: Homography based
-        #   TODO: Event: min points -> v = 0
         
         
         #   Update
         t += dt
-        #Z += U[2,0]
         
     ####   Plot
     

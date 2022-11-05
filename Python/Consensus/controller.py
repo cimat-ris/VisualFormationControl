@@ -45,23 +45,38 @@ class agent:
         self.error =  self.s_current_n - self.s_ref_n
         self.error = self.error.T.reshape((1,2*self.n_points))
         
+        self.Ls_set = None
+        self.inv_Ls_set = None
         
-    def get_control(self, error, deg,lamb=1.0, Z = 1.0 ):
         
-        #   TODO: restricción de movimiento
+    def get_control(self, error, deg,lamb=1.0, Z = 1.0, control_sel=1 ):
+        
         #   TODO: Restricción de minimo de descriptores
-        Ls = Interaction_Matrix(self.s_current_n,Z)
-        #print(Ls)
-        Ls = Inv_Moore_Penrose(Ls) 
+        if control_sel ==1:
+            Ls = Interaction_Matrix(self.s_current_n,Z)
+            #print(Ls)
+            Ls = Inv_Moore_Penrose(Ls) 
+        elif control_sel ==2:
+            Ls = self.inv_Ls_set
+        elif control_sel ==3:
+            Ls = Interaction_Matrix(self.s_current_n,Z)
+            #print(Ls)
+            Ls = Inv_Moore_Penrose(Ls) 
+            Ls = 0.5*( Ls +self.inv_Ls_set)
         if Ls is None:
-            print("Invalid Ls matrix")
-            return None
+                print("Invalid Ls matrix")
+                return None
         #print(error.T)
         #print(Ls)
         U = lamb*(Ls @ error) / deg
         U[0] = -U[0]
         return  -U
     
+    def set_interactionMat(self,Z):
+        self.Ls_set = Interaction_Matrix(self.s_ref_n,Z)
+        #print(Ls)
+        self.inv_Ls_set = Inv_Moore_Penrose(self.Ls_set) 
+        
     def update(self,U,dt, points):
         
         p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]

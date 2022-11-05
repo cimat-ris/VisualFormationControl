@@ -85,7 +85,10 @@ def main():
     
     case_n = 1  #   Case selector if needed
     directed = False
-    depthOp=1 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
+    
+    depthOp=4 #Depth estimation for interaction matrix, 1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
+    Z_set = 1.0
+    
     case_controlable=1 #1-All (6), 2-Horizontal (4)
     
     #   Random inital positions?
@@ -138,10 +141,6 @@ def main():
     
     
     
-    #   TODO: verify points in FOV
-    
-    #   TODO: Z estimation
-    
     #   INIT LOOP
     
     t=0.0
@@ -158,6 +157,8 @@ def main():
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,3,steps))
+    
+    #   TODO: Ls+ options
     
     #   LOOP
     for i in range(steps):
@@ -180,9 +181,34 @@ def main():
         
         #   Get control
         for j in range(n_agents):
-            U = agents[j].get_control(error[j,:],G.deg[j],1.0)
+            
+            #   Depth calculation
+            Z = np.ones((1,P.shape[1]))
+            if depthOp ==1:
+                Z = agents[j].camera.p[2]*Z
+                Z = Z-P[2,:]
+            elif depthOp ==2:
+                Z = p0[2,j]*Z
+                Z = Z-P[2,:]
+            elif depthOp == 3:
+                Z = pd[2,j]*Z
+                Z = Z-P[2,:]
+            elif depthOp == 4:
+                Z = Z*Z_set
+            elif depthOp == 5:
+                tmp = agents[j].camera.p[2]-np.mean(P[2,:])
+                Z = Z*tmp
+            else:
+                print("Invalid depthOp")
+                return
+            
+            #   Control
+            U = agents[j].get_control(error[j,:],
+                                      G.deg[j],
+                                      Z = Z)
+            
             if U is None:
-                print("Invalid Ls matrix")
+                print("Invalid U control")
                 break
             
             print('U= ',U)
@@ -193,11 +219,13 @@ def main():
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
             pos_arr[j,:,i] = agents[j].camera.p
         
-        #   Homography based
+        #   TODO: Homography based
+        #   TODO: Event: min points -> v = 0
         
         
         #   Update
         t += dt
+        #Z += U[2,0]
         
     ####   Plot
     
@@ -229,6 +257,8 @@ def main():
                 color = colors[i],
                 camera_scale    = 0.02)
     plt.savefig(name+'.png',bbox_inches='tight')
+    #plt.show()
+    #plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):

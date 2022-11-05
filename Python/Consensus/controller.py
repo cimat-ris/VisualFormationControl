@@ -46,14 +46,15 @@ class agent:
         self.error = self.error.T.reshape((1,2*self.n_points))
         
         
-    def get_control(self, error, deg,lamb ):
-        #   TODO: Z calculada
+    def get_control(self, error, deg,lamb=1.0, Z = 1.0 ):
+        
         #   TODO: restricción de movimiento
         #   TODO: Restricción de minimo de descriptores
-        Ls = Interaction_Matrix(self.s_current_n,1.0)
+        Ls = Interaction_Matrix(self.s_current_n,Z)
         #print(Ls)
         Ls = Inv_Moore_Penrose(Ls) 
         if Ls is None:
+            print("Invalid Ls matrix")
             return None
         #print(error.T)
         #print(Ls)

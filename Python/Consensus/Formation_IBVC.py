@@ -99,7 +99,7 @@ def main():
     p0 = np.array(ip.p0)    #   init positions
     n_agents = p0.shape[1] #Number of agents
     
-    pd = ip.circle(n_agents,0.6,1.2)  #   Desired pose in a circle
+    pd = ip.circle(n_agents,1.0,1.2)  #   Desired pose in a circle
     
     
     #   Parameters
@@ -266,6 +266,7 @@ def main():
     fig.suptitle(label)
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
     for i in range(n_agents):
+        agents[i].count_points_in_FOV(P)
         plot_3Dcam(ax, agents[i].camera,
                 pos_arr[i,:,:],
                 p0[:,i],

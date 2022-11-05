@@ -51,6 +51,9 @@ class agent:
         
     def get_control(self, error, deg,lamb=1.0, Z = 1.0, control_sel=1 ):
         
+        if self.count_points_in_FOV(Z) < 4:
+            return np.zeros(6)
+        
         #   TODO: Restricción de minimo de descriptores
         if control_sel ==1:
             Ls = Interaction_Matrix(self.s_current_n,Z)
@@ -91,3 +94,14 @@ class agent:
         #print(self.error)
         self.error = self.error.T.reshape((1,2*self.n_points))
         #print(self.error)
+    def count_points_in_FOV(self,Z):
+        xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)
+        ylim = self.camera.rho[1]*self.camera.iMsize[1]/(2*self.camera.foco)
+        
+        a = abs(self.s_current_n[0,:]) < xlim 
+        b = abs(self.s_current_n[1,:]) < ylim
+        
+        test = []
+        for i in range(self.s_current.shape[1]):
+            test.append(a[i] and b[i] and Z[0,i] > 0.0)
+        return test.count(True)

@@ -25,6 +25,27 @@ def Inv_Moore_Penrose(L):
         return None
     return inv(A) @ L.T
 
+def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set):
+    if control_sel ==1:
+        Ls = Interaction_Matrix(s_current_n,Z)
+        #print(Ls)
+        Ls = Inv_Moore_Penrose(Ls) 
+    elif control_sel ==2:
+        Ls = inv_Ls_set
+    elif control_sel ==3:
+        Ls = Interaction_Matrix(s_current_n,Z)
+        #print(Ls)
+        Ls = Inv_Moore_Penrose(Ls) 
+        Ls = 0.5*( Ls +inv_Ls_set)
+    if Ls is None:
+            print("Invalid Ls matrix")
+            return None
+    #print(error.T)
+    #print(Ls)
+    U = (Ls @ error) / deg
+    U[0] = -U[0]
+    return  -U
+
 class agent:
     
     def __init__(self,camera,p_obj,p_current,points ):
@@ -49,31 +70,19 @@ class agent:
         self.inv_Ls_set = None
         
         
-    def get_control(self, error, deg,lamb=1.0, Z = 1.0, control_sel=1 ):
+    def get_control(self, sel,error,lamb,Z, args ):
         
         if self.count_points_in_FOV(Z) < 4:
             return np.zeros(6)
         
-        #   TODO: Restricción de minimo de descriptores
-        if control_sel ==1:
-            Ls = Interaction_Matrix(self.s_current_n,Z)
-            #print(Ls)
-            Ls = Inv_Moore_Penrose(Ls) 
-        elif control_sel ==2:
-            Ls = self.inv_Ls_set
-        elif control_sel ==3:
-            Ls = Interaction_Matrix(self.s_current_n,Z)
-            #print(Ls)
-            Ls = Inv_Moore_Penrose(Ls) 
-            Ls = 0.5*( Ls +self.inv_Ls_set)
-        if Ls is None:
-                print("Invalid Ls matrix")
-                return None
-        #print(error.T)
-        #print(Ls)
-        U = lamb*(Ls @ error) / deg
-        U[0] = -U[0]
-        return  -U
+        if sel == 1:
+            return  lamb* IBVC(args["control_sel"],
+                               error,
+                               self.s_current_n,
+                               Z,
+                               args["deg"],
+                               self.inv_Ls_set)
+        
     
     def set_interactionMat(self,Z):
         self.Ls_set = Interaction_Matrix(self.s_ref_n,Z)

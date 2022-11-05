@@ -217,10 +217,12 @@ def main():
                 return
             
             #   Control
-            U = agents[j].get_control(error[j,:],
-                                      G.deg[j],
-                                      Z = Z,
-                                      control_sel = case_interactionM)
+            args = {"deg":G.deg[j] , 
+                    "control_sel":case_interactionM}
+            U = agents[j].get_control(1, error[j,:], 1.0,Z,args)
+                                      #G.deg[j],
+                                      #Z = Z,
+                                      #control_sel = case_interactionM)
             
             if U is None:
                 print("Invalid U control")

@@ -47,7 +47,7 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set):
     #print(Ls)
     U = (Ls @ error) / deg
     U[0] = -U[0]
-    return  -U
+    return  U
 
 def get_Homographies(agents):
     n = len(agents)
@@ -62,7 +62,7 @@ def get_Homographies(agents):
 
 
 
-def Homography(H, delta_pref,adj_list):
+def Homography(H, delta_pref,adj_list,gamma):
     
     n = H.shape[0]
     U = np.zeros(6)
@@ -72,14 +72,14 @@ def Homography(H, delta_pref,adj_list):
     han = 0.0
     
     for i in adj_list:
-        hxy += H[i,0:2,2] - delta_pref[i,0:2,0]
+        hxy +=  H[i,0:2,2] - delta_pref[i,0:2,0]
         hz  += 1.0 - H[i,2,2]
         han += np.arctan2(H[i,1,0],H[i,0,0]) - delta_pref[i,5,0]
     U[0:2] = hxy
     U[0]  *= -1.0
     U[2]   = hz
     U[5]   = han
-    return -U
+    return U
 
 class agent:
     
@@ -105,24 +105,24 @@ class agent:
         self.inv_Ls_set = None
         
         
-    def get_control(self, sel,error,lamb,Z, args ):
+    def get_control(self, sel,lamb, Z,args ):
         
         if self.count_points_in_FOV(Z) < 4:
             return np.zeros(6)
         
             #   IBVC
         if sel == 1:
-            return  lamb* IBVC(args["control_sel"],
-                               error,
+            return  -lamb* IBVC(args["control_sel"],
+                               args["error"],
                                self.s_current_n,
                                Z,
                                args["deg"],
                                self.inv_Ls_set)
-            #   Homografía TODO: args
         elif sel == 2:
-            return  lamb* Homography(args["H"],
+            return  -lamb* Homography(args["H"],
                                      args["delta_pref"],
-                                     args["Adj_list"])
+                                     args["Adj_list"],
+                                     args["gamma"])
         
     
     def set_interactionMat(self,Z):

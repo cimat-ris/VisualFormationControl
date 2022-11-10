@@ -68,10 +68,10 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
-def Z_select(depthOp, agents, P, Z_set):
+def Z_select(depthOp, agent, P, Z_set):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
-        Z = agents[j].camera.p[2]*Z
+        Z = agent.camera.p[2]*Z
         Z = Z-P[2,:]
     elif depthOp ==2:
         Z = p0[2,j]*Z
@@ -82,7 +82,7 @@ def Z_select(depthOp, agents, P, Z_set):
     elif depthOp == 4:
         Z = Z*Z_set
     elif depthOp == 5:
-        tmp = agents[j].camera.p[2]-np.mean(P[2,:])
+        tmp = agent.camera.p[2]-np.mean(P[2,:])
         Z = Z*tmp
     else:
         print("Invalid depthOp")
@@ -119,7 +119,7 @@ def main():
     #   Controladores
     #   1  - IBVC   2 - Montijano
     control_type = 2 
-    case_controlable=2 #1-All (6), 2-Horizontal (4)
+    case_controlable=1 #1-All (6), 2-Horizontal (4)
     
     #   Random inital positions?
     init_rand =False
@@ -180,7 +180,7 @@ def main():
     if case_interactionM > 1:
         for i in range(n_agents):
             #   Depth calculation
-            Z = Z_select(depthOp, agents, P,Z_set)
+            Z = Z_select(depthOp, agents[i], P,Z_set)
             if Z is None:
                 return
             agents[i].set_interactionMat(Z)
@@ -190,6 +190,7 @@ def main():
         for i in range(n_agents):
             for j in range(n_agents):
                 delta_pref[i,j,:,0] = pd[:,j]-pd[:,i]
+        gamma =  p0[2,:]
     
     #   Storage variables
     t_array = np.arange(t,t_end+dt,dt)
@@ -216,28 +217,31 @@ def main():
         
         
         ####   Image based formation
-        H = ctr.get_Homographies(agents)
+        if control_type ==2:
+            H = ctr.get_Homographies(agents)
         #   Get control
         for j in range(n_agents):
             
             #   Depth calculation
-            Z = Z_select(depthOp, agents, P,Z_set)
+            Z = Z_select(depthOp, agents[j], P,Z_set)
             if Z is None:
                 return
             
             #   Control
             if control_type == 1:
                 args = {"deg":G.deg[j] , 
-                        "control_sel":case_interactionM}
+                        "control_sel":case_interactionM,
+                        "error": error[j,:]}
             elif control_type == 2:
                 args = {"H" : H[j,:,:,:],
                         "delta_pref" : delta_pref[j,:,:,:],
-                        "Adj_list":G.list_adjacency[j][0]}
+                        "Adj_list":G.list_adjacency[j][0],
+                        "gamma": gamma[j]}
             else:
                 print("invalid control selection")
                 return
             
-            U = agents[j].get_control(control_type, error[j,:], 1.0,Z,args)
+            U = agents[j].get_control(control_type,1.0,Z,args)
                                      
             
             if U is None:
@@ -255,14 +259,12 @@ def main():
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
             pos_arr[j,:,i] = agents[j].camera.p
         
-        #   TODO: Homography based
-        
-        
         #   Update
         t += dt
+        if control_type ==2:
+            gamma = A_ds @ gamma #/ 10.0
         
     ####   Plot
-    
     # Colors setup
     
     #        RANDOM X_i

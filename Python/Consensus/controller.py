@@ -56,8 +56,8 @@ def get_Homographies(agents):
     for i in range(n):
         for j in range(n):
             [H[i,j,:,:], mask] = cv2.findHomography(
-                                    agents[i].s_current_n.T,
-                                    agents[j].s_current_n.T)
+                                    agents[j].s_current_n.T,
+                                    agents[i].s_current_n.T)
     return H
 
 
@@ -72,16 +72,14 @@ def Homography(H, delta_pref,adj_list):
     han = 0.0
     
     for i in adj_list:
-        print(i)
-        print(H[i,0:2,2])
-        print( delta_pref[i,0:2,0])
         hxy += H[i,0:2,2] - delta_pref[i,0:2,0]
-        hz += 1.0 - H[i,2,2]
-        han += np.arctan2(H[i,1,0],H[i,0,0])
+        hz  += 1.0 - H[i,2,2]
+        han += np.arctan2(H[i,1,0],H[i,0,0]) - delta_pref[i,5,0]
     U[0:2] = hxy
-    U[2] = hz
-    U[5] = han
-    return U
+    U[0]  *= -1.0
+    U[2]   = hz
+    U[5]   = han
+    return -U
 
 class agent:
     

@@ -55,9 +55,12 @@ def get_Homographies(agents):
     
     for i in range(n):
         for j in range(n):
-            [H[i,j,:,:], mask] = cv2.findHomography(
+            [H_tmp, mask] = cv2.findHomography(
                                     agents[j].s_current_n.T,
                                     agents[i].s_current_n.T)
+            #   Docondition
+            H_tmp = H_tmp/np.linalg.norm(H_tmp[:,1])
+            H[i,j,:,:] = H_tmp
     return H
 
 
@@ -72,12 +75,12 @@ def Homography(H, delta_pref,adj_list,gamma):
     han = 0.0
     
     for i in adj_list:
-        hxy +=  H[i,0:2,2] - delta_pref[i,0:2,0]
+        hxy += gamma* H[i,0:2,2] - delta_pref[i,0:2,0]
         hz  += 1.0 - H[i,2,2]
         han += np.arctan2(H[i,1,0],H[i,0,0]) - delta_pref[i,5,0]
     U[0:2] = hxy
     U[0]  *= -1.0
-    U[2]   = hz
+    U[2]   = -hz
     U[5]   = han
     return U
 
@@ -107,8 +110,8 @@ class agent:
         
     def get_control(self, sel,lamb, Z,args ):
         
-        if self.count_points_in_FOV(Z) < 4:
-            return np.zeros(6)
+        #if self.count_points_in_FOV(Z) < 4:
+            #return np.zeros(6)
         
             #   IBVC
         if sel == 1:

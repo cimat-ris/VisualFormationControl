@@ -179,20 +179,20 @@ from numpy import sin, cos, pi
 #[0.0,-0.0,-0.0,0.0]]
 
 ##All x-y-z-yaw different, the orientation of c4 defined the global final orientation
-#p0=[[0.8,-1.0,0.25,0.0],
-#[0.0,1.3,-0.9,-0.5],
-#[1.4,0.8,1.2,1.6],
-#[3.14159265358979,3.14159265358979,3.14159265358979,3.14159265358979],
-#[0,0,0,0],
-#[0.2,-0.18,-0.3,-0.0]]
-
-##All x-y-z-yaw different, the orientation of c4 defined the global final orientation
 p0=[[0.8,-1.0,0.25,0.0],
 [0.0,1.3,-0.9,-0.5],
-[1.4,1.4,1.4,1.4],
+[3.4,0.8,2.2,2.6],
 [3.14159265358979,3.14159265358979,3.14159265358979,3.14159265358979],
 [0,0,0,0],
 [0.2,-0.18,-0.3,-0.0]]
+
+##All x-y-z-yaw different, the orientation of c4 defined the global final orientation
+#p0=[[0.8,-1.0,0.25,0.0],
+#[0.0,1.3,-0.9,-0.5],
+#[1.4,1.4,1.4,1.4],
+#[3.14159265358979,3.14159265358979,3.14159265358979,3.14159265358979],
+#[0,0,0,0],
+#[0.2,-0.18,-0.3,-0.0]]
 
 #All x-y diferent, the orientation of c4 defined the global final orientation
 #p0=[[0.8,-1.0,0.25,0.0],

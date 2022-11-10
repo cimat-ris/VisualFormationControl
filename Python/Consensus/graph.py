@@ -52,4 +52,5 @@ class graph:
         plt.tight_layout()
         plt.savefig(name+'.png',bbox_inches='tight')
         #plt.show()
+        plt.close()
         

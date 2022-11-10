@@ -33,6 +33,7 @@ def plot_time(t_array,
     plt.tight_layout()
     plt.savefig(name+'.png',bbox_inches='tight')
     #plt.show()
+    plt.close()
     
     #   ---
     
@@ -73,6 +74,7 @@ def plot_descriptors(descriptors_array,
     plt.tight_layout()
     plt.savefig(name+'.png',bbox_inches='tight')
     #plt.show()
+    plt.close()
 
 def plot_position(position_array,
                     desired_position,
@@ -117,3 +119,4 @@ def plot_position(position_array,
     plt.tight_layout()
     plt.savefig(name+'.png',bbox_inches='tight')
     #plt.show()
+    plt.close()

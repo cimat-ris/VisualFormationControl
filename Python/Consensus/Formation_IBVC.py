@@ -151,15 +151,14 @@ def main():
     print(L)
     
     #   Conectivity graph
-    print('plot')
     G.plot()
     
     
     [U,S,V]=svd(L)
     lam_n=S[0]
     lam_2=S[-2]
-    alpha=2/(lam_n+lam_2)
-    A_ds=np.ones(n_agents)-alpha*L
+    alpha=2./(lam_n+lam_2)
+    A_ds=np.eye(n_agents)-alpha*L
     print(A_ds)
     
     #   Agents array
@@ -202,7 +201,7 @@ def main():
     #   LOOP
     for i in range(steps):
         
-        print("loop",i)
+        print("loop",i, end="\r")
         
         #   Error:
         
@@ -210,7 +209,7 @@ def main():
         for j in range(n_agents):
             error[j,:] = agents[j].error
         error = -L @ error
-        print(error)
+        
         #   save data
         #print(error)
         err_array[:,:,i] = error
@@ -221,6 +220,10 @@ def main():
             H = ctr.get_Homographies(agents)
         #   Get control
         for j in range(n_agents):
+            
+            #   save data 
+            desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
+            pos_arr[j,:,i] = agents[j].camera.p
             
             #   Depth calculation
             Z = Z_select(depthOp, agents[j], P,Z_set)
@@ -251,19 +254,18 @@ def main():
             if case_controlable == 2:
                 U[3:5] = 0.0
             
-            print('U= ',U)
+            #print('U= ',U)
             U_array[j,:,i] = U
             agents[j].update(U,dt,P)
             
-            #   save data 
-            desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
-            pos_arr[j,:,i] = agents[j].camera.p
         
         #   Update
         t += dt
         if control_type ==2:
             gamma = A_ds @ gamma #/ 10.0
         
+    
+    
     ####   Plot
     # Colors setup
     
@@ -295,7 +297,7 @@ def main():
                 camera_scale    = 0.02)
     plt.savefig(name+'.png',bbox_inches='tight')
     #plt.show()
-    #plt.close()
+    plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):

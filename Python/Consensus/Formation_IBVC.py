@@ -19,7 +19,7 @@ import matplotlib.patches as mpatches
 from numpy.random import rand, randint
 
 #   Image
-import cv2
+#import cv2
 import shutil, os
 import csv
 
@@ -116,6 +116,9 @@ def main():
     #   1- computed each step 2- Computed at the end 3- average
     case_interactionM = 1
     
+    #   Controladores
+    #   1  - IBVC   2 - Montijano
+    control_type = 2 
     case_controlable=2 #1-All (6), 2-Horizontal (4)
     
     #   Random inital positions?
@@ -182,6 +185,12 @@ def main():
                 return
             agents[i].set_interactionMat(Z)
     
+    if control_type == 2:
+        delta_pref = np.zeros((n_agents,n_agents,6,1))
+        for i in range(n_agents):
+            for j in range(n_agents):
+                delta_pref[i,j,:,0] = pd[:,j]-pd[:,i]
+    
     #   Storage variables
     t_array = np.arange(t,t_end+dt,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
@@ -207,7 +216,7 @@ def main():
         
         
         ####   Image based formation
-        
+        H = ctr.get_Homographies(agents)
         #   Get control
         for j in range(n_agents):
             
@@ -217,12 +226,19 @@ def main():
                 return
             
             #   Control
-            args = {"deg":G.deg[j] , 
-                    "control_sel":case_interactionM}
-            U = agents[j].get_control(1, error[j,:], 1.0,Z,args)
-                                      #G.deg[j],
-                                      #Z = Z,
-                                      #control_sel = case_interactionM)
+            if control_type == 1:
+                args = {"deg":G.deg[j] , 
+                        "control_sel":case_interactionM}
+            elif control_type == 2:
+                args = {"H" : H[j,:,:,:],
+                        "delta_pref" : delta_pref[j,:,:,:],
+                        "Adj_list":G.list_adjacency[j][0]}
+            else:
+                print("invalid control selection")
+                return
+            
+            U = agents[j].get_control(control_type, error[j,:], 1.0,Z,args)
+                                     
             
             if U is None:
                 print("Invalid U control")

@@ -175,7 +175,7 @@ void Controller::setGamma(int label, double val){
 */
 void Controller::compute(int matches, int j, Mat &GC,double *pose_i, double *pose_j,double *R, double *t, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i){
 	this->pose_i = pose_i; this->pose_j = pose_j; 
-
+cout << "------------- DB3 ------------- \n";
 	switch(controller_type){
 		case 1: PBFCHD(matches,label,j,GC); break;
 		case 2: PBFCED(matches,label,j,GC,R,t); break;
@@ -186,7 +186,7 @@ void Controller::compute(int matches, int j, Mat &GC,double *pose_i, double *pos
 		case 7: IBFCH(matches,label,j,GC); break;
 		case 8: IBFCE(matches,label,j,GC,R,t); break;
 		case 9: EBFC(matches, label, j, GC); break;
-        case 10: IBFCF(matches,  kp_j, kp_i); break; 
+        case 10: IBFCF(matches, label, j, kp_j, kp_i); break; 
 		default: cout << "Computing nothing..."<<endl; 
 	}
 }
@@ -460,7 +460,9 @@ void Controller::IBFCH(int matches, int i, int j, Mat &H){
 	//rectified matrix
 	Mat Hr = Hir*H*Hjr.inv();
 
-	double p_ij[3] = {-gamma[i]*Hr.at<double>(1,2),-gamma[i]*Hr.at<double>(0,2),1.0-Hr.at<double>(2,2)};
+	double p_ij[3] = {-gamma[i]*Hr.at<double>(1,2),
+                        -gamma[i]*Hr.at<double>(0,2),
+                        1.0-Hr.at<double>(2,2)};
 	double yaw_ij = -atan2(Hr.at<double>(1,0),Hr.at<double>(0,0));
 
 	Vx += Kv*(p_ij[0]-x_aster[i][j]);
@@ -517,20 +519,44 @@ void Controller::EBFC(int matches,int i, int j, Mat &F){
 	normalize(p,3);
 	
 	if(!DONE[i][j]){//use the first decomposition and choice to set the filters
-		Mat R_i = rotationZ(pose_i[5]); Mat R_j = rotationZ(pose_j[5]); Mat R_ij = R_i.t()*R_j;		
-		Vec3d p_i(pose_i[0],pose_i[1],pose_i[2]); Vec3d p_j(pose_j[0],pose_j[1],pose_j[2]);
-		Vec3f angles = rotationMatrixToEulerAngles(R_ij); double yaw_ij1 = angles[2];
-		Mat p_ij1 = R_i.t()*Mat(p_j-p_i); 
-		p_ij[0] = p_ij1.at<double>(0,0); p_ij[1] = p_ij1.at<double>(1,0); p_ij[2] = p_ij1.at<double>(2,0);
+		Mat R_i = rotationZ(pose_i[5]);
+		 Mat R_j = rotationZ(pose_j[5]);
+		 Mat R_ij = R_i.t()*R_j;
+				
+		Vec3d p_i(pose_i[0],pose_i[1],pose_i[2]);
+		 Vec3d p_j(pose_j[0],pose_j[1],pose_j[2]);
+		
+		Vec3f angles = rotationMatrixToEulerAngles(R_ij);
+		 double yaw_ij1 = angles[2];
+		
+		Mat p_ij1 = R_i.t()*Mat(p_j-p_i);
+		 
+		p_ij[0] = p_ij1.at<double>(0,0);
+		 p_ij[1] = p_ij1.at<double>(1,0);
+		 p_ij[2] = p_ij1.at<double>(2,0);
+		
 		normalize(p_ij,3);
+		
 		yaw_ij = yaw_ij1;
+		
 		yawf[i][j] = yaw_ij1;
-		xf[i][j] = p_ij[0]; yf[i][j] = p_ij[1]; zf[i][j] = p_ij[2];		
-		DONE[i][j] = 1;		
+		
+		xf[i][j] = p_ij[0];
+		 yf[i][j] = p_ij[1];
+		 zf[i][j] = p_ij[2];
+				
+		DONE[i][j] = 1;
+				
 	}else{//use epipoles to obtain good direction		
 		filter_pose_epipoles(i,j,p,p_ij, &yaw_ij);
-		Mat R_i = rotationZ(pose_i[5]); Mat R_j = rotationZ(pose_j[5]); Mat R_ij = R_i.t()*R_j;	
-		Vec3f angles = rotationMatrixToEulerAngles(R_ij); yaw_ij = angles[2];	
+		
+		Mat R_i = rotationZ(pose_i[5]);
+		 Mat R_j = rotationZ(pose_j[5]);
+		 Mat R_ij = R_i.t()*R_j;
+			
+		Vec3f angles = rotationMatrixToEulerAngles(R_ij);
+		 yaw_ij = angles[2];
+			
 	}
 
 	Vx += Kv*(p_ij[0]-x_aster[i][j]);
@@ -553,44 +579,56 @@ void Controller::EBFC(int matches,int i, int j, Mat &F){
 		j: label of the agent used to compute the homography
 		H: Homography as opencv Mat
 */
-void Controller::IBFCF(int matches, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i){
-	Mat U = Mat::zeros(6,1,CV_64F) ;
-    int deg = kp_j.size();
-    for (int i = 0; i < deg; i++)
-    {
-        //  varaible convertions
-        vector<Point2f> point2f_kp_j; //We define vector of point2f
-        vector<Point2f> point2f_kp_i; //We define vector of point2f
-        KeyPoint::convert(kp_j[i], point2f_kp_j, vector< int >());
-        KeyPoint::convert(kp_i[i], point2f_kp_i, vector< int >());
-        //Then we use this nice function from OpenCV to directly convert from KeyPoint vector to Point2f vector
-        cv::Mat pointmatrix_kp_j(point2f_kp_j); 
-        cv::Mat pointmatrix_kp_i(point2f_kp_i); 
-        
-        // Descriptor control
-        double lambda = 1.0;
-        camera_norm(pointmatrix_kp_i);
-        camera_norm(pointmatrix_kp_j);
-        
-        //  Compute error for all pair kp_i kp_j
-        //  TODO : revisar que sea el eorden adecuado ij
-        Mat err = pointmatrix_kp_j-pointmatrix_kp_i;
-        Mat L = interaction_Mat(pointmatrix_kp_j,1.0);
-        double det=0.0;
-        L = Moore_Penrose_PInv(L,det);
-        if (det < 1e-6)
-            return;
-
-        U = U -1.0 * lambda * L*err.reshape(1,L.cols); 
-    }
-    U = U/deg;
-    
+void Controller::IBFCF(int matches, int i, int j,
+                       vector<vector<KeyPoint>> kp_j,
+                       vector<vector<KeyPoint>> kp_i){
+	
+    cout << "------------- DB1 ------------- \n";
+    int n = kp_j[i].size();
+    cout << "------------- DB1.1 ------------- \n";
+    //  varaible convertions
+    vector<Point2f> point2f_kp_j; //We define vector of point2f
+    vector<Point2f> point2f_kp_i; //We define vector of point2f
+    vector<int> mask(n,1);
+    cout << "------------- DB1.1.1 ------------- \n";
+    KeyPoint::convert(kp_j[j], point2f_kp_j, mask);
+    KeyPoint::convert(kp_i[i], point2f_kp_i, mask);
+    cout << "------------- DB1.1.2 ------------- \n";
+    //Then we use this nice function from OpenCV to directly convert from KeyPoint vector to Point2f vector
+    cv::Mat pointmatrix_kp_j(point2f_kp_j); 
+    cv::Mat pointmatrix_kp_i(point2f_kp_i); 
+    cout << "------------- DB1.2 ------------- \n";
+    // Descriptor control
+    double lambda = 1.0;
+    camera_norm(pointmatrix_kp_i);
+    camera_norm(pointmatrix_kp_j);
+    cout << "------------- DB1.3 ------------- \n";
+    //  Compute error for all pair kp_i kp_j
+    //  TODO : revisar que sea el eorden adecuado ij
+    Mat err = pointmatrix_kp_j-pointmatrix_kp_i;
+    //  TODO : apropiate Z
+    Mat L = interaction_Mat(pointmatrix_kp_j,1.0);
+    /*double det=0.0;
+    L = Moore_Penrose_PInv(L,det);
+    if (det < 1e-6)
+        return;
+    */cout << "------------- DB1.4 ------------- \n";
+    Mat U  = -1.0 * lambda * L*err.reshape(1,L.cols); 
+    U = U/(float)n_neigh;
+    cout << "------------- DB1.5 ------------- \n";
     Vx += (float) U.at<double>(1,0);
 	Vy += (float) U.at<double>(0,0);
 	Vz += (float) U.at<double>(2,0);
 	Wz += (float) U.at<double>(5,0);
-
-// 	getError(matches,i,j,p_ij[0],p_ij[1],p_ij[2],yaw_ij);
+    cout << "------------- DB1.6 ------------- \n";
+    //  Error calculation for update
+    double p_ij [4];
+    p_ij[0] = pose_j[0] - pose_i[0];
+    p_ij[1] = pose_j[1] - pose_i[1];
+    p_ij[2] = pose_j[2] - pose_i[2];
+    p_ij[3] = pose_j[5] - pose_i[5];
+    cout << "------------- DB2 ------------- \n";
+	getError(matches,i,j,p_ij[0],p_ij[1],p_ij[2],p_ij[3]);
 }
 
 /*
@@ -616,19 +654,37 @@ void Controller::getError(int matches,int i, int j, double hat_x, double hat_y, 
 	string name(output_dir+"/"+to_string(j)+"/");
 	
 	//computing GT
-	Mat R_i = rotationZ(pose_i[5]); Mat R_j = rotationZ(pose_j[5]); Mat R_ij = R_i.t()*R_j;		
-	Vec3d p_i(pose_i[0],pose_i[1],pose_i[2]); Vec3d p_j(pose_j[0],pose_j[1],pose_j[2]);
-	Vec3f angles = rotationMatrixToEulerAngles(R_ij); double yaw_ij = angles[2];
-	Mat p_ij = R_i.t()*Mat(p_j-p_i); 
+	Mat R_i = rotationZ(pose_i[5]);
+	Mat R_j = rotationZ(pose_j[5]);
+	Mat R_ij = R_i.t()*R_j;
+			
+	Vec3d p_i(pose_i[0],pose_i[1],pose_i[2]);
+	Vec3d p_j(pose_j[0],pose_j[1],pose_j[2]);
+	
+	Vec3f angles = rotationMatrixToEulerAngles(R_ij);
+	double yaw_ij = angles[2];
+	
+	Mat p_ij = R_i.t()*Mat(p_j-p_i);
+	 
 	double xij = p_ij.at<double>(0,0);
 	double yij = p_ij.at<double>(1,0);
 	double zij = p_ij.at<double>(2,0);
-
+	
 	//estimated pose, desired pose, ground truth pose. In that order for every coordinate
 	if(bearingsNeeded(controller_type)){
-	double norm = sqrt(xij*xij+yij*yij+zij*zij); xij/=norm;yij/=norm;zij/=norm;}
-	double data[12] = {hat_x,x_aster[i][j],xij,hat_y,y_aster[i][j],yij,hat_z,z_aster[i][j],zij,hat_yaw,yaw_aster[i][j],yaw_ij};
+        double norm = sqrt(xij*xij+yij*yij+zij*zij);
+        xij/=norm;
+        yij/=norm;
+        zij/=norm;
+	}
+	double data[12] =
+        {hat_x,x_aster[i][j],xij,
+        hat_y,y_aster[i][j],yij,
+        hat_z,z_aster[i][j],zij,
+        hat_yaw,yaw_aster[i][j],yaw_ij};
+	
 	appendToFile(name+"coordinates.txt",data,12);
+	
 
 	data[0] = (double) matches;
 	appendToFile(name+"matches.txt",data,1);

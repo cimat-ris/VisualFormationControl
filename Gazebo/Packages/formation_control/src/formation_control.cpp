@@ -172,7 +172,14 @@ int main(int argc, char **argv){
 			pubs_constraint[i].publish(this_drone.sendGeometricConstraintMsg(i));
 
 		//if we havent computed velocities using information from all neighbors, skip to the next loop.
-		if(this_drone.haveComputedVelocities(&err_t,&err_psi) == 0){rate.sleep(); if(ite-last_time > 10) break; else continue;} 		
+		if(this_drone.haveComputedVelocities(&err_t,&err_psi) == 0)
+        {
+            rate.sleep();
+            if(ite-last_time > 10) 
+                break;
+            else 
+                continue;
+        } 		
 
 		rate.sleep();
 
@@ -200,7 +207,9 @@ int main(int argc, char **argv){
 		err_psi = average(e_psi,size);
 
 		//print information
-		cout << t <<" I'm drone "<< me_str << " e_t: "<<err_t<< " e_psi: " << err_psi << endl;
+		cout << t <<" I'm drone "<< me_str ;
+        cout << " e_t: "<<err_t;
+        cout<< " e_psi: " << err_psi << endl;
 
 		//do we stop?
 		if(t>max_time || (err_t < th_t && err_psi < th_psi)) break;

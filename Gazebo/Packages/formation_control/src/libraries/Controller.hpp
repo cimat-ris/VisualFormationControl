@@ -62,7 +62,7 @@ class Controller{
 		void IBFCH(int matches, int i, int j, Mat &H);//image based formation control with h. Montijano		
 		void IBFCE(int matches, int i, int j, Mat &E,double *R, double *t);//image based formation control with essential
 		void EBFC(int matches,int i, int j, Mat &F); //Epipoles Based Formation Control
-        void IBFCF(int matches, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i);
+        void IBFCF(int matches, int i, int j, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i); // Visual controller from Chaumette implementacion 
 
 		//--------------------------------- extra functions for controllers
 		void getError(int matches,int i, int j, double hat_x, double hat_y, double hat_z, double hat_yaw);//to obtain the error between every pair

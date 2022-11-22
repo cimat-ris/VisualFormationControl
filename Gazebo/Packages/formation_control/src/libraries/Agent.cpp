@@ -323,6 +323,7 @@ void Agent::getGeometricConstraint(const formation_control::geometric_constraint
 	}
 
 	int matches = msg->n_matches;
+    cout << "------------- DB4 ------------- \n";
 	controller.compute(matches,you,GC,pose,pose_j,R,t,processor.kp_j, processor.kp_i);	
 }
 

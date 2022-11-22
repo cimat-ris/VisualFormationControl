@@ -26,8 +26,8 @@
   <arg name="desired_formation" default="0" />
   <arg name="width" default="2" />
 
-  <arg name="input_dir" default="/home/hector/patty_ws/src/formation_control/src/input/" />
-  <arg name="output_dir" default="/home/hector/patty_ws/src/formation_control/src/output/" />
+  <arg name="input_dir" default="/home/edgarchavez/catkin_ws/src/formation_control/src/input/" />
+  <arg name="output_dir" default="/home/edgarchavez/catkin_ws/src/formation_control/src/output/" />
   <arg name="gamma_file" default="0"/>
   <arg name="matching" default="0"/>
   <arg name="communication_type" default="1"/>

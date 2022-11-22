@@ -147,7 +147,7 @@ int epipoleConsensus(int ct){
 		0: the code is not valid
 */
 int isValidConsensus(int ct){
-	if (ct >= 1 and ct <= 9)
+	if (ct >= 1 and ct <= 10)
 		return 1;
 	return 0;
 }

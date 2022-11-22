@@ -24,10 +24,11 @@ class Controller{
 		void getVelocities(double *Vx, double *Vy, double *Vz, double *Wz);//return computed velocities
 		void setGamma(int label, double value);//sets the value of gamma for the given agent
 		//---------------------------- processing
-		void compute(int matches,int j,Mat &GC,double *pose_i, double *pose_j,double *R, double *t);//compute velocities
+		void compute(int matches,int j,Mat &GC,double *pose_i, double *pose_j,double *R, double *t, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i);//compute velocities
 		//-----------------------------flags
 		int haveComputedVelocities(double *et, double *epsi);//to verify everything has been computed
 		int gammaInitialized();//verifies if the gamma vector has been initialized
+        void camera_norm(Mat &  points);
 	private:
 		//--------------------------------------------attributes
 		int label;//id for this quadrotor
@@ -61,6 +62,7 @@ class Controller{
 		void IBFCH(int matches, int i, int j, Mat &H);//image based formation control with h. Montijano		
 		void IBFCE(int matches, int i, int j, Mat &E,double *R, double *t);//image based formation control with essential
 		void EBFC(int matches,int i, int j, Mat &F); //Epipoles Based Formation Control
+        void IBFCF(int matches, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i);
 
 		//--------------------------------- extra functions for controllers
 		void getError(int matches,int i, int j, double hat_x, double hat_y, double hat_z, double hat_yaw);//to obtain the error between every pair
@@ -70,3 +72,5 @@ class Controller{
 		void filter_pose_epipoles(int i, int j, double *e, double *p, double *yaw); //to filter epipoles
 		void readK();
 };
+Mat interaction_Mat(Mat pointmatrix,double Z);
+Mat  Moore_Penrose_PInv(Mat L,double & det);

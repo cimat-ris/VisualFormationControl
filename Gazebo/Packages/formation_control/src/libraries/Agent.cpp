@@ -272,7 +272,10 @@ void Agent::getImageDescription(const formation_control::image_description::Cons
 	//compute message and obtain geometric constraint
 	Mat GM = processor.getGeometricConstraint(msg,&j,pose,pose_j,&SUCCESS,&matches,R,t);
 	if(SUCCESS) //everything could be computed
-		controller.compute(matches,j,GM,pose,pose_j,R,t);		
+		controller.compute(matches,j,GM,
+                           pose,pose_j,
+                            R,t,
+                            processor.kp_j, processor.kp_i);		
 }
 
 
@@ -320,7 +323,7 @@ void Agent::getGeometricConstraint(const formation_control::geometric_constraint
 	}
 
 	int matches = msg->n_matches;
-	controller.compute(matches,you,GC,pose,pose_j,R,t);	
+	controller.compute(matches,you,GC,pose,pose_j,R,t,processor.kp_j, processor.kp_i);	
 }
 
 /*

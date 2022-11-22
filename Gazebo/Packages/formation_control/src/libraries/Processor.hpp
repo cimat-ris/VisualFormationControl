@@ -55,7 +55,7 @@ class Processor{
 		void detectAndCompute(double *pose);//process the actual image to obtain key points and descriptors
 		Mat getGeometricConstraint(const formation_control::image_description::ConstPtr& msg, int *you, double *pose_i, double *pose_j, int *SUCCESS, int *n_matches,double *R, double *t); //
 		void matchingCallback(const sensor_msgs::Image::ConstPtr& msg);
-	private:
+// 	private:
 		//------------------------------------------attributes
 		int label;//id of the quadrotor
 		int controller_type;//code of the controller

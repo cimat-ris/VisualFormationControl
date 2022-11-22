@@ -196,3 +196,4 @@ double average(vector<double> &a, int n){
 
 	return avg/(double) n;
 }
+

@@ -173,7 +173,7 @@ void Controller::setGamma(int label, double val){
 			opencv function recover pose. It is only given the first time and used for epipolar
 			consensus
 */
-void Controller::compute(int matches, int j, Mat &GC,double *pose_i, double *pose_j,double *R, double *t){
+void Controller::compute(int matches, int j, Mat &GC,double *pose_i, double *pose_j,double *R, double *t, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i){
 	this->pose_i = pose_i; this->pose_j = pose_j; 
 
 	switch(controller_type){
@@ -186,6 +186,7 @@ void Controller::compute(int matches, int j, Mat &GC,double *pose_i, double *pos
 		case 7: IBFCH(matches,label,j,GC); break;
 		case 8: IBFCE(matches,label,j,GC,R,t); break;
 		case 9: EBFC(matches, label, j, GC); break;
+        case 10: IBFCF(matches,  kp_j, kp_i); break; 
 		default: cout << "Computing nothing..."<<endl; 
 	}
 }
@@ -541,6 +542,58 @@ void Controller::EBFC(int matches,int i, int j, Mat &F){
 }
 
 /*
+	function: IBFCF (controller_type: 10)
+	description: Image-Based Formation Control using Features. 
+		this controller is the implementation from Becerra et 
+		al paper 'Vision-based Consensus' (NYP). CODE: 10
+	params:
+		matches: number of matches used to obtain the homography
+		i: label of the agent whose reference frame was used to 
+			obtain the homography (this agent)
+		j: label of the agent used to compute the homography
+		H: Homography as opencv Mat
+*/
+void Controller::IBFCF(int matches, vector<vector<KeyPoint>> kp_j,vector<vector<KeyPoint>> kp_i){
+	Mat U = Mat::zeros(6,1,CV_64F) ;
+    int deg = kp_j.size();
+    for (int i = 0; i < deg; i++)
+    {
+        //  varaible convertions
+        vector<Point2f> point2f_kp_j; //We define vector of point2f
+        vector<Point2f> point2f_kp_i; //We define vector of point2f
+        KeyPoint::convert(kp_j[i], point2f_kp_j, vector< int >());
+        KeyPoint::convert(kp_i[i], point2f_kp_i, vector< int >());
+        //Then we use this nice function from OpenCV to directly convert from KeyPoint vector to Point2f vector
+        cv::Mat pointmatrix_kp_j(point2f_kp_j); 
+        cv::Mat pointmatrix_kp_i(point2f_kp_i); 
+        
+        // Descriptor control
+        double lambda = 1.0;
+        camera_norm(pointmatrix_kp_i);
+        camera_norm(pointmatrix_kp_j);
+        
+        //  Compute error for all pair kp_i kp_j
+        //  TODO : revisar que sea el eorden adecuado ij
+        Mat err = pointmatrix_kp_j-pointmatrix_kp_i;
+        Mat L = interaction_Mat(pointmatrix_kp_j,1.0);
+        double det=0.0;
+        L = Moore_Penrose_PInv(L,det);
+        if (det < 1e-6)
+            return;
+
+        U = U -1.0 * lambda * L*err.reshape(1,L.cols); 
+    }
+    U = U/deg;
+    
+    Vx += (float) U.at<double>(1,0);
+	Vy += (float) U.at<double>(0,0);
+	Vz += (float) U.at<double>(2,0);
+	Wz += (float) U.at<double>(5,0);
+
+// 	getError(matches,i,j,p_ij[0],p_ij[1],p_ij[2],yaw_ij);
+}
+
+/*
 	function: getError
 	description: computes the feedback error and saves important data to plot.
 	params:
@@ -769,4 +822,93 @@ void Controller::readK(){
 
 	//close file
 	inFile.close();
+}
+
+
+
+/*
+ * function:  Normalization in siut
+ * description: normalices the coordinates in the matrix reference
+ * params:
+ *      points : Mat(n,2)
+ */
+
+void Controller::camera_norm(Mat &  points){
+    
+    //  Normalización in situ
+    int n = points.rows;
+    
+    //  p1
+    points.col(0) = points.col(0)-K.at<double>(0,2);
+    points.col(1) = points.col(1)-K.at<double>(1,2);
+    points.col(0) = points.col(0).mul(1.0/K.at<double>(0,0));
+    points.col(1) = points.col(1).mul(1.0/K.at<double>(1,1));
+
+    return;
+}
+
+/*
+ * function:  Moore Penrose Pseudoinverse matrix
+ * description: computes the interaction list for a set of point descriptors
+ * params:
+ *      L: Input matrix
+ *      det : a pointer to a double that saves the determinant calculation
+ * returns 
+ *      Lt : Pseudoinverse
+ */
+
+Mat  Moore_Penrose_PInv(Mat L,double & det){
+    
+    Mat Lt = L.t();
+    Mat Ls = Lt*L;
+    det = determinant(Ls);
+    if (det > 1e-6){
+        return Ls.inv()*Lt;
+    }
+        
+    return Lt;
+}
+
+/*
+ * function: interation matrix
+ * description: computes the interaction list for a set of point descriptors
+ * params:
+ *      p2: OpenCV matrix with image points
+ *      Z : Opencv matrix with depth aproximation
+ * reutrns:
+ *      L: The interaction Matrix at given state
+ */
+Mat interaction_Mat(Mat pointmatrix,
+                double Z
+                   ){
+    
+    int n = pointmatrix.rows;
+
+    Mat L= Mat::zeros(n,12,CV_64F) ;
+    
+    //  Calculos
+    //   -1/Z
+    L.col(0) = -Mat::ones(n,1,CV_64F)/Z;
+//     L.col(1) =
+    //  p[0,:]/Z
+    L.col(2) = pointmatrix.col(0)/Z;
+    //  p[0,:]*p[1,:]
+    L.col(3) = pointmatrix.col(0).mul(pointmatrix.col(1));
+    //  -(1+p[0,:]**2)
+    L.col(4) = -1.0*(1.0+pointmatrix.col(0).mul(pointmatrix.col(0)));
+    //  p[1,:]
+    pointmatrix.col(1).copyTo(L.col(5));
+//     L.col(6) =
+    //  -1/Z
+    L.col(0).copyTo(L.col(7));
+    //  p[1,:]/Z
+    L.col(8) = pointmatrix.col(1)/Z;
+    //  1+p[1,:]**2
+    L.col(9) =  1.0+pointmatrix.col(1).mul(pointmatrix.col(1));
+    //  -p[0,:]*p[1,:]
+    L.col(10) = -1.0*pointmatrix.col(0).mul(pointmatrix.col(1));
+    //  -p[0,:]
+    L.col(11) = -1.0 * pointmatrix.col(0);
+
+    return L.reshape(1,2*n);
 }

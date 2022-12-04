@@ -44,7 +44,7 @@ class Controller{
 		string input_dir, output_dir; //to write files
 		double **xf, **yf,**zf,**yawf; //filters
 		double *errors_t, *errors_psi; //to save the errors for all the neighbors
-		double *pose_i, *pose_j;//for plotting
+		double pose_i[6] = {0}, pose_j[6] = {0};//for plotting
 
 		//-----------------------------flags
 		int ERRORS_SET = 0; //to verify if the array errors have been allocated

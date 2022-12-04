@@ -174,8 +174,8 @@ int main(int argc, char **argv){
 		image_descriptor_publisher.publish(this_drone.getImageDescription());	
 
 		//publish the geometric constraints obtained
-		for(int i=0;i<ns;i++)			
-			pubs_constraint[i].publish(this_drone.sendGeometricConstraintMsg(i));
+// 		for(int i=0;i<ns;i++)			
+// 			pubs_constraint[i].publish(this_drone.sendGeometricConstraintMsg(i));
 
 		//if we havent computed velocities using information from all neighbors, skip to the next loop.
 		if(this_drone.haveComputedVelocities(&err_t,&err_psi) == 0)

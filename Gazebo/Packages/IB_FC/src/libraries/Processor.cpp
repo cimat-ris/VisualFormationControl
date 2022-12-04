@@ -116,9 +116,9 @@ int *Processor::BRCommunicationReceives(int label, int n_neigh, int *neighbors, 
  cout << "------------- BRC_Receives ------------- \n" << flush;
 	for (int i=0;i<n_neigh;i++)
 		if(label > neighbors[i]){			
-            vector<Point2f> p1,p2;
-            pi.push_back(p1);
-            pj.push_back(p2);
+//             vector<Point2f> p1,p2;
+//             pi.push_back(p1);
+//             pj.push_back(p2);
 			r[nr] = neighbors[i];			
 			nr++;
             
@@ -200,9 +200,9 @@ int *Processor::OptCommunicationReceives(int label, int n_neigh, int *neighbors,
 	nr = 0;
 	 cout << "------------- Opt_Receives ------------- \n" << flush;
 	for (int i=0;i<n_neigh;i++){
-        vector<Point2f> p1,p2;
-            pi.push_back(p1);
-            pj.push_back(p2);
+//         vector<Point2f> p1,p2;
+//             pi.push_back(p1);
+//             pj.push_back(p2);
 		possible = 1;
 		for(int j=0;j<ns;j++)		
 			if(neighbors[i]==s[j]){
@@ -241,6 +241,12 @@ void Processor::setProperties(int label,int n_agents, int matching,int controlle
 			DONE[i] = 0;
 		DONE_SET = 1;
 	}
+	for (int i = 0; i < n_agents; i++)
+    {
+        vector<Point2f> p1,p2;
+        pi.push_back(p1);
+        pj.push_back(p2);
+    }
 	orb = ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,cv::ORB::HARRIS_SCORE,patchSize,fastThreshold);
 	readK();
 }
@@ -358,13 +364,13 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 //     p1.clear();
 // 	vector<Point2f> * p2 = pj.at(index);
 //     p2.clear();
-	pi[index].clear();
-	pj[index].clear();
+	pi[*you].clear();
+	pj[*you].clear();
 	
 	for(int i = 0; i < goodMatches.size(); i++){
 		//-- Get the keypoints from the good matches
-		pi[index].push_back(kp[goodMatches[i].queryIdx].pt);
-		pj[index].push_back(kn[goodMatches[i].trainIdx].pt);
+		pi[*you].push_back(kp[goodMatches[i].queryIdx].pt);
+		pj[*you].push_back(kn[goodMatches[i].trainIdx].pt);
 	}
 
 	Mat GM;	

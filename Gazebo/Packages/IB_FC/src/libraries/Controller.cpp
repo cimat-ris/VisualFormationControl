@@ -214,7 +214,7 @@ int Controller::haveComputedVelocities(double *et, double *epsi){
 		}
 	}
 	//Verify if we computed everything		
-	if(n_neigh == count){ 
+	if(n_neigh <= count){ 
 		//save velocities
 		double data[4] = {Vx,Vy,Vz,Wz};
 		appendToFile(output_dir+"/velocities.txt",data,4);
@@ -623,14 +623,14 @@ void Controller::IBFCF(int matches, int j,
 // 	Vy += (float) U.at<double>(0,0);
 // 	Vz += (float) U.at<double>(2,0);
 // 	Wz += (float) U.at<double>(5,0);
-    cout << "------------- DB1.6 ------------- \n";
+    cout << "------------- DB1.6 ------------- \n"<<flush;
     //  Error calculation for update
     double p_ij [4];
     p_ij[0] = pose_j[0] - pose_i[0];
     p_ij[1] = pose_j[1] - pose_i[1];
     p_ij[2] = pose_j[2] - pose_i[2];
     p_ij[3] = pose_j[5] - pose_i[5];
-    cout << "------------- DB2 ------------- \n";
+    cout << "------------- DB2 ------------- \n"<<flush;
 	getError(matches,label,j,p_ij[0],p_ij[1],p_ij[2],p_ij[3]);
 }
 

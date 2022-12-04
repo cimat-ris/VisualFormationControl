@@ -271,11 +271,12 @@ void Agent::getImageDescription(const IB_FC::image_description::ConstPtr& msg){
 	int j, SUCCESS = 0, matches = 0; double R[9], t[3];	
 	//compute message and obtain geometric constraint
 	Mat GM = processor.getGeometricConstraint(msg,&j,pose,pose_j,&SUCCESS,&matches,R,t);
-    cout << "------ DG ID ----- " << SUCCESS << "\n" << flush;
+    cout << "------ DG ID ----- " << SUCCESS << " j= " << j << "\n" << flush;
 	if(SUCCESS) //everything could be computed
     {
 //          int idx = find(j,processor.s,processor.ns);
-         int idx = find(j,processor.r,processor.nr);
+//          int idx = find(j,processor.r,processor.nr);
+        int idx = j;
          cout << "------ DG ID idx ----- " << idx << "\n" << flush;
         controller.IBFCF(matches,j,processor.pj[idx], processor.pi[idx]);
     }
@@ -346,9 +347,10 @@ void Agent::getGeometricConstraint(const IB_FC::geometric_constraint::ConstPtr& 
 	}
 
 	int matches = msg->n_matches;
-    cout << "------" << label << " DB4 ------------- \n" << flush;
+    cout << "------" << label << " DB4 ------------- " << " you= " << you << endl << flush;
 //     int idx = find(you,processor.s,processor.ns);
-    int idx = find(you,processor.r,processor.nr);
+//     int idx = find(you,processor.r,processor.nr);
+    int idx = you;
     cout << "------" << label << " DB4 idx ----- " << idx << "\n" << flush;
     controller.IBFCF(matches,idx,
                        processor.pj[idx], processor.pi[idx]);

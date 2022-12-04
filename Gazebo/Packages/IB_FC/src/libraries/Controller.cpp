@@ -596,15 +596,24 @@ void Controller::IBFCF(int matches, int j,
 //     cout << "------------- DB1.1.1 ------------- \n";
 //     KeyPoint::convert(kp_j[j], point2f_kp_j, mask);
 //     KeyPoint::convert(kp_i[i], point2f_kp_i, mask);
-//     cout << "------------- DB1.1.2 ------------- \n";
+    cout << "------------- DB1.1.2 ------------- \n" << flush;
 //     //Then we use this nice function from OpenCV to directly convert from KeyPoint vector to Point2f vector
-//     cv::Mat pointmatrix_kp_j(point2f_kp_j); 
-//     cv::Mat pointmatrix_kp_i(point2f_kp_i); 
-//     cout << "------------- DB1.2 ------------- \n";
-//     // Descriptor control
-//     double lambda = 1.0;
-//     camera_norm(pointmatrix_kp_i);
-//     camera_norm(pointmatrix_kp_j);
+    cv::Mat pointmatrix_kp_j = cv::Mat(pj).reshape(1); 
+    cv::Mat pointmatrix_kp_i = cv::Mat(pi).reshape(1); 
+    
+    cout << "------------- DB1.2 ------------- \n" << flush;
+    // Descriptor control
+    double lambda = 1.0;
+//     cout << pointmatrix_kp_i.dims << endl << flush;
+//     cout << pointmatrix_kp_j.dims << endl << flush;
+//     cout << pointmatrix_kp_i.cols << endl << flush;
+//     cout << pointmatrix_kp_j.cols << endl << flush;
+//     cout << pointmatrix_kp_i.rows << endl << flush;
+//     cout << pointmatrix_kp_j.rows << endl << flush;
+    camera_norm(pointmatrix_kp_i);
+    camera_norm(pointmatrix_kp_j);
+//     cout << pointmatrix_kp_j << endl << flush;
+//     cout << pointmatrix_kp_i << endl << flush;
 //     cout << "------------- DB1.3 ------------- \n";
 //     //  Compute error for all pair kp_i kp_j
 //     //  TODO : revisar que sea el eorden adecuado ij
@@ -898,10 +907,13 @@ void Controller::camera_norm(Mat &  points){
     int n = points.rows;
     
     //  p1
+//     cout << "-- " << label << " Norm A --\n" << flush; 
     points.col(0) = points.col(0)-K.at<double>(0,2);
     points.col(1) = points.col(1)-K.at<double>(1,2);
+//     cout << "-- " << label << " Norm B --\n" << flush; 
     points.col(0) = points.col(0).mul(1.0/K.at<double>(0,0));
     points.col(1) = points.col(1).mul(1.0/K.at<double>(1,1));
+//     cout << "-- " << label << " Norm C --\n" << flush; 
 
     return;
 }

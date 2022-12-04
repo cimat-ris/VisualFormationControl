@@ -104,9 +104,15 @@ int main(int argc, char **argv){
 	
 	for(int i=0;i<ns;i++){
 		string j = to_string(s[i]);
-		ros::Subscriber n_s = nh.subscribe<IB_FC::image_description>("/hummingbird"+j+"/image_description",1,&Agent::getImageDescription, &this_drone);
+		ros::Subscriber n_s = nh.subscribe<IB_FC::image_description>(
+            "/hummingbird"+j+"/image_description",
+            1,
+            &Agent::getImageDescription,
+            &this_drone);
 		subs_neighbors.push_back(n_s);
-		ros::Publisher gm_p = nh.advertise<IB_FC::geometric_constraint>("/hummingbird"+me_str+"/geometric_constraint"+j,1);
+		
+        ros::Publisher gm_p = nh.advertise<IB_FC::geometric_constraint>(
+            "/hummingbird"+me_str+"/geometric_constraint"+j,1);
 		pubs_constraint.push_back(gm_p);	
 		if(matching==1){		
 			image_transport::Subscriber nis = it.subscribe("/hummingbird"+j+"/camera_nadir/image_raw",1,&Processor::matchingCallback,&this_drone.processor);

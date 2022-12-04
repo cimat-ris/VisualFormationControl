@@ -417,16 +417,16 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 // 	}
 
 	/*********************************************************** Save information in menssage object */
-	gm[index].n_matches = goodMatches.size();
-	gm[index].i = label;
-	
-	for(int i=0;i<6;i++)
-		gm[index].pose[i] = pose_i[i];			
-
-	//fill the geoemtric constraint
-	for(int i=0;i<3;i++)
-		for(int j=0;j<3;j++)
-			gm[index].constraint[i*3+j] = GM.at<double>(i,j);
+// 	gm[index].n_matches = goodMatches.size();
+// 	gm[index].i = label;
+// 	
+// 	for(int i=0;i<6;i++)
+// 		gm[index].pose[i] = pose_i[i];			
+// 
+// 	//fill the geoemtric constraint
+// 	for(int i=0;i<3;i++)
+// 		for(int j=0;j<3;j++)
+// 			gm[index].constraint[i*3+j] = GM.at<double>(i,j);
 
 	if(goodMatches.size() > 0)
 		*SUCCESS = 1;

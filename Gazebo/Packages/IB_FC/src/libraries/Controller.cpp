@@ -617,10 +617,12 @@ void Controller::IBFCF(int matches, int j,
 //     cout << "------------- DB1.3 ------------- \n";
 //     //  Compute error for all pair kp_i kp_j
 //     //  TODO : revisar que sea el eorden adecuado ij
-//     Mat err = pointmatrix_kp_j-pointmatrix_kp_i;
+    Mat err = pointmatrix_kp_j-pointmatrix_kp_i;
 //     //  TODO : apropiate Z
-//     Mat L = interaction_Mat(pointmatrix_kp_j,1.0);
-//     /*double det=0.0;
+//     cout << pointmatrix_kp_i << endl << flush;
+    Mat L = interaction_Mat(pointmatrix_kp_i,1.0);
+//     cout << L << endl << flush;
+//     double det=0.0;
 //     L = Moore_Penrose_PInv(L,det);
 //     if (det < 1e-6)
 //         return;
@@ -954,17 +956,21 @@ Mat interaction_Mat(Mat pointmatrix,
                    ){
     
     int n = pointmatrix.rows;
-
-    Mat L= Mat::zeros(n,12,CV_64F) ;
     
+    cout << "--- IM 0nm---" << n << " " << pointmatrix.cols <<  flush;
+
+    int type_point = pointmatrix.type();
+    Mat L= Mat::zeros(n,12,type_point) ;
+    cout << "--- IM 1---\n" << flush;
     //  Calculos
     //   -1/Z
-    L.col(0) = -Mat::ones(n,1,CV_64F)/Z;
+    L.col(0) = -Mat::ones(n,1,type_point)/Z;
 //     L.col(1) =
     //  p[0,:]/Z
     L.col(2) = pointmatrix.col(0)/Z;
     //  p[0,:]*p[1,:]
     L.col(3) = pointmatrix.col(0).mul(pointmatrix.col(1));
+    cout << "--- IM 2---\n" << flush;
     //  -(1+p[0,:]**2)
     L.col(4) = -1.0*(1.0+pointmatrix.col(0).mul(pointmatrix.col(0)));
     //  p[1,:]
@@ -972,6 +978,7 @@ Mat interaction_Mat(Mat pointmatrix,
 //     L.col(6) =
     //  -1/Z
     L.col(0).copyTo(L.col(7));
+    cout << "--- IM 3---\n" << flush;
     //  p[1,:]/Z
     L.col(8) = pointmatrix.col(1)/Z;
     //  1+p[1,:]**2
@@ -980,6 +987,7 @@ Mat interaction_Mat(Mat pointmatrix,
     L.col(10) = -1.0*pointmatrix.col(0).mul(pointmatrix.col(1));
     //  -p[0,:]
     L.col(11) = -1.0 * pointmatrix.col(0);
+    cout << "--- IM 4---\n" << flush;
 
     return L.reshape(1,2*n);
 }

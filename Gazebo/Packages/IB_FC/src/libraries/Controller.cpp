@@ -621,19 +621,19 @@ void Controller::IBFCF(int matches, int j,
 //     //  TODO : apropiate Z
 //     cout << pointmatrix_kp_i << endl << flush;
     Mat L = interaction_Mat(pointmatrix_kp_i,1.0);
-//     cout << L << endl << flush;
-//     double det=0.0;
-//     L = Moore_Penrose_PInv(L,det);
-//     if (det < 1e-6)
-//         return;
-//     */cout << "------------- DB1.4 ------------- \n";
-//     Mat U  = -1.0 * lambda * L*err.reshape(1,L.cols); 
-//     U = U/(float)n_neigh;
+    double det=0.0;
+    L = Moore_Penrose_PInv(L,det);
+    if (det < 1e-6)
+        return;
+//     cout << "------------- DB1.4 ------------- \n";
+    Mat U  = -1.0 * lambda * L*err.reshape(1,L.cols); 
+    U = U/(float)n_neigh;
+    cout << U << endl << flush;
 //     cout << "------------- DB1.5 ------------- \n";
-//     Vx += (float) U.at<double>(1,0);
-// 	Vy += (float) U.at<double>(0,0);
-// 	Vz += (float) U.at<double>(2,0);
-// 	Wz += (float) U.at<double>(5,0);
+    Vx += (float) U.at<double>(1,0);
+	Vy += (float) U.at<double>(0,0);
+	Vz += (float) U.at<double>(2,0);
+	Wz += (float) U.at<double>(5,0);
     cout << "------------- DB1.6 ------------- \n"<<flush;
     //  Error calculation for update
     double p_ij [4];

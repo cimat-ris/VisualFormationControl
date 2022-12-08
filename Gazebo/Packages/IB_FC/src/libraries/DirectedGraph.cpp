@@ -88,20 +88,21 @@ int DirectedGraph::countConnections(int label, DirectedGraph g){
 	int n = 0;
 	for(int v=0;v<g.V_;v++){
 		if(v == label){
-			for (list<int>::const_iterator it = g.adjList_[v].begin(); it != g.adjList_[v].end(); ++it) 
+			for (list<int>::const_iterator it = adjList_[label].begin(); it != adjList_[label].end(); ++it) 
 				n++;
 			break;
 		}
 	}
 
 	return n;
+//     return adjList_[label].size();
 }
 
 void DirectedGraph::getConnections(int label, DirectedGraph g, int *s){
 	int n = 0;
 	for(int v=0;v<g.V_;v++){
 		if(v == label){
-			for (list<int>::const_iterator it = g.adjList_[v].begin(); it != g.adjList_[v].end(); ++it){ 
+			for (list<int>::const_iterator it = adjList_[label].begin(); it != adjList_[label].end(); ++it){ 
 				s[n] = *it; n++;}
 			break;
 		}

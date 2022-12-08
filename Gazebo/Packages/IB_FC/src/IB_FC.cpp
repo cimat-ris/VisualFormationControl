@@ -110,7 +110,7 @@ int main(int argc, char **argv){
             &Agent::getImageDescription,
             &this_drone);
 		subs_neighbors.push_back(n_s);
-		
+		cout <<  "---- " << me_str << " subscribing to " << j << endl << flush;
         ros::Publisher gm_p = nh.advertise<IB_FC::geometric_constraint>(
             "/hummingbird"+me_str+"/geometric_constraint"+j,1);
 		pubs_constraint.push_back(gm_p);	
@@ -150,8 +150,9 @@ int main(int argc, char **argv){
 			when initial info is obtained, we will continue to next step and this will not be longer excuted.
 			
 		*/
+        cout << "----- " << me_str <<  "ROS:OK -----\n" << flush;
 	
-		this_drone.resetVelocities();
+// 		this_drone.resetVelocities();
 		ite+=1;	
 		
 		//get a msg	
@@ -160,8 +161,9 @@ int main(int argc, char **argv){
 		//if we havent get the pose
 		if(this_drone.isUpdated() == 0){rate.sleep(); continue;}	
 
+        cout << "----- " << me_str <<  "Drone updated -----\n" << flush;
 		//if we havent initialized gamma
-		if(needsAltitudeConsensus(controller_type) == 1 && gamma_file == 0 && this_drone.gammaInitialized()==0) { g.publish(this_drone.getGamma()); rate.sleep();continue;}
+// 		if(needsAltitudeConsensus(controller_type) == 1 && gamma_file == 0 && this_drone.gammaInitialized()==0) { g.publish(this_drone.getGamma()); rate.sleep();continue;}
 
 		/******************************************************************************* 2nd PART
 			If we already know the pose and gamma_0 (if needed), we will proceed to process and send information 
@@ -171,22 +173,25 @@ int main(int argc, char **argv){
 		*/
 
 		//publish kp and descriptors of this drone
-		image_descriptor_publisher.publish(this_drone.getImageDescription());	
+		image_descriptor_publisher.publish(this_drone.getImageDescriptionID());	
 
 		//publish the geometric constraints obtained
 // 		for(int i=0;i<ns;i++)			
 // 			pubs_constraint[i].publish(this_drone.sendGeometricConstraintMsg(i));
 
 		//if we havent computed velocities using information from all neighbors, skip to the next loop.
-		if(this_drone.haveComputedVelocities(&err_t,&err_psi) == 0)
+// 		if(this_drone.haveComputedVelocities(&err_t,&err_psi) == 0)
+		if(this_drone.incompleteComputedVelocities() )
         {
+        cout << "----- " << me_str <<  "velocities not  computed -----\n" << flush;
             rate.sleep();
-            if(ite-last_time > 10) 
-                break;
-            else 
+//             if(ite-last_time > 100) 
+//                 break;
+//             else 
                 continue;
         } 		
-
+        cout << "----- " << me_str <<  "velocities  computed -----\n" << flush;
+    // TODO: revisar que no haya repeticiones del calculo de velocidad
 		rate.sleep();
 
 		/******************************************************************************* 3rd PART
@@ -197,28 +202,29 @@ int main(int argc, char **argv){
 
 		//publish position
 		position_publisher.publish(this_drone.move(dt));
-
+        this_drone.resetVelocities(); // 
+        cout << me_str << "------- M O V E --------\n" << flush;
 		//add time
 		t+=dt;
 		last_time = ite;
 
 		//compute average error for 10 iterations
-		e_t.push_back(err_t);
-		e_psi.push_back(err_psi);
-		if(size > window){
-			e_t.erase(e_t.begin());
-			e_psi.erase(e_psi.begin());
-		}else size++;		
-		err_t = average(e_t,size);
-		err_psi = average(e_psi,size);
+// 		e_t.push_back(err_t);
+// 		e_psi.push_back(err_psi);
+// 		if(size > window){
+// 			e_t.erase(e_t.begin());
+// 			e_psi.erase(e_psi.begin());
+// 		}else size++;		
+// 		err_t = average(e_t,size);
+// 		err_psi = average(e_psi,size);
 
 		//print information
 		cout << t <<" I'm drone "<< me_str ;
-        cout << " e_t: "<<err_t;
-        cout<< " e_psi: " << err_psi << endl;
+//         cout << " e_t: "<<err_t;
+//         cout<< " e_psi: " << err_psi << endl;
 
 		//do we stop?
-		if(t>max_time || (err_t < th_t && err_psi < th_psi)) break;
+		if(t>max_time ) break;
 	}
 
 	return 0;

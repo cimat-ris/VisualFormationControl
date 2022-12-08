@@ -221,7 +221,7 @@ void Agent::processImage(const sensor_msgs::Image::ConstPtr& msg){
 	description: returns the processed image description in the format
 	of a message of the type image_description, ready to send to the neighbors
 */
-IB_FC::image_description Agent::getImageDescription(){
+IB_FC::image_description Agent::getImageDescriptionID(){
 	//add aditional data and say that you have calculated everything
 	return processor.getImageDescription();
 }
@@ -410,6 +410,9 @@ void Agent::setGamma(const IB_FC::gamma::ConstPtr& msg){
 int Agent::haveComputedVelocities(double *et, double *epsi){
 	return controller.haveComputedVelocities(et,epsi);
 }
+bool Agent::incompleteComputedVelocities(){
+	return controller.incompleteComputedVelocities();
+}
 
 /*
 	function: isUpdated
@@ -417,6 +420,8 @@ int Agent::haveComputedVelocities(double *et, double *epsi){
 	This is necesary because we move it integrating the pose. Its a padlock
 */
 int Agent::isUpdated(){
+    for (int i = 0; i< controller.n_agents; i++)
+        cout << label << " " << i << " " <<  controller.velContributions[i] << endl << flush;
 	return POSE_UPDATED;
 }
 

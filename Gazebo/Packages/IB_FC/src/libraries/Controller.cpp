@@ -68,6 +68,9 @@ void Controller::setProperties(int label, int n_agents, int n_neigh, int control
 	//creating memory	
   	errors_psi = new double[n_agents];
 	errors_t = new double[n_agents];
+    velContributions = new bool[n_agents];
+    for (int i = 0; i < n_agents ; i++)
+        velContributions[i] = false;
 	ERRORS_SET = 1;
 	if(needsFilter(controller_type)){
 		DONE =  (int **) createMatrix(sizeof(int), sizeof(int *), n_agents,n_agents);
@@ -136,6 +139,8 @@ void Controller::setProperties(int label, int n_agents, int n_neigh, int control
 */
 void Controller::resetVelocities(){
 	Vx = 0.0; Vy = 0.0; Vz = 0.0; Wz = 0.0;
+    for(int i = 0; i < n_agents; i++)
+        velContributions[i] = false;
 }
 
 /*
@@ -191,6 +196,23 @@ void Controller::setGamma(int label, double val){
 // 	}
 // }
 
+
+bool Controller::incompleteComputedVelocities(){
+    int count = 0;
+    for (int i = 0 ; i < n_agents; i++)
+    {
+        if(velContributions[i] == true)
+            count++;
+    }
+    
+    if (count >= n_neigh)
+        return false;
+    
+    return true;
+    
+}
+    
+    
 /*
 	function: haveComputedVelocities
 	description: checks if has computed the velocities with all its neighbors
@@ -209,12 +231,13 @@ int Controller::haveComputedVelocities(double *et, double *epsi){
 			err_t+=errors_t[i];
 			err_psi+=errors_psi[i];
 			count+=1.0;
-			errors_t[i] = -1;
-			errors_psi[i] = -1; 
+// 			errors_t[i] = -1;
+// 			errors_psi[i] = -1; 
 		}
 	}
 	//Verify if we computed everything		
 	if(n_neigh <= count){ 
+        cout << "---- " << label << " Controller : have computed velocities " << count << endl << flush;
 		//save velocities
 		double data[4] = {Vx,Vy,Vz,Wz};
 		appendToFile(output_dir+"/velocities.txt",data,4);
@@ -223,6 +246,11 @@ int Controller::haveComputedVelocities(double *et, double *epsi){
 		*et = err_t; *epsi = err_psi;
 		data[0] = err_t; data[1] = err_psi;
 		appendToFile(output_dir+"/errors.txt",data,2);
+        
+        for(int i = 0; i < n_agents ; i++){
+            errors_t[i] = -1;
+			errors_psi[i] = -1; 
+        }
 		if(needsAltitudeConsensus(controller_type)){
 			//make a step in scale
 			data[0] = gamma[label];
@@ -240,7 +268,7 @@ int Controller::haveComputedVelocities(double *et, double *epsi){
 		}
 		return 1;
 	}	
-
+cout << "---- " << label << " Controller : have NOT computed velocities " << count << endl << flush;
 	return 0;
 }
 
@@ -583,6 +611,9 @@ void Controller::IBFCF(int matches, int j,
                        vector<Point2f> &pj,
                        vector<Point2f> &pi){
 	
+    cout << "---------" << label << ": " << "DB0 ------------- \n" << flush;
+    if(velContributions[j]==true)
+        return;
     cout << "---------" << label << ": " << "DB1 ------------- \n" << flush;
     int n = pj.size();
     int m = pi.size();
@@ -635,14 +666,16 @@ void Controller::IBFCF(int matches, int j,
 	Vz += (float) U.at<double>(2,0);
 	Wz += (float) U.at<double>(5,0);
     cout << "------------- DB1.6 ------------- \n"<<flush;
+    velContributions[j]=true;
     //  Error calculation for update
-    double p_ij [4];
-    p_ij[0] = pose_j[0] - pose_i[0];
-    p_ij[1] = pose_j[1] - pose_i[1];
-    p_ij[2] = pose_j[2] - pose_i[2];
-    p_ij[3] = pose_j[5] - pose_i[5];
-    cout << "------------- DB2 ------------- \n"<<flush;
-	getError(matches,label,j,p_ij[0],p_ij[1],p_ij[2],p_ij[3]);
+//     double p_ij [4];
+//     p_ij[0] = pose_j[0] - pose_i[0];
+//     p_ij[1] = pose_j[1] - pose_i[1];
+//     p_ij[2] = pose_j[2] - pose_i[2];
+//     p_ij[3] = pose_j[5] - pose_i[5];
+//     cout << "------------- DB2 ------------- \n"<<flush;
+// 	getError(matches,label,j,p_ij[0],p_ij[1],p_ij[2],p_ij[3]);
+    
 }
 
 /*

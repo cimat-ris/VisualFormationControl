@@ -53,7 +53,7 @@ class Agent{
 		//---------------------------------------------------------------- callbacks
 		void getPose(const geometry_msgs::Pose::ConstPtr& msg); //callback to obtain pose from sensors
 		void processImage(const sensor_msgs::Image::ConstPtr& msg); //callback to process image from camera
-		IB_FC::image_description getImageDescription(); //to send the msg with image description
+		IB_FC::image_description getImageDescriptionID(); //to send the msg with image description
 		trajectory_msgs::MultiDOFJointTrajectory move(double dt); //to calculate the new pose of the agent
 		void getImageDescription(const IB_FC::image_description::ConstPtr& msg);//computes constraint and velocities from msg		
 		void getGeometricConstraint(const IB_FC::geometric_constraint::ConstPtr& msg); //obtains geometric constraint from message and process it
@@ -62,10 +62,12 @@ class Agent{
 
 		//-----------------------------------------------------------------flags	
 		int haveComputedVelocities(double *et, double *epsi); //verify we have computed the geometric constraint
+        bool incompleteComputedVelocities();
 		int isUpdated(); //to verify if we have updated poses at least once to integrate		
 		int gammaInitialized();//verifies if the gamma vector is completely set		
 	private:
 		//-------------------------------------------------------------- Attributes 
+		Controller controller; //control object for this drone		
 		int label;//the label that corresponds to this drone
 		string name; //number of the agent in string
 		int n_neigh; //number of neighbors	
@@ -75,7 +77,6 @@ class Agent{
 		int communication_type = 0; //if it uses brute force to communicate or optima
 		double *pose, *pose_j; //pose of this drone for plotting gt
 		trajectory_msgs::MultiDOFJointTrajectory position_msg; //to send mesage with new position		
-		Controller controller; //control object for this drone		
 
 		//-------------------------------------------------------------- Flags
 		int SHOW_MATCHING = 0;//save images for matching

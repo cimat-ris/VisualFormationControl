@@ -142,7 +142,7 @@ int *Processor::BRCommunicationReceives(int label, int n_neigh, int *neighbors, 
 		
 */
 int *Processor::OptCommunicationSends(DirectedGraph g, int label, int *n_s){	
-	g.loadBalance();
+// 	g.loadBalance();
 	ns =  g.countConnections(label,g);
 	s = new int[ns]; 
 	g.getConnections(label,g,s);

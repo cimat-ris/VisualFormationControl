@@ -27,6 +27,7 @@ class Controller{
 // 		void compute(int matches,int j,Mat &GC,double *pose_i, double *pose_j,double *R, double *t, vector<Point2f> pj,vector<Point2f> pi);//compute velocities
 		//-----------------------------flags
 		int haveComputedVelocities(double *et, double *epsi);//to verify everything has been computed
+        bool incompleteComputedVelocities();
 		int gammaInitialized();//verifies if the gamma vector has been initialized
         void camera_norm(Mat &  points);
 // 	private:
@@ -36,6 +37,7 @@ class Controller{
 		int controller_type;//controller type
 		Mat K = Mat(3,3,CV_64F); //calibration matrix
 		double Vx=0.0,Vy=0.0,Vz=0.0,Wz=0.0;//velocities
+		bool *velContributions;
 		double Kv,Kw;//gains
 		double **x_aster,**y_aster,**z_aster,**yaw_aster;//desired relative poses
 		double **A, *gamma;//doubly stochastic matrix and vector with altitudes

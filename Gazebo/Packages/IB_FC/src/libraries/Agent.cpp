@@ -241,6 +241,11 @@ trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt){
 	Vec3d Vel(Vx,Vy,Vz);
 	Mat p_d = Rz*Mat(Vel);//change in position
 
+    cout << "-- Total velocities: " << Vx << ", ";
+    cout <<  Vy << ", ";
+    cout <<  Vz << ", ";
+    cout <<  Wz << endl << flush;
+    
 	//change in rotation
 	Mat S = (Mat_<double>(3, 3) << 0,-Wz,0,Wz,0,0,0,0,0);
 	Mat R_d = Rz*S; Mat R = Rz+R_d*dt; Vec3f angles = rotationMatrixToEulerAngles(R);

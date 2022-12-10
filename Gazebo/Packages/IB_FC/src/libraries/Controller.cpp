@@ -661,10 +661,15 @@ void Controller::IBFCF(int matches, int j,
     U = U/(float)n_neigh;
     cout << U << endl << flush;
 //     cout << "------------- DB1.5 ------------- \n";
-    Vx += (float) U.at<double>(1,0);
-	Vy += (float) U.at<double>(0,0);
-	Vz += (float) U.at<double>(2,0);
-	Wz += (float) U.at<double>(5,0);
+    Vx +=  U.at<float>(1,0);
+	Vy +=  U.at<float>(0,0);
+	Vz +=  U.at<float>(2,0);
+	Wz +=  U.at<float>(5,0);
+    cout << "-- Partial velocities: " << Vx << ", ";
+    cout <<  Vy << ", ";
+    cout <<  Vz << ", ";
+    cout <<  Wz << endl << flush;
+    
     cout << "------------- DB1.6 ------------- \n"<<flush;
     velContributions[j]=true;
     //  Error calculation for update

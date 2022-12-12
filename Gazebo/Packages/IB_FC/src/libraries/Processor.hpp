@@ -86,7 +86,12 @@ class Processor{
 		int fastThreshold=20;
 		float scaleFactor=1.2f;
 		Ptr<ORB> orb;
-
+        
+        //  reference image data
+        Mat desired_img ;
+        vector<KeyPoint> desired_kp; // the keypoints of this agent
+		Mat desired_descriptors;//descriptors
+        
 		//------------------------------------------- flags
 		int SHOW_MATCHING = 0; //to know if ew need to visualize matching
 		int SEND_RECEIVE_SET = 0; //to know if we have set the way to communicate

@@ -79,6 +79,14 @@ int main(int argc, char **argv){
 	this_drone.setNeighbors(formation.getNeighbors(this_drone.getLabel(), this_drone.getNNeighPtr()));			
 	this_drone.setControllerProperties(controller_type, Kv, Kw, formation.getA(),input_dir,output_dir,gamma_file, n,matching,communication_type);
 
+    /************************************************************************** OPENING DESIRED IMAGE */
+	string image_dir = "reference" + me_str + ".png";
+	this_drone.imageRead(input_dir+image_dir);
+	if(this_drone.imgEmpty()) {
+		 cerr <<  "[ERR] Could not open or find the reference image" << endl ;
+		 return -1;
+	}
+    
 	/*********************************************************************************** Init node */
 	ros::init(argc,argv,"IB_FC");
 	ros::NodeHandle nh;
@@ -191,7 +199,7 @@ int main(int argc, char **argv){
                 continue;
         } 		
         cout << "----- " << me_str <<  "velocities  computed -----\n" << flush;
-    // TODO: revisar que no haya repeticiones del calculo de velocidad
+    
 		rate.sleep();
 
 		/******************************************************************************* 3rd PART

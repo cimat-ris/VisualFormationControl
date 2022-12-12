@@ -441,3 +441,22 @@ int Agent::gammaInitialized(){
 	return controller.gammaInitialized();
 }
 
+
+//  Función de carga de imagen
+void Agent::imageRead(const string & file)
+{
+    processor.img = imread(file, IMREAD_COLOR);
+   
+
+	processor.orb->detect(processor.desired_img, 
+                processor.desired_kp);
+	processor.orb->compute(processor.desired_img,
+                 processor.desired_kp,
+                processor.desired_descriptors);
+}
+
+bool Agent::imgEmpty()
+{
+    return processor.img.empty();
+}
+

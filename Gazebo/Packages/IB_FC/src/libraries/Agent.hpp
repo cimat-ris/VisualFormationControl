@@ -65,6 +65,11 @@ class Agent{
         bool incompleteComputedVelocities();
 		int isUpdated(); //to verify if we have updated poses at least once to integrate		
 		int gammaInitialized();//verifies if the gamma vector is completely set		
+        
+        //  utilidades para leer imagen
+        void imageRead(const string & file);
+        bool imgEmpty();
+        
 	private:
 		//-------------------------------------------------------------- Attributes 
 		Controller controller; //control object for this drone		

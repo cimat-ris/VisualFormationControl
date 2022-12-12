@@ -80,10 +80,11 @@ int main(int argc, char **argv){
 	this_drone.setControllerProperties(controller_type, Kv, Kw, formation.getA(),input_dir,output_dir,gamma_file, n,matching,communication_type);
 
     /************************************************************************** OPENING DESIRED IMAGE */
-	string image_dir = "reference" + me_str + ".png";
-	this_drone.imageRead(input_dir+image_dir);
-	if(this_drone.imgEmpty()) {
-		 cerr <<  "[ERR] Could not open or find the reference image" << endl ;
+// 	string image_dir = "reference" + me_str + ".png";
+// 	this_drone.imageRead(input_dir+image_dir);
+// 	if(this_drone.imgEmpty()) {
+    if (this_drone.imageRead(input_dir) != n){
+		 cerr <<  "[ERR] Could not open or find the reference images" << endl ;
 		 return -1;
 	}
     

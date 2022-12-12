@@ -331,10 +331,18 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 	if(SHOW_MATCHING){ kp_j[index].clear(); kp_i[index].clear(); }
 	for(std::vector<KeyPoint>::size_type i = 0; i != msg->kps.size(); i++){
 		KeyPoint k;
-		k.angle = msg->kps[i].angle; k.class_id = msg->kps[i].class_id;k.octave = msg->kps[i].octave;
-		k.pt.x = msg->kps[i].pt[0]; k.pt.y = msg->kps[i].pt[1]; 
-		k.response = msg->kps[i].response; k.size=msg->kps[i].size;
+		k.angle = msg->kps[i].angle;
+		 k.class_id = msg->kps[i].class_id;
+		k.octave = msg->kps[i].octave;
+		
+		k.pt.x = msg->kps[i].pt[0];
+		 k.pt.y = msg->kps[i].pt[1];
+		 
+		k.response = msg->kps[i].response;
+		 k.size=msg->kps[i].size;
+		
     		kn.push_back(k);
+		
 		if(SHOW_MATCHING==1){ kp_j[index].push_back(k);	kp_i[index].push_back(kp[i]); }
 	}
 

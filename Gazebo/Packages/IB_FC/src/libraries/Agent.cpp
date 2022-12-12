@@ -442,21 +442,34 @@ int Agent::gammaInitialized(){
 }
 
 
-//  Función de carga de imagen
-void Agent::imageRead(const string & file)
+//  Función de carga de imagenes de referencia en un dir especificado
+//  regresa la cantidad de imágenes leídas exitosamente
+int Agent::imageRead(const string & dir)
 {
-    processor.img = imread(file, IMREAD_COLOR);
-   
-
-	processor.orb->detect(processor.desired_img, 
-                processor.desired_kp);
-	processor.orb->compute(processor.desired_img,
-                 processor.desired_kp,
-                processor.desired_descriptors);
+    
+    int loaded_imgs = 0;
+    for (int i = 0; i < controller.n_agents; i++)
+    {
+        string name = dir+"reference"+to_string(i)+".png";
+        Mat tmp_img = imread(name, IMREAD_COLOR);
+        vector<KeyPoint> tmp_kp;
+        Mat tmp_descriptors;
+        
+        if(! tmp_img.empty())
+        {
+            loaded_imgs++;
+            
+            processor.orb->detect(tmp_img, tmp_kp);
+            processor.orb->compute(tmp_img, tmp_kp, tmp_descriptors);
+        }
+        
+        processor.desired_img.push_back(tmp_img);
+        processor.desired_kp.push_back(tmp_kp);
+        processor.desired_descriptors.push_back(tmp_descriptors);
+        
+        
+    }
+    return loaded_imgs;
 }
 
-bool Agent::imgEmpty()
-{
-    return processor.img.empty();
-}
 

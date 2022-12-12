@@ -88,9 +88,12 @@ class Processor{
 		Ptr<ORB> orb;
         
         //  reference image data
-        Mat desired_img ;
-        vector<KeyPoint> desired_kp; // the keypoints of this agent
-		Mat desired_descriptors;//descriptors
+        vector<Mat> desired_img ;
+        vector<vector<KeyPoint>> desired_kp; // the keypoints of this agent
+		vector<Mat> desired_descriptors;//descriptors
+//         Mat desired_img ;
+//         vector<KeyPoint> desired_kp; // the keypoints of this agent
+// 		Mat desired_descriptors;//descriptors
         
 		//------------------------------------------- flags
 		int SHOW_MATCHING = 0; //to know if ew need to visualize matching

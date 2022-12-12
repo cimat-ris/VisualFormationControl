@@ -67,8 +67,8 @@ class Agent{
 		int gammaInitialized();//verifies if the gamma vector is completely set		
         
         //  utilidades para leer imagen
-        void imageRead(const string & file);
-        bool imgEmpty();
+        int imageRead(const string & dir);
+//         bool imgEmpty();
         
 	private:
 		//-------------------------------------------------------------- Attributes 

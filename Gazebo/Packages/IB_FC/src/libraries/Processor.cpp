@@ -349,21 +349,93 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 	/************************************************************* Using flann for matching*/
 	if( !COMPUTED || (rows == 0 && cols == 0)) return null; //if we dont have our own kp and descriptors
 
-  	vector<vector<DMatch>> matches;
+	// matchses  (p_i vs p_j) (p_i vs p*_i) (p_i vs p*_j)
+  	vector<vector<DMatch>> matches_ij, matches_ri, matches_rj;
 	FlannBasedMatcher matcher(new flann::LshIndexParams(20, 10, 2));
- 	matcher.knnMatch(descriptors,dn,matches,2);
-	vector<DMatch> goodMatches;
+ 	matcher.knnMatch(descriptors,dn,matches_ij,2);
+ 	matcher.knnMatch(descriptors,desired_descriptors[label],matches_ri,2);
+ 	matcher.knnMatch(descriptors,desired_descriptors[*you],matches_rj,2);
+// 	vector<DMatch> goodMatches;
 
 	/************************************************************* Processing to get only goodmatches*/	
+    
 	if(SHOW_MATCHING) matchesNeighbors[index].clear();
 
-	for(int i = 0; i < matches.size(); ++i)
-		if (matches[i][0].distance < matches[i][1].distance * RATIO){
-			goodMatches.push_back(matches[i][0]);
-			if(SHOW_MATCHING) matchesNeighbors[index].push_back(matches[i][0]);
+    cout << "---------- " << label << " -- DB KP 0 \n" << flush;
+    cout << "---------- " << matches_ij.size() << " \n" << flush;
+    cout << "---------- " << matches_ri.size() << " \n" << flush;
+    cout << "---------- " << matches_rj.size() << " \n" << flush;
+    
+    pi[*you].clear();
+    pj[*you].clear();
+	for(int i = 0; i < matches_ij.size(); ++i)
+    {
+//         cout << "---------- " << label << " -- DB KP 1 \n" << flush;
+        DMatch tmp_match;
+		if (matches_ij[i][0].distance < matches_ij[i][1].distance * RATIO){
+//             cout << "---------- " << label << " -- DB KP 2 \n" << flush;
+// 			goodMatches.push_back(matches[i][0]);
+			tmp_match = matches_ij[i][0];
+// 			if(SHOW_MATCHING) matchesNeighbors[index].push_back(matches[i][0]);
+            
+            int idx_i = tmp_match.queryIdx;
+            int idx_j = tmp_match.trainIdx;
+            
+            //  Bruteforce find idx:
+            int idx_ri = 0;
+            
+            while (idx_ri < matches_ri.size() && matches_ri[idx_ri][0].queryIdx != idx_i)
+                idx_ri++;
+            
+            
+            int idx_rj = 0;
+            while (idx_rj < matches_rj.size() && matches_rj[idx_rj][0].queryIdx != idx_i)
+                idx_rj++;
+            
+            
+            //  If all matches are good matches
+            //      then add point and partial error (-p*_i -(p_j - p*_j))
+//             if (idx_ri < matches_ri.size() && idx_rj < matches_rj.size())
+//             if (matches_ri[idx_ri][0].queryIdx == idx_i && matches_rj[idx_rj][0].queryIdx == idx_i)
+            {
+//                 cout << "---------- " << label << " -- DB KP 3 \n" << flush;
+                if (matches_ri[idx_ri][0].distance < matches_ri[idx_ri][1].distance * RATIO )
+//                     && 
+//                     matches_rj[idx_rj][0].distance < matches_rj[idx_rj][1].distance * RATIO
+//                 )
+                {
+//                     cout << "---------- " << label << " -- DB KP 4 \n" << flush;
+                    //  p_i (el mismo que se usa para L
+                    pi[*you].push_back(kp[idx_i].pt);
+                    
+                    //  error parcial
+                    //  (-desired_kp[label] -(kn -desired_kp[you]))
+                    //  los signos están cambiados porque en el control se tiene pi -pj
+                    idx_ri = matches_ri[idx_ri][0].trainIdx;
+                    idx_rj = matches_rj[idx_rj][0].trainIdx;
+//                     cout << desired_kp[label][idx_ri].pt << endl << flush;
+//                     Point2f tmp_err = kn[idx_j].pt; // Only consensus
+//                     Point2f tmp_err = desired_kp[label][idx_j].pt; // Only reference
+                    Point2f tmp_err = desired_kp[label][idx_ri].pt;
+//                     cout << tmp_err << endl << flush;
+//                     tmp_err += kn[idx_j].pt;
+//                     tmp_err -= desired_kp[*you][idx_rj].pt;
+                    
+                    pj[*you].push_back(tmp_err);
+//                     cout << pj[*you][pj[*you].size()-1] << endl << flush;
+                }
+                
+                
+            }
+            
+            
 		}   		
-
-	*n_matches = goodMatches.size();
+    }
+    
+cout << "---------- " << label << pi[*you].size() << endl << flush;
+cout << "---------- " << label << pj[*you].size() << endl << flush;
+    
+// 	*n_matches = goodMatches.size();
 
 	/************************************************************* Finding geometric constraint */
 	 //-- transforming goodmatches to points		
@@ -372,14 +444,14 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 //     p1.clear();
 // 	vector<Point2f> * p2 = pj.at(index);
 //     p2.clear();
-	pi[*you].clear();
-	pj[*you].clear();
-	
-	for(int i = 0; i < goodMatches.size(); i++){
-		//-- Get the keypoints from the good matches
-		pi[*you].push_back(kp[goodMatches[i].queryIdx].pt);
-		pj[*you].push_back(kn[goodMatches[i].trainIdx].pt);
-	}
+// 	pi[*you].clear();
+// 	pj[*you].clear();
+// 	
+// 	for(int i = 0; i < goodMatches.size(); i++){
+// 		//-- Get the keypoints from the good matches
+// 		pi[*you].push_back(kp[goodMatches[i].queryIdx].pt);
+// 		pj[*you].push_back(kn[goodMatches[i].trainIdx].pt);
+// 	}
 
 	Mat GM;	
 // 
@@ -442,8 +514,10 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 // 		for(int j=0;j<3;j++)
 // 			gm[index].constraint[i*3+j] = GM.at<double>(i,j);
 
-	if(goodMatches.size() > 0)
+// 	if(goodMatches.size() > 0)
+	if(pi[*you].size() > 0)
 		*SUCCESS = 1;
+    cout << "---------- " << label << " -- DB KP 5 " << *SUCCESS << endl << flush;
 
 	return GM;
 }

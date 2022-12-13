@@ -641,6 +641,7 @@ void Controller::IBFCF(int matches, int j,
 //     cout << pointmatrix_kp_j.cols << endl << flush;
 //     cout << pointmatrix_kp_i.rows << endl << flush;
 //     cout << pointmatrix_kp_j.rows << endl << flush;
+    cout << pointmatrix_kp_j -pointmatrix_kp_i << flush;
     camera_norm(pointmatrix_kp_i);
     camera_norm(pointmatrix_kp_j);
 //     cout << pointmatrix_kp_j << endl << flush;
@@ -649,6 +650,7 @@ void Controller::IBFCF(int matches, int j,
 //     //  Compute error for all pair kp_i kp_j
 //     //  TODO : revisar que sea el eorden adecuado ij
     Mat err = pointmatrix_kp_j-pointmatrix_kp_i;
+//     cout << err << flush;
 //     //  TODO : apropiate Z
 //     cout << pointmatrix_kp_i << endl << flush;
     Mat L = interaction_Mat(pointmatrix_kp_i,1.0);
@@ -658,7 +660,7 @@ void Controller::IBFCF(int matches, int j,
         return;
 //     cout << "------------- DB1.4 ------------- \n";
     Mat U  = -1.0 * lambda * L*err.reshape(1,L.cols); 
-    U = U/(float)n_neigh;
+//     U = U/(float)n_neigh;
     cout << U << endl << flush;
 //     cout << "------------- DB1.5 ------------- \n";
     Vx +=  U.at<float>(1,0);

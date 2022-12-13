@@ -76,7 +76,7 @@ class Processor{
 		vector<IB_FC::geometric_constraint> gm;//to send homography	made with every neighbor
 		
 		//------------------------------------------------- orb params
-		int nfeatures=100;
+		int nfeatures=500;
 		int nlevels=8;
 		int edgeThreshold=20;
 		int firstLevel=0;

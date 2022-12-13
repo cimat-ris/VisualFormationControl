@@ -448,6 +448,9 @@ int Agent::imageRead(const string & dir)
 {
     
     int loaded_imgs = 0;
+    
+    //  load a referenc for each agent
+    //      sef inluded
     for (int i = 0; i < controller.n_agents; i++)
     {
         string name = dir+"reference"+to_string(i)+".png";
@@ -455,6 +458,7 @@ int Agent::imageRead(const string & dir)
         vector<KeyPoint> tmp_kp;
         Mat tmp_descriptors;
         
+        //  if image cannot be read, don't extract descriptors
         if(! tmp_img.empty())
         {
             loaded_imgs++;
@@ -463,6 +467,7 @@ int Agent::imageRead(const string & dir)
             processor.orb->compute(tmp_img, tmp_kp, tmp_descriptors);
         }
         
+        //  Append
         processor.desired_img.push_back(tmp_img);
         processor.desired_kp.push_back(tmp_kp);
         processor.desired_descriptors.push_back(tmp_descriptors);

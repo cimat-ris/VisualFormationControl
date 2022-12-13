@@ -395,14 +395,14 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
             
             //  If all matches are good matches
             //      then add point and partial error (-p*_i -(p_j - p*_j))
-//             if (idx_ri < matches_ri.size() && idx_rj < matches_rj.size())
-//             if (matches_ri[idx_ri][0].queryIdx == idx_i && matches_rj[idx_rj][0].queryIdx == idx_i)
+            if (idx_ri < matches_ri.size() && idx_rj < matches_rj.size())
+// //             if (matches_ri[idx_ri][0].queryIdx == idx_i && matches_rj[idx_rj][0].queryIdx == idx_i)
             {
 //                 cout << "---------- " << label << " -- DB KP 3 \n" << flush;
-                if (matches_ri[idx_ri][0].distance < matches_ri[idx_ri][1].distance * RATIO )
-//                     && 
-//                     matches_rj[idx_rj][0].distance < matches_rj[idx_rj][1].distance * RATIO
-//                 )
+                if (matches_ri[idx_ri][0].distance < matches_ri[idx_ri][1].distance * RATIO 
+                    && 
+                    matches_rj[idx_rj][0].distance < matches_rj[idx_rj][1].distance * RATIO
+                )
                 {
 //                     cout << "---------- " << label << " -- DB KP 4 \n" << flush;
                     //  p_i (el mismo que se usa para L
@@ -418,8 +418,8 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 //                     Point2f tmp_err = desired_kp[label][idx_j].pt; // Only reference
                     Point2f tmp_err = desired_kp[label][idx_ri].pt;
 //                     cout << tmp_err << endl << flush;
-//                     tmp_err += kn[idx_j].pt;
-//                     tmp_err -= desired_kp[*you][idx_rj].pt;
+                    tmp_err += kn[idx_j].pt;
+                    tmp_err -= desired_kp[*you][idx_rj].pt;
                     
                     pj[*you].push_back(tmp_err);
 //                     cout << pj[*you][pj[*you].size()-1] << endl << flush;
@@ -515,7 +515,7 @@ cout << "---------- " << label << pj[*you].size() << endl << flush;
 // 			gm[index].constraint[i*3+j] = GM.at<double>(i,j);
 
 // 	if(goodMatches.size() > 0)
-	if(pi[*you].size() > 0)
+	if(pi[*you].size() > 3)
 		*SUCCESS = 1;
     cout << "---------- " << label << " -- DB KP 5 " << *SUCCESS << endl << flush;
 

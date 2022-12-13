@@ -657,7 +657,10 @@ void Controller::IBFCF(int matches, int j,
     double det=0.0;
     L = Moore_Penrose_PInv(L,det);
     if (det < 1e-6)
+    {
+        cout << "MSPI perdió rengo \n" << flush;
         return;
+    }
 //     cout << "------------- DB1.4 ------------- \n";
     Mat U  = -1.0 * lambda * L*err.reshape(1,L.cols); 
 //     U = U/(float)n_neigh;

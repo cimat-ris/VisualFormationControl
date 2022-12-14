@@ -141,6 +141,10 @@ void Controller::resetVelocities(){
 	Vx = 0.0; Vy = 0.0; Vz = 0.0; Wz = 0.0;
     for(int i = 0; i < n_agents; i++)
         velContributions[i] = false;
+    error_sum = 0.0;
+    error_min = 100.0;
+    error_max = -100.0;
+    error_count = 0;
 }
 
 /*
@@ -685,6 +689,24 @@ void Controller::IBFCF(int matches, int j,
 //     p_ij[3] = pose_j[5] - pose_i[5];
 //     cout << "------------- DB2 ------------- \n"<<flush;
 // 	getError(matches,label,j,p_ij[0],p_ij[1],p_ij[2],p_ij[3]);
+    
+    //  save errror for processing:
+    
+    for (int i = 0; i < n ; i++)
+    {
+        float e0 =  err.at<float>(i,0) ;
+        float e1 =  err.at<float>(i,1) ;
+        error_sum += e0 + e1 ;
+        error_count += 2;
+        if (e0 < error_min)
+            error_min = e0;
+        if (e1 < error_min)
+            error_min = e1;
+        if (e0 > error_max)
+            error_max = e0;
+        if (e1 > error_max)
+            error_max = e1;
+    }
     
 }
 

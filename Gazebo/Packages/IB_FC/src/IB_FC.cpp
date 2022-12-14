@@ -216,7 +216,7 @@ int main(int argc, char **argv){
 		*/
 
 		//publish position
-		position_publisher.publish(this_drone.move(dt,name));
+		position_publisher.publish(this_drone.move(dt,name,t));
         this_drone.resetVelocities(); // 
 //         cout << me_str << "------- M O V E --------\n" << flush;
 		//add time

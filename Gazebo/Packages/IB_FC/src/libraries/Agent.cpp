@@ -233,7 +233,7 @@ IB_FC::image_description Agent::getImageDescriptionID(){
 	params: sampling time dt
 	returns: msg with the new pose, ready to publish
 */
-trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt, string name){
+trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt, string name,double t){
 	double Vx,Vy,Vz,Wz;
 	controller.getVelocities(&Vx,&Vy,&Vz,&Wz);
 
@@ -254,11 +254,18 @@ trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt, string name){
 	Y = Y + p_d.at<double>(1,0)*dt;
 	Z = Z + p_d.at<double>(2,0)*dt;
 	Yaw = (double) angles[2];
-	double data[4] = {p_d.at<double>(0,0),
+	double data[9] = {t,p_d.at<double>(0,0),
                         p_d.at<double>(1,0),
                         p_d.at<double>(2,0),
-                        Wz};
-    appendToFile(name+"velocity.txt",data, 4);
+                        Wz,
+                        controller.error_sum,
+                        controller.error_min,
+                        controller.error_max,
+                        (float)controller.error_count};
+    appendToFile(name+"velocity.txt",data, 9);
+//  TODO: save errors
+    // delete errors
+    
     
 	//create message for the pose
 	Eigen::VectorXd position; position.resize(3); 

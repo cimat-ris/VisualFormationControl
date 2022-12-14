@@ -54,6 +54,13 @@ class Controller{
 		int FILTERS_SET = 0; //if we have allocated DONE;xf,yf,zf and yawf
 		int GAMMA_SET = 0; //if we have alocated gamma vector
 		
+		//    Error calculation
+		double error_sum = 0.0;
+        double error_min = 100.0;
+        double error_max = -100.0;
+        int error_count = 0;
+		
+		
 		//-------------------------------- CONTROLLERS
 		void PBFCHD(int matches,int i, int j, Mat &H); //position based formation contr with homography decomposition
 		void PBFCED(int matches,int i, int j, Mat &E,double *R, double *t); //position based formation contr with homography decomposition

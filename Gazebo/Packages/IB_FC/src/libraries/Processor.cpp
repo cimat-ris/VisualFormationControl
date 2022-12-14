@@ -361,10 +361,10 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
     
 	if(SHOW_MATCHING) matchesNeighbors[index].clear();
 
-    cout << "---------- " << label << " -- DB KP 0 \n" << flush;
-    cout << "---------- " << matches_ij.size() << " \n" << flush;
-    cout << "---------- " << matches_ri.size() << " \n" << flush;
-    cout << "---------- " << matches_rj.size() << " \n" << flush;
+//     cout << "---------- " << label << " -- DB KP 0 \n" << flush;
+//     cout << "---------- " << matches_ij.size() << " \n" << flush;
+//     cout << "---------- " << matches_ri.size() << " \n" << flush;
+//     cout << "---------- " << matches_rj.size() << " \n" << flush;
     
     pi[*you].clear();
     pj[*you].clear();
@@ -432,8 +432,8 @@ Mat Processor::getGeometricConstraint(const IB_FC::image_description::ConstPtr& 
 		}   		
     }
     
-cout << "---------- " << label << pi[*you].size() << endl << flush;
-cout << "---------- " << label << pj[*you].size() << endl << flush;
+// cout << "---------- " << label << pi[*you].size() << endl << flush;
+// cout << "---------- " << label << pj[*you].size() << endl << flush;
     
 // 	*n_matches = goodMatches.size();
 
@@ -517,7 +517,7 @@ cout << "---------- " << label << pj[*you].size() << endl << flush;
 // 	if(goodMatches.size() > 0)
 	if(pi[*you].size() > 3)
 		*SUCCESS = 1;
-    cout << "---------- " << label << " -- DB KP 5 " << *SUCCESS << endl << flush;
+//     cout << "---------- " << label << " -- DB KP 5 " << *SUCCESS << endl << flush;
 
 	return GM;
 }

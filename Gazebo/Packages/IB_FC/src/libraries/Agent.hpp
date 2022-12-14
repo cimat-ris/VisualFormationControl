@@ -54,7 +54,7 @@ class Agent{
 		void getPose(const geometry_msgs::Pose::ConstPtr& msg); //callback to obtain pose from sensors
 		void processImage(const sensor_msgs::Image::ConstPtr& msg); //callback to process image from camera
 		IB_FC::image_description getImageDescriptionID(); //to send the msg with image description
-		trajectory_msgs::MultiDOFJointTrajectory move(double dt); //to calculate the new pose of the agent
+		trajectory_msgs::MultiDOFJointTrajectory move(double dt, string name); //to calculate the new pose of the agent
 		void getImageDescription(const IB_FC::image_description::ConstPtr& msg);//computes constraint and velocities from msg		
 		void getGeometricConstraint(const IB_FC::geometric_constraint::ConstPtr& msg); //obtains geometric constraint from message and process it
 		IB_FC::gamma getGamma();//get the value gamma for this agent, ready to send as message
@@ -68,9 +68,8 @@ class Agent{
         
         //  utilidades para leer imagen
         int imageRead(const string & dir);
-//         bool imgEmpty();
         
-	private:
+// 	private:
 		//-------------------------------------------------------------- Attributes 
 		Controller controller; //control object for this drone		
 		int label;//the label that corresponds to this drone

@@ -611,13 +611,13 @@ void Controller::IBFCF(int matches, int j,
                        vector<Point2f> &pj,
                        vector<Point2f> &pi){
 	
-    cout << "---------" << label << ": " << "DB0 ------------- \n" << flush;
+//     cout << "---------" << label << ": " << "DB0 ------------- \n" << flush;
     if(velContributions[j]==true)
         return;
-    cout << "---------" << label << ": " << "DB1 ------------- \n" << flush;
+//     cout << "---------" << label << ": " << "DB1 ------------- \n" << flush;
     int n = pj.size();
     int m = pi.size();
-    cout << "n,m = " << n << " " << m << "\n" << flush;
+//     cout << "n,m = " << n << " " << m << "\n" << flush;
     
 //     cout << "------------- DB1.1 ------------- \n";
 //     //  varaible convertions
@@ -627,12 +627,12 @@ void Controller::IBFCF(int matches, int j,
 //     cout << "------------- DB1.1.1 ------------- \n";
 //     KeyPoint::convert(kp_j[j], point2f_kp_j, mask);
 //     KeyPoint::convert(kp_i[i], point2f_kp_i, mask);
-    cout << "------------- DB1.1.2 ------------- \n" << flush;
+//     cout << "------------- DB1.1.2 ------------- \n" << flush;
 //     //Then we use this nice function from OpenCV to directly convert from KeyPoint vector to Point2f vector
     cv::Mat pointmatrix_kp_j = cv::Mat(pj).reshape(1); 
     cv::Mat pointmatrix_kp_i = cv::Mat(pi).reshape(1); 
     
-    cout << "------------- DB1.2 ------------- \n" << flush;
+//     cout << "------------- DB1.2 ------------- \n" << flush;
     // Descriptor control
     double lambda = 1.0;
 //     cout << pointmatrix_kp_i.dims << endl << flush;
@@ -641,7 +641,7 @@ void Controller::IBFCF(int matches, int j,
 //     cout << pointmatrix_kp_j.cols << endl << flush;
 //     cout << pointmatrix_kp_i.rows << endl << flush;
 //     cout << pointmatrix_kp_j.rows << endl << flush;
-    cout << pointmatrix_kp_j -pointmatrix_kp_i << flush;
+//     cout << pointmatrix_kp_j -pointmatrix_kp_i << flush;
     camera_norm(pointmatrix_kp_i);
     camera_norm(pointmatrix_kp_j);
 //     cout << pointmatrix_kp_j << endl << flush;
@@ -664,18 +664,18 @@ void Controller::IBFCF(int matches, int j,
 //     cout << "------------- DB1.4 ------------- \n";
     Mat U  = -1.0 * lambda * L*err.reshape(1,L.cols); 
 //     U = U/(float)n_neigh;
-    cout << U << endl << flush;
+//     cout << U << endl << flush;
 //     cout << "------------- DB1.5 ------------- \n";
     Vx +=  U.at<float>(1,0);
 	Vy +=  U.at<float>(0,0);
 	Vz +=  U.at<float>(2,0);
 	Wz +=  U.at<float>(5,0);
-    cout << "-- Partial velocities: " << Vx << ", ";
-    cout <<  Vy << ", ";
-    cout <<  Vz << ", ";
-    cout <<  Wz << endl << flush;
+//     cout << "-- Partial velocities: " << Vx << ", ";
+//     cout <<  Vy << ", ";
+//     cout <<  Vz << ", ";
+//     cout <<  Wz << endl << flush;
     
-    cout << "------------- DB1.6 ------------- \n"<<flush;
+//     cout << "------------- DB1.6 ------------- \n"<<flush;
     velContributions[j]=true;
     //  Error calculation for update
 //     double p_ij [4];

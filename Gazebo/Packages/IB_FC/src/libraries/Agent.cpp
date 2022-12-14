@@ -180,8 +180,8 @@ void Agent::getPose(const geometry_msgs::Pose::ConstPtr& msg){
 	pose[0] = msg->position.x;
 	pose[1] = msg->position.y;
 	pose[2] = msg->position.z;
-				
-	/*To integrate, we only need it the first time*/
+    
+    /*To integrate, we only need it the first time*/
 	if(!POSE_UPDATED){
 		//setting the position if its the first time 
 		X = msg->position.x;
@@ -233,7 +233,7 @@ IB_FC::image_description Agent::getImageDescriptionID(){
 	params: sampling time dt
 	returns: msg with the new pose, ready to publish
 */
-trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt){
+trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt, string name){
 	double Vx,Vy,Vz,Wz;
 	controller.getVelocities(&Vx,&Vy,&Vz,&Wz);
 
@@ -254,7 +254,12 @@ trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt){
 	Y = Y + p_d.at<double>(1,0)*dt;
 	Z = Z + p_d.at<double>(2,0)*dt;
 	Yaw = (double) angles[2];
-	
+	double data[4] = {p_d.at<double>(0,0),
+                        p_d.at<double>(1,0),
+                        p_d.at<double>(2,0),
+                        Wz};
+    appendToFile(name+"velocity.txt",data, 4);
+    
 	//create message for the pose
 	Eigen::VectorXd position; position.resize(3); 
 	position(0) = X; position(1) = Y; position(2) = Z;
@@ -425,8 +430,8 @@ bool Agent::incompleteComputedVelocities(){
 	This is necesary because we move it integrating the pose. Its a padlock
 */
 int Agent::isUpdated(){
-    for (int i = 0; i< controller.n_agents; i++)
-        cout << label << " " << i << " " <<  controller.velContributions[i] << endl << flush;
+//     for (int i = 0; i< controller.n_agents; i++)
+//         cout << label << " " << i << " " <<  controller.velContributions[i] << endl << flush;
 	return POSE_UPDATED;
 }
 

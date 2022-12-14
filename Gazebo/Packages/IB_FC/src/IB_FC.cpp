@@ -149,6 +149,9 @@ int main(int argc, char **argv){
 	/*********************************************************************************** ros rate*/	
 	ros::Rate rate(20);
 	
+    //  to save data
+    string name(output_dir+"/"+me_str+"/");
+    
 	/******************************************************************************* BUCLE START*/
 	while(ros::ok()){
 
@@ -167,6 +170,9 @@ int main(int argc, char **argv){
 		//get a msg	
 		ros::spinOnce();	
 
+        //  save data
+        appendToFile(name+"pose.txt",this_drone.pose, 6);
+        
 		//if we havent get the pose
 		if(this_drone.isUpdated() == 0){rate.sleep(); continue;}	
 
@@ -210,9 +216,9 @@ int main(int argc, char **argv){
 		*/
 
 		//publish position
-		position_publisher.publish(this_drone.move(dt));
+		position_publisher.publish(this_drone.move(dt,name));
         this_drone.resetVelocities(); // 
-        cout << me_str << "------- M O V E --------\n" << flush;
+//         cout << me_str << "------- M O V E --------\n" << flush;
 		//add time
 		t+=dt;
 		last_time = ite;

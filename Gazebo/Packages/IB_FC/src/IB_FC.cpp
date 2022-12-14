@@ -101,9 +101,9 @@ int main(int argc, char **argv){
 	ros::Publisher position_publisher = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("/hummingbird"+me_str+"/command/trajectory",1);	
 		
 	/*********************************************************************************** Pubs and subs for the neighbors */
-	vector<ros::Publisher> pubs_constraint; //to publish the geometric constraint to other neighbors
+// 	vector<ros::Publisher> pubs_constraint; //to publish the geometric constraint to other neighbors
 	vector<ros::Subscriber> subs_neighbors; //to get the image description from neighbors
-	vector<ros::Subscriber> subs_gamma; //to obtain the first gamma approximation if needed
+// 	vector<ros::Subscriber> subs_gamma; //to obtain the first gamma approximation if needed
 	vector<image_transport::Subscriber> subs_matching; // to obtain the image from other neighbors and create the image matching
 
 	//gets the way this drone will communicate with the neighbors, given the param communication_type
@@ -120,9 +120,9 @@ int main(int argc, char **argv){
             &this_drone);
 		subs_neighbors.push_back(n_s);
 		cout <<  "---- " << me_str << " subscribing to " << j << endl << flush;
-        ros::Publisher gm_p = nh.advertise<IB_FC::geometric_constraint>(
-            "/hummingbird"+me_str+"/geometric_constraint"+j,1);
-		pubs_constraint.push_back(gm_p);	
+//         ros::Publisher gm_p = nh.advertise<IB_FC::geometric_constraint>(
+//             "/hummingbird"+me_str+"/geometric_constraint"+j,1);
+// 		pubs_constraint.push_back(gm_p);	
 		if(matching==1){		
 			image_transport::Subscriber nis = it.subscribe("/hummingbird"+j+"/camera_nadir/image_raw",1,&Processor::matchingCallback,&this_drone.processor);
 			subs_matching.push_back(nis);
@@ -136,7 +136,7 @@ int main(int argc, char **argv){
 		subs_neighbors.push_back(n_s);
 	}
 
-	if(gamma_file == 0 && needsAltitudeConsensus(controller_type)==1){
+	/*if(gamma_file == 0 && needsAltitudeConsensus(controller_type)==1){
 		for(int i=0;i<n;i++){
 			if(i!=this_drone.getLabel()){
 				string j = to_string(i);
@@ -144,7 +144,7 @@ int main(int argc, char **argv){
 				subs_gamma.push_back(l);
 			}
 		}
-	}	
+	}*/	
 		
 	/*********************************************************************************** ros rate*/	
 	ros::Rate rate(20);
@@ -162,7 +162,7 @@ int main(int argc, char **argv){
 			when initial info is obtained, we will continue to next step and this will not be longer excuted.
 			
 		*/
-        cout << "----- " << me_str <<  "ROS:OK -----\n" << flush;
+//         cout << "----- " << me_str <<  "ROS:OK -----\n" << flush;
 	
 // 		this_drone.resetVelocities();
 		ite+=1;	
@@ -176,7 +176,7 @@ int main(int argc, char **argv){
 		//if we havent get the pose
 		if(this_drone.isUpdated() == 0){rate.sleep(); continue;}	
 
-        cout << "----- " << me_str <<  "Drone updated -----\n" << flush;
+//         cout << "----- " << me_str <<  "Drone updated -----\n" << flush;
 		//if we havent initialized gamma
 // 		if(needsAltitudeConsensus(controller_type) == 1 && gamma_file == 0 && this_drone.gammaInitialized()==0) { g.publish(this_drone.getGamma()); rate.sleep();continue;}
 
@@ -198,14 +198,14 @@ int main(int argc, char **argv){
 // 		if(this_drone.haveComputedVelocities(&err_t,&err_psi) == 0)
 		if(this_drone.incompleteComputedVelocities() )
         {
-        cout << "----- " << me_str <<  "velocities not  computed -----\n" << flush;
+//         cout << "----- " << me_str <<  "velocities not  computed -----\n" << flush;
             rate.sleep();
 //             if(ite-last_time > 100) 
 //                 break;
 //             else 
                 continue;
         } 		
-        cout << "----- " << me_str <<  "velocities  computed -----\n" << flush;
+//         cout << "----- " << me_str <<  "velocities  computed -----\n" << flush;
     
 		rate.sleep();
 

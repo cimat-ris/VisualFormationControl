@@ -690,23 +690,26 @@ void Controller::IBFCF(int matches, int j,
 //     cout << "------------- DB2 ------------- \n"<<flush;
 // 	getError(matches,label,j,p_ij[0],p_ij[1],p_ij[2],p_ij[3]);
     
+    error_save.push_back(err);
     //  save errror for processing:
-    
-    for (int i = 0; i < n ; i++)
-    {
-        float e0 =  err.at<float>(i,0) ;
-        float e1 =  err.at<float>(i,1) ;
-        error_sum += e0 + e1 ;
-        error_count += 2;
-        if (e0 < error_min)
-            error_min = e0;
-        if (e1 < error_min)
-            error_min = e1;
-        if (e0 > error_max)
-            error_max = e0;
-        if (e1 > error_max)
-            error_max = e1;
-    }
+//     string name ("/home/bloodfield/catkin_ws/src/IB_FC/src/output/"+to_string(label));
+//     float * array_save = err.ptr<float>(0,0);
+//     appendToFile(name+"/error.txt",array_save, 2*n);
+//     for (int i = 0; i < n ; i++)
+//     {
+//         float e0 =  err.at<float>(i,0) ;
+//         float e1 =  err.at<float>(i,1) ;
+//         error_sum += e0 + e1 ;
+//         error_count += 2;
+//         if (e0 < error_min)
+//             error_min = e0;
+//         if (e1 < error_min)
+//             error_min = e1;
+//         if (e0 > error_max)
+//             error_max = e0;
+//         if (e1 > error_max)
+//             error_max = e1;
+//     }
     
 }
 

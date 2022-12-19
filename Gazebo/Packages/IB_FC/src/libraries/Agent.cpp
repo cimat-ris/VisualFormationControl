@@ -254,15 +254,20 @@ trajectory_msgs::MultiDOFJointTrajectory Agent::move(double dt, string name,doub
 	Y = Y + p_d.at<double>(1,0)*dt;
 	Z = Z + p_d.at<double>(2,0)*dt;
 	Yaw = (double) angles[2];
-	double data[9] = {t,p_d.at<double>(0,0),
+	double data[5] = {t,p_d.at<double>(0,0),
                         p_d.at<double>(1,0),
                         p_d.at<double>(2,0),
-                        Wz,
-                        controller.error_sum,
-                        controller.error_min,
-                        controller.error_max,
-                        (float)controller.error_count};
-    appendToFile(name+"velocity.txt",data, 9);
+                        Wz};
+    appendToFile(name+"velocity.txt",data, 5);
+// 	double data[9] = {t,p_d.at<double>(0,0),
+//                         p_d.at<double>(1,0),
+//                         p_d.at<double>(2,0),
+//                         Wz,
+//                         controller.error_sum,
+//                         controller.error_min,
+//                         controller.error_max,
+//                         (float)controller.error_count};
+//     appendToFile(name+"velocity.txt",data, 9);
 //  TODO: save errors
     // delete errors
     

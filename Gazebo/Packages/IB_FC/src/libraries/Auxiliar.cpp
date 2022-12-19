@@ -41,7 +41,16 @@ void freeMatrix(char **M, int n){
 		val: array with the values to write
 		n: size of the array
 */
+
 void appendToFile(string name, double *val, int n){  
+	ofstream outfile;
+	outfile.open(name, std::ios_base::app);	
+	for(int i=0;i<n;i++)
+		outfile << val[i] << " " ;
+	outfile << endl;
+}
+
+void appendToFile(string name, float *val, int n){  
 	ofstream outfile;
 	outfile.open(name, std::ios_base::app);	
 	for(int i=0;i<n;i++)

@@ -215,11 +215,18 @@ int main(int argc, char **argv){
 			the neighbors.
 		*/
 
+    //  Save consensus errors
+//     string name ("/home/bloodfield/catkin_ws/src/IB_FC/src/output/"+me_str);
+    float * array_save = this_drone.controller.error_save.ptr<float>(0,0);
+    int size_err =  2*this_drone.controller.error_save.rows;
+    appendToFile(name+"error.txt",array_save, size_err);
+    this_drone.controller.error_save = Mat::zeros(0,2,CV_32F);
+    
 		//publish position
 		position_publisher.publish(this_drone.move(dt,name,t));
         this_drone.resetVelocities(); // 
-//         cout << me_str << "------- M O V E --------\n" << flush;
-		//add time
+        
+		//    time update
 		t+=dt;
 		last_time = ite;
 
@@ -234,7 +241,7 @@ int main(int argc, char **argv){
 // 		err_psi = average(e_psi,size);
 
 		//print information
-		cout << t <<" I'm drone "<< me_str ;
+		cout << t <<" I'm drone "<< me_str << endl << flush;
 //         cout << " e_t: "<<err_t;
 //         cout<< " e_psi: " << err_psi << endl;
 

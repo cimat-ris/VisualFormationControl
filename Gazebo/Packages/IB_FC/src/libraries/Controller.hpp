@@ -59,7 +59,7 @@ class Controller{
         double error_min = 100.0;
         double error_max = -100.0;
         int error_count = 0;
-		
+		Mat error_save = Mat::zeros(0,2,CV_32F);
 		
 		//-------------------------------- CONTROLLERS
 		void PBFCHD(int matches,int i, int j, Mat &H); //position based formation contr with homography decomposition

@@ -13,6 +13,7 @@ using namespace std;
 char **createMatrix(int type, int typePtr, int n, int m);//to create a matrix with dynamic memory
 void freeMatrix(char **M, int n);//to free the memory of a matrix from previous function
 void appendToFile(string name, double *val, int n); //writes a new row to the specified file with the array val
+void appendToFile(string name, float *val, int n); //writes a new row to the specified file with the array val
 int needsAltitudeConsensus(int ct); //to verify if a controller needs altitude consensus
 int isHomographyConsensus(int ct); //to check if the given controller uses the homography or the fundamental matrix
 int bearingsNeeded(int ct); //to verify if the consensus works with bearings

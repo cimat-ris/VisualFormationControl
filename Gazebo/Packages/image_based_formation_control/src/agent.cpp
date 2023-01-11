@@ -17,20 +17,31 @@ fvc::agent::~agent()
     if (velContributions != nullptr)
         delete velContributions;
     
+    if (States != nullptr)
+        delete States;
+    
 }
 
 void fvc::agent::load(const ros::NodeHandle &nh)
 {
-    State.load(nh);
+//     State.load(nh);
+    vcc::state tmp_State;
+    tmp_State.load(nh);
     // Load Laplacian rows
     n_agents = nh.param(std::string("n_agents"),0);
     
     neighbors = new int[n_agents];
     gamma = new double[n_agents];
     velContributions = new bool[n_agents];
+    States = new vcc::state [n_agents];
+    
+    
     
     for (int i = 0; i < n_agents ; i++)
+    {
         velContributions[i] = false;
+        States[i] = tmp_State;
+    }
     
     int i = label*n_agents;
     int end = i + n_agents;
@@ -139,7 +150,10 @@ void fvc::agent::setPose(const geometry_msgs::Pose::ConstPtr& msg){
         _z = msg->position.z;
     
     
-        State.initialize(_x,_y,_z,yaw);
+//         State.initialize(_x,_y,_z,yaw);
+        for (int i = 0; i < n_agents; i ++)
+            States[i].initialize(_x,_y,_z,yaw);
+        
         POSITION_UPDATED = true;
     
         std::cout << "Init pose drone " << label << std::endl;
@@ -211,7 +225,7 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
 //     complement = aruco_refs[label];
     
     //  TODO: pasar el control a otra parte para que no dependa del orden
-    if (ARUCO_COMPUTED)
+    if (ARUCO_COMPUTED) // and !velContributions[j])
     {
         //  Add velocity contribution
         vcc::homograpy_matching_result result;
@@ -219,14 +233,40 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
         tmp1.copyTo(result.p2);
         cv::Mat tmp2 = cv::Mat(complement).reshape(1);
         tmp2.copyTo(result.p1);
+     
+        //  remove previous contribution
+        States[label].Vx -= States[j].Vx;
+        States[label].Vy -= States[j].Vy;
+        States[label].Vz -= States[j].Vz;
+        States[label].Vroll -= States[j].Vroll;
+        States[label].Vpitch -= States[j].Vpitch;
+        States[label].Vyaw -= States[j].Vyaw;
         
-        int ret = controllers[1](State,result);
+        //  reset partials
+        States[j].Vx = 0.;
+        States[j].Vy = 0.;
+        States[j].Vz = 0.;
+        States[j].Vroll = 0.;
+        States[j].Vpitch = 0.;
+        States[j].Vyaw = 0.;
+        
+//         int ret = controllers[1](State,result);
+        int ret = controllers[1](States[j],result);
+        
         
         if(ret !=0)
         {
             std::cout << "Controller error" << std::endl;
             return;
         }
+        
+        //  add new contribution
+        States[label].Vx += States[j].Vx;
+        States[label].Vy += States[j].Vy;
+        States[label].Vz += States[j].Vz;
+        States[label].Vroll += States[j].Vroll;
+        States[label].Vpitch += States[j].Vpitch;
+        States[label].Vyaw += States[j].Vyaw;
         
         velContributions[j] = true;
     }
@@ -242,7 +282,12 @@ bool fvc::agent::isNeighbor(int j)
 void fvc::agent::save_state(double time)
 {
 //     std::cout << output_dir << std::endl;
-    State.save_data(time,output_dir+"state.txt");
+//     State.save_data(time,output_dir+"state.txt");
+    for(int i = 0; i< n_agents; i++)
+    {
+        std::string name = output_dir+"partial_"+std::to_string(i)+".txt";
+        States[i].save_data(time, name);
+    }
     //Save consensus error
 }
 
@@ -297,38 +342,75 @@ bool fvc::agent::incompleteComputedVelocities(){
 void fvc::agent::execControl(double dt)
 {
     
-    
+//  //  Simpla state update V1
+//     State.update();
+//     std::cout << State.Vx << ", " <<
+//     State.Vy << ", " <<
+//     State.Vz << ", " <<
+//     State.Vyaw << std::endl << std::flush;
+//     
+
+//  //  Rotated state update V1
+//     double yaw = State.Yaw;
+// //     cv::Mat Rz = cv::rotationZ(State.Yaw);
+//     cv::Mat Rz = (cv::Mat_<double>(3, 3) <<                 
+//                   cos(yaw), -sin(yaw), 0,
+//                   sin(yaw),  cos(yaw), 0,
+//                          0,         0, 1);
+//     cv::Vec3d Vel(State.Vx,State.Vy,State.Vz);
+//     cv::Mat p_d = Rz * cv::Mat(Vel);//change in position
+// 
+//     //change in rotation
+//     cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-State.Vyaw,0,
+//                                             State.Vyaw,0,0,
+//                                             0,0,0);
+//     cv::Mat R_d = Rz*S; 
+// //     cv::Mat R = Rz+State.Kw *R_d*State.dt;
+//     cv::Mat R = Rz+State.Kw *R_d*dt;
+//     cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
+// 
+//     std::cout << Vel << std::endl << std::flush ;
+//     std::cout << p_d << std::endl << std::flush ;
+//     
+//     State.X += State.Kv * p_d.at<double>(0,0) * dt;
+//     State.Y += State.Kv * p_d.at<double>(1,0) * dt;
+//     State.Z += State.Kv * p_d.at<double>(2,0) * dt;
+//     State.Yaw =  (double) angles[2];
+
+//     //  TODO: Simpla state update V2
 //     State.update();
 //     std::cout << State.Vx << ", " <<
 //     State.Vy << ", " <<
 //     State.Vz << ", " <<
 //     State.Vyaw << std::endl << std::flush;
     
-    double yaw = State.Yaw;
-//     cv::Mat Rz = cv::rotationZ(State.Yaw);
+
+ //  Rotated state update V2
+    double yaw = States[label].Yaw;
+//     cv::Mat Rz = cv::rotationZ(States[label].Yaw);
     cv::Mat Rz = (cv::Mat_<double>(3, 3) <<                 
                   cos(yaw), -sin(yaw), 0,
                   sin(yaw),  cos(yaw), 0,
                          0,         0, 1);
-    cv::Vec3d Vel(State.Vx,State.Vy,State.Vz);
+    cv::Vec3d Vel(States[label].Vx,States[label].Vy,States[label].Vz);
     cv::Mat p_d = Rz * cv::Mat(Vel);//change in position
 
     //change in rotation
-    cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-State.Vyaw,0,
-                                            State.Vyaw,0,0,
+    cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-States[label].Vyaw,0,
+                                            States[label].Vyaw,0,0,
                                             0,0,0);
     cv::Mat R_d = Rz*S; 
-//     cv::Mat R = Rz+State.Kw *R_d*State.dt;
-    cv::Mat R = Rz+State.Kw *R_d*dt;
+//     cv::Mat R = Rz+States[label].Kw *R_d*States[label].dt;
+    cv::Mat R = Rz+States[label].Kw *R_d*dt;
     cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
 
     std::cout << Vel << std::endl << std::flush ;
     std::cout << p_d << std::endl << std::flush ;
     
-    State.X += State.Kv * p_d.at<double>(0,0) * dt;
-    State.Y += State.Kv * p_d.at<double>(1,0) * dt;
-    State.Z += State.Kv * p_d.at<double>(2,0) * dt;
-    State.Yaw =  (double) angles[2];
+    States[label].X += States[label].Kv * p_d.at<double>(0,0) * dt;
+    States[label].Y += States[label].Kv * p_d.at<double>(1,0) * dt;
+    States[label].Z += States[label].Kv * p_d.at<double>(2,0) * dt;
+    States[label].Yaw =  (double) angles[2];
     
 }
 
@@ -337,15 +419,19 @@ trajectory_msgs::MultiDOFJointTrajectory fvc::agent::getPose()
     //create message for the pose
     Eigen::VectorXd position; 
     position.resize(3); 
-    position(0) = State.X; 
-    position(1) = State.Y; 
-    position(2) = State.Z;
+    position(0) = States[label].X; 
+    position(1) = States[label].Y; 
+    position(2) = States[label].Z;
+//     position(0) = State.X; 
+//     position(1) = State.Y; 
+//     position(2) = State.Z;
     
     // prepare msg
     trajectory_msgs::MultiDOFJointTrajectory position_msg;
     position_msg.header.stamp=ros::Time::now();
     mav_msgs::msgMultiDofJointTrajectoryFromPositionYaw(
-        position, State.Yaw, &position_msg);
+        position, States[label].Yaw, &position_msg);
+//         position, State.Yaw, &position_msg);
     
     return position_msg;
 	
@@ -355,12 +441,21 @@ void fvc::agent::reset(char SELECT)
 {
     if (SELECT & VELOCITIES)
     {
-        State.Vx = 0.;
-        State.Vy = 0.;
-        State.Vz = 0.;
-        State.Vyaw = 0.;
-        State.Vpitch = 0.;
-        State.Vroll = 0.;
+        for (int i = 0; i < n_agents ; i++)
+        {
+            States[i].Vx = 0.;
+            States[i].Vy = 0.;
+            States[i].Vz = 0.;
+            States[i].Vyaw = 0.;
+            States[i].Vpitch = 0.;
+            States[i].Vroll = 0.;
+        }
+//         State.Vx = 0.;
+//         State.Vy = 0.;
+//         State.Vz = 0.;
+//         State.Vyaw = 0.;
+//         State.Vpitch = 0.;
+//         State.Vroll = 0.;
     }
     if (SELECT & ERRORS)
     {

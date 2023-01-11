@@ -112,11 +112,8 @@ int main(int argc, char **argv){
         ros::spinOnce();	
 
         //  save data
-        new_agent.save_state(t);
+//         new_agent.save_state(t);
         
-//         if(new_agent.ARUCO_COMPUTED)
-//             image_descriptor_publisher.publish(new_agent.getArUco());
-//         
         //if we havent get the pose
         if(! new_agent.isUpdated()){rate.sleep(); continue;}	
 
@@ -150,6 +147,9 @@ int main(int argc, char **argv){
         //    PART 3 EXECUTE CONTROL AND RESET
         //-----------------------------------------------------------
 
+        //  save data
+        new_agent.save_state(t);
+        
         //  CONTROL EXECUTE
         dt = ros::Time::now().toSec() -dt;
         dt = 0.025;
@@ -160,7 +160,8 @@ int main(int argc, char **argv){
         
         //  RESET CONTROL VELOCITIES
         new_agent.reset(
-            fvc::VELOCITIES | fvc::CONTRIBUTIONS | fvc::CORNERS); 
+            fvc::VELOCITIES );
+//             fvc::VELOCITIES | fvc::CONTRIBUTIONS | fvc::CORNERS); 
 
         //    time update
         t+=ros::Time::now().toSec();

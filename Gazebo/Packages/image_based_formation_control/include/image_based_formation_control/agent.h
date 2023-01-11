@@ -35,7 +35,8 @@ namespace fvc
     class agent {
     public:
         
-        vcc::state State;
+//         vcc::state  State;
+        vcc::state * States = nullptr;
         int label = 0;
         bool POSITION_UPDATED = false;
         

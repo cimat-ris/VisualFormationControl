@@ -1,0 +1,35 @@
+# The camera intrinsic parameters matrix
+# 3x3 matrix
+camera_intrinsic_parameters: [241.4268236, 0,    376.0,
+                              0,    241.4268236, 240.0,
+                              0,    0,    1]
+
+# Sampling time
+dt: 0.025
+
+# Gain on linear velocities
+gain_v: 0.25
+
+# Gain on angular velocities
+#gain_w: 0.
+gain_w: 0.75
+
+# Threshold on the feature position error, used to stop the visual control
+feature_error_threshold: 0.5
+
+nfeatures: 280
+scaleFactor: 1.2
+nlevels: 8
+edgeThreshold: 15
+patchSize: 30
+fastThreshold: 20
+flann_ratio: 0.7
+
+# Directories
+input_dir: "/home/bloodfield/catkin_ws/src/image_based_formation_control/src/input/"
+output_dir: "/home/bloodfield/catkin_ws/src/image_based_formation_control/src/output/"
+# Formation Laplacian
+n_agents: 3
+Laplacian: [-2, 1, 1,
+            1, -2, 1,
+            1, 1, -2]

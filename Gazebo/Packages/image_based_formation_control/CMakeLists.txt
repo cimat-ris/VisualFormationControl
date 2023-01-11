@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8.3...3.22)
-project(vc_controller)
+cmake_minimum_required(VERSION 2.8.3)
+project(image_based_formation_control)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,8 +7,8 @@ project(vc_controller)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-
 set(OpenCV_DIR "/usr/lib/x86_64-linux-gnu/cmake/opencv4")
+
 find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport
@@ -18,7 +18,9 @@ find_package(catkin REQUIRED COMPONENTS
 	std_msgs
 	mav_msgs
 	geometry_msgs
+	vc_controller
 	OpenCV REQUIRED
+	message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -55,11 +57,16 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+	FILES
+	image_description.msg
+	key_point.msg
+	descriptors.msg
+	geometric_constraint.msg
+	gamma.msg
+	point2f.msg
+	corners.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -76,10 +83,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs
-# )
+generate_messages(
+	DEPENDENCIES
+	std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -111,9 +118,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
- INCLUDE_DIRS include
- LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs
+#  INCLUDE_DIRS include
+#  LIBRARIES homography
+	CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs trajectory_msgs std_msgs mav_msgs geometry_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -124,23 +131,14 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
+include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-add_library(${PROJECT_NAME}
-    src/vc_controller.cpp
-    src/camera_norm.cpp  
-    src/compute_descriptors.cpp
-    src/Moore_Penrose_PInv.cpp 
-    src/chaumette.cpp
-    src/interaction_Mat.cpp
-    src/compute_homography.cpp  
-    src/homograpy.cpp
-    src/rotationMatrixToEulerAngles.cpp 
-    src/select_decomposition.cpp 
-)
+# add_library(${PROJECT_NAME}
+#   src/${PROJECT_NAME}/homography.cpp
+# )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -163,9 +161,9 @@ add_library(${PROJECT_NAME}
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+# )
 
 #############
 ## Install ##
@@ -183,16 +181,14 @@ target_link_libraries(${PROJECT_NAME}
 
 ## Mark executables and/or libraries for installation
 # install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
-install(TARGETS ${PROJECT_NAME} 
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  )
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 #   FILES_MATCHING PATTERN "*.h"
 #   PATTERN ".svn" EXCLUDE
 # )
@@ -217,17 +213,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(${PROJECT_NAME}_node src/vc_controller_node.cpp 
-src/camera_norm.cpp  
-src/compute_descriptors.cpp
-src/Moore_Penrose_PInv.cpp 
-src/chaumette.cpp
-src/interaction_Mat.cpp
-src/compute_homography.cpp  
-src/homograpy.cpp
-src/rotationMatrixToEulerAngles.cpp 
-src/select_decomposition.cpp 
-src/vc_controller.cpp)
-target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
-
-target_compile_definitions(${PROJECT_NAME}_node PUBLIC WORKSPACE="/home/bloodfield/catkin_ws")
+add_executable(image_based_formation_control src/image_based_formation_control.cpp src/agent.cpp)
+add_dependencies(image_based_formation_control formation_control_generate_messages_cpp)
+target_link_libraries(image_based_formation_control ${catkin_LIBRARIES})

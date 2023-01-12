@@ -2,6 +2,21 @@
 
 using namespace fvc;
 
+static void save_mat(double time, std::string directory, cv::Mat & _mat)
+{
+    std::ofstream outfile;
+    outfile.open(directory, std::ios_base::app);	
+    outfile << time << " " ;
+    
+    float * mat_ptr = _mat.ptr<float>(0,0);
+    int n = _mat.cols * _mat.rows;
+    for(int i=0;i<n;i++)
+		outfile << mat_ptr[i] << " " ;
+	outfile << std::endl;
+    
+    outfile.close();
+}
+
 fvc::agent::agent(std::string name)
 {
     label = atoi(name.c_str());
@@ -41,6 +56,7 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     {
         velContributions[i] = false;
         States[i] = tmp_State;
+        errors.push_back(cv::Mat());
     }
     
     int i = label*n_agents;
@@ -234,6 +250,15 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
         cv::Mat tmp2 = cv::Mat(complement).reshape(1);
         tmp2.copyTo(result.p1);
      
+        //  save error 
+        if (velContributions[j] == true)
+            errors[label] = errors[label] - errors[j];
+        errors[j] = tmp2 -tmp1;
+        if (errors[label].empty())
+            errors[label] = errors[j];
+        else
+            errors[label] = errors[label] + errors[j];
+        
         //  remove previous contribution
         States[label].Vx -= States[j].Vx;
         States[label].Vy -= States[j].Vy;
@@ -287,6 +312,8 @@ void fvc::agent::save_state(double time)
     {
         std::string name = output_dir+"partial_"+std::to_string(i)+".txt";
         States[i].save_data(time, name);
+        name = output_dir+"error_"+std::to_string(i)+".txt";
+        save_mat(time,name,errors[i]);
     }
     //Save consensus error
 }
@@ -459,7 +486,8 @@ void fvc::agent::reset(char SELECT)
     }
     if (SELECT & ERRORS)
     {
-        
+        for (int i = 0; i < n_agents ; i++)
+            errors[i] = cv::Mat();
     }
     if (SELECT & CONTRIBUTIONS)
     {
@@ -471,3 +499,4 @@ void fvc::agent::reset(char SELECT)
         ARUCO_COMPUTED = false;
     }
 }
+

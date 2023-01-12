@@ -34,7 +34,7 @@ int chaumette(
     
     /**********Updating velocities in the axis*/
     //velocities from homography decomposition
-    //  TODO: U = cv::Mat(U,CV_32F); // para generalizar el tipo de cariable
+//     U = cv::Mat(U,CV_32F); // para generalizar el tipo de cariable
     state.Vx += (float) U.at<float>(1,0);
     state.Vy += (float) U.at<float>(0,0);
     state.Vz += (float) U.at<float>(2,0);

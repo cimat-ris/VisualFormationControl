@@ -95,7 +95,8 @@ int main(int argc, char **argv){
     // LOOP
 
     ros::Rate rate(20);
-    double dt = ros::Time::now().toSec();
+    t = ros::Time::now().toSec();
+    double dt = t;
     while(ros::ok()){
         
         //-----------------------------------------------------------
@@ -126,6 +127,7 @@ int main(int argc, char **argv){
         //-----------------------------------------------------------
         
         //    CORNER PUBLISH
+        if(new_agent.ARUCO_COMPUTED)
         image_descriptor_publisher.publish(new_agent.getArUco());	
 
         //  If the velocities are incomplete, wait
@@ -152,10 +154,11 @@ int main(int argc, char **argv){
         
         //  CONTROL EXECUTE
         dt = ros::Time::now().toSec() -dt;
-        dt = 0.025;
+//         dt = 0.025;
         new_agent.execControl(dt);
         
         //  PUBLISH NEW POSITION
+//         if (new_agent.label !=1)
         position_publisher.publish(new_agent.getPose());
         
         //  RESET CONTROL VELOCITIES
@@ -164,7 +167,7 @@ int main(int argc, char **argv){
 //             fvc::VELOCITIES | fvc::CONTRIBUTIONS | fvc::CORNERS); 
 
         //    time update
-        t+=ros::Time::now().toSec();
+        t=ros::Time::now().toSec();///1000.0;
         dt = t;
         //print information
         if(verbose)

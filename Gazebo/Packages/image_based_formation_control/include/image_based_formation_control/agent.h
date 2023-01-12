@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+
 #include <ros/ros.h>
 #include <opencv2/aruco.hpp>
 #define  VC_CONTROLLER_NODE_H
@@ -48,7 +49,7 @@ namespace fvc
         bool *velContributions = nullptr;
         
         //  Variables 
-//         Mat error_save = Mat::zeros(0,2,CV_32F);
+        std::vector<cv::Mat> errors;
         
         //  directorios
         std::string input_dir;

@@ -255,7 +255,7 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
             errors[label] = errors[label] - errors[j];
         errors[j] = tmp2 -tmp1;
         if (errors[label].empty())
-            errors[label] = errors[j];
+            errors[j].copyTo(errors[label]);
         else
             errors[label] = errors[label] + errors[j];
         
@@ -466,7 +466,7 @@ trajectory_msgs::MultiDOFJointTrajectory fvc::agent::getPose()
 
 void fvc::agent::reset(char SELECT)
 {
-    if (SELECT & VELOCITIES)
+    if (SELECT & CONTRIBUTIONS)
     {
         for (int i = 0; i < n_agents ; i++)
         {
@@ -476,24 +476,14 @@ void fvc::agent::reset(char SELECT)
             States[i].Vyaw = 0.;
             States[i].Vpitch = 0.;
             States[i].Vroll = 0.;
-        }
-//         State.Vx = 0.;
-//         State.Vy = 0.;
-//         State.Vz = 0.;
-//         State.Vyaw = 0.;
-//         State.Vpitch = 0.;
-//         State.Vroll = 0.;
-    }
-    if (SELECT & ERRORS)
-    {
-        for (int i = 0; i < n_agents ; i++)
+            
             errors[i] = cv::Mat();
+            velContributions[i] = false;
+        }
+
     }
-    if (SELECT & CONTRIBUTIONS)
-    {
-        for(int i = 0; i < n_agents; i++)
-        velContributions[i] = false;
-    }
+    
+    
     if (SELECT & CORNERS)
     {
         ARUCO_COMPUTED = false;

@@ -28,10 +28,8 @@
 namespace fvc
 {
     const char ALL = 0xff;
-    const char VELOCITIES = 0x01;
-    const char ERRORS = 0x02;
-    const char CONTRIBUTIONS = 0x04;
-    const char CORNERS = 0x08;
+    const char CONTRIBUTIONS = 0x01;
+    const char CORNERS = 0x02;
     
     class agent {
     public:

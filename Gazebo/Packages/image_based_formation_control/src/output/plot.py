@@ -70,13 +70,19 @@ for i in range(n):
             plt.legend(loc=0)
             plt.savefig(dir+'/error_t_'+str(j)+'.pdf',bbox_inches='tight')
             plt.clf()
+            
+            #   step Time histogram
+            dt = time[1:]-time[:-1]
+            plt.hist(dt,bins=int(dt.max()/dt.min()))
+            plt.savefig(dir+'/dt_histogram.pdf',bbox_inches='tight')
+            plt.clf()
         
         velocities = data[init:,[7,8,9,10]]
     
         #plot translation velocities
-        plt.plot(time, velocities[:,0],label = "V X")
-        plt.plot(time, velocities[:,1],label = "V Y")
-        plt.plot(time, velocities[:,2],label = "V Z")
+        plt.plot(time, velocities[:,0],label = "V_x")
+        plt.plot(time, velocities[:,1],label = "V_y")
+        plt.plot(time, velocities[:,2],label = "V_z")
         plt.ylabel('Velocity $(m/s)$')
         plt.xlabel('Time $(s)$')
         plt.grid(True)
@@ -105,24 +111,24 @@ for i in range(n):
             dimention = data.shape[1]
             
             #plot error u
-            error = data[init:,range(1,dimention,2)]
+            error = data[init:,range(1,dimention,2)]/241.4268236
             #error = data[init:,range(1,int((1+dimention)/2))]
             plt.plot(time, error)
             plt.ylabel('U error $(m)$')
             plt.xlabel('Time $(s)$')
             plt.grid(True)
-            #plt.ylim((-1,1))
+            plt.ylim((-1,1))
             plt.savefig(dir+'/error_u_'+str(j)+'.pdf',bbox_inches='tight')
             plt.clf()
             
             #plot error v
-            error = data[init:,range(2,dimention,2)]
+            error = data[init:,range(2,dimention,2)]/241.4268236
             #error = data[init:,range(int((1+dimention)/2),dimention)]
             plt.plot(time, error)
             plt.ylabel('V error $(m)$')
             plt.xlabel('Time $(s)$')
             plt.grid(True)
-            #plt.ylim((-1,1))
+            plt.ylim((-1,1))
             plt.savefig(dir+'/error_v_'+str(j)+'.pdf',bbox_inches='tight')
             plt.clf()
             

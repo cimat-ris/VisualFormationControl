@@ -97,6 +97,7 @@ int main(int argc, char **argv){
     ros::Rate rate(20);
     t = ros::Time::now().toSec();
     double dt = t;
+    double tf = t +30;
     while(ros::ok()){
         
         //-----------------------------------------------------------
@@ -149,33 +150,33 @@ int main(int argc, char **argv){
         //    PART 3 EXECUTE CONTROL AND RESET
         //-----------------------------------------------------------
 
-        //  save data
-        new_agent.save_state(t);
-        
-        //  CONTROL EXECUTE
+        //    time update
+        t=ros::Time::now().toSec();
         dt = ros::Time::now().toSec() -dt;
 //         dt = 0.025;
+        //  CONTROL EXECUTE
         new_agent.execControl(dt);
+        dt = t;
+        
+        //  save data
+        new_agent.save_state(t);
         
         //  PUBLISH NEW POSITION
 //         if (new_agent.label !=1)
         position_publisher.publish(new_agent.getPose());
         
         //  RESET CONTROL VELOCITIES
-        new_agent.reset(
-            fvc::VELOCITIES );
-//             fvc::VELOCITIES | fvc::CONTRIBUTIONS | fvc::CORNERS); 
+//         new_agent.reset( fvc::CONTRIBUTIONS | fvc::CORNERS); 
+        new_agent.reset( fvc::CORNERS); 
+//         new_agent.reset( fvc::CONTRIBUTIONS); 
 
-        //    time update
-        t=ros::Time::now().toSec();///1000.0;
-        dt = t;
         //print information
         if(verbose)
         std::cout << t <<" Control exec in drone "<<
         me_str << std::endl << std::flush;
 
         //do we stop?
-        if(ite > 100000 ) break;
+        if(t > tf ) break;
     }
 
     return 0;

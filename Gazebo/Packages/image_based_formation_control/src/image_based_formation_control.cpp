@@ -167,7 +167,7 @@ int main(int argc, char **argv){
         
         //  RESET CONTROL VELOCITIES
 //         new_agent.reset( fvc::CONTRIBUTIONS | fvc::CORNERS); 
-        new_agent.reset( fvc::CORNERS); 
+//         new_agent.reset( fvc::CORNERS); 
 //         new_agent.reset( fvc::CONTRIBUTIONS); 
 
         //print information

@@ -57,6 +57,8 @@ void fvc::agent::load(const ros::NodeHandle &nh)
         velContributions[i] = false;
         States[i] = tmp_State;
         errors.push_back(cv::Mat());
+        std::vector<cv::Point2f> tmp;
+        complements.push_back(tmp);
     }
     
     int i = label*n_agents;
@@ -217,6 +219,7 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
 {
     int j = msg->j;
     
+//     std::vector<cv::Point2f> complement(4);
     std::vector<cv::Point2f> complement(4);
     
     //  consenso
@@ -229,6 +232,7 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
     complement[2].y = msg->data[2].y;
     complement[3].x = msg->data[3].x;
     complement[3].y = msg->data[3].y;
+    
     //      then add point and partial error (-p*_i -(p_j - p*_j))
     for (int i = 0; i< 4; i++)
     {
@@ -236,65 +240,12 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
         complement[i] = complement[i] - aruco_refs[j][i];
     }
         
+    complements[j] = complement;
     
 //     //  Case for reference only
 //     complement = aruco_refs[label];
-    
-    //  TODO: pasar el control a otra parte para que no dependa del orden
-    if (ARUCO_COMPUTED) // and !velContributions[j])
-    {
-        //  Add velocity contribution
-        vcc::homograpy_matching_result result;
-        cv::Mat tmp1 = cv::Mat(corners).reshape(1);
-        tmp1.copyTo(result.p2);
-        cv::Mat tmp2 = cv::Mat(complement).reshape(1);
-        tmp2.copyTo(result.p1);
-     
-        //  save error 
-        if (velContributions[j] == true)
-            errors[label] = errors[label] - errors[j];
-        errors[j] = tmp2 -tmp1;
-        if (errors[label].empty())
-            errors[j].copyTo(errors[label]);
-        else
-            errors[label] = errors[label] + errors[j];
-        
-        //  remove previous contribution
-        States[label].Vx -= States[j].Vx;
-        States[label].Vy -= States[j].Vy;
-        States[label].Vz -= States[j].Vz;
-        States[label].Vroll -= States[j].Vroll;
-        States[label].Vpitch -= States[j].Vpitch;
-        States[label].Vyaw -= States[j].Vyaw;
-        
-        //  reset partials
-        States[j].Vx = 0.;
-        States[j].Vy = 0.;
-        States[j].Vz = 0.;
-        States[j].Vroll = 0.;
-        States[j].Vpitch = 0.;
-        States[j].Vyaw = 0.;
-        
-//         int ret = controllers[1](State,result);
-        int ret = controllers[1](States[j],result);
-        
-        
-        if(ret !=0)
-        {
-            std::cout << "Controller error" << std::endl;
-            return;
-        }
-        
-        //  add new contribution
-        States[label].Vx += States[j].Vx;
-        States[label].Vy += States[j].Vy;
-        States[label].Vz += States[j].Vz;
-        States[label].Vroll += States[j].Vroll;
-        States[label].Vpitch += States[j].Vpitch;
-        States[label].Vyaw += States[j].Vyaw;
-        
+
         velContributions[j] = true;
-    }
 }
 
 bool fvc::agent::isNeighbor(int j)
@@ -368,6 +319,64 @@ bool fvc::agent::incompleteComputedVelocities(){
 
 void fvc::agent::execControl(double dt)
 {
+    if(ARUCO_COMPUTED)
+    {
+    States[label].Vx = 0.;
+    States[label].Vy = 0.;
+    States[label].Vz = 0.;
+    States[label].Vroll = 0.;
+    States[label].Vpitch = 0.;
+    States[label].Vyaw = 0.;
+    
+    for (int i = 0; i < n_agents ; i++)
+    {
+        errors[i] = cv::Mat();
+    }
+    
+    for (int i = 0; i< n_agents; i++)
+    {
+        if (isNeighbor(i))
+        {
+            //  Add velocity contribution
+            vcc::homograpy_matching_result result;
+            cv::Mat tmp1 = cv::Mat(corners).reshape(1);
+            tmp1.copyTo(result.p2);
+            cv::Mat tmp2 = cv::Mat(complements[i]).reshape(1);
+            tmp2.copyTo(result.p1);
+        
+            //  save error 
+            errors[i] = tmp2 -tmp1;
+            if (errors[label].empty())
+                errors[i].copyTo(errors[label]);
+            else
+                errors[label] = errors[label] + errors[i];
+            
+            //  reset partials
+            States[i].Vx = 0.;
+            States[i].Vy = 0.;
+            States[i].Vz = 0.;
+            States[i].Vroll = 0.;
+            States[i].Vpitch = 0.;
+            States[i].Vyaw = 0.;
+            
+    //         int ret = controllers[1](State,result);
+            int ret = controllers[1](States[i],result);
+            
+            if(ret !=0)
+            {
+                std::cout << "Controller error" << std::endl;
+                return;
+            }
+            
+            //  add new contribution
+            States[label].Vx += States[i].Vx;
+            States[label].Vy += States[i].Vy;
+            States[label].Vz += States[i].Vz;
+            States[label].Vroll += States[i].Vroll;
+            States[label].Vpitch += States[i].Vpitch;
+            States[label].Vyaw += States[i].Vyaw;
+        }
+    }
     
 //  //  Simpla state update V1
 //     State.update();
@@ -438,7 +447,7 @@ void fvc::agent::execControl(double dt)
     States[label].Y += States[label].Kv * p_d.at<double>(1,0) * dt;
     States[label].Z += States[label].Kv * p_d.at<double>(2,0) * dt;
     States[label].Yaw =  (double) angles[2];
-    
+    }
 }
 
 trajectory_msgs::MultiDOFJointTrajectory fvc::agent::getPose()

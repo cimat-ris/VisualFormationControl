@@ -202,13 +202,19 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
         
         if (_corners.size() > 0)
         {
-            ARUCO_COMPUTED = true;
         
             //  Save message
             std::cout << _corners.size() << " ArUco(s) detected\n" << std::flush;
             corners = _corners[0];
             
-        }else{ARUCO_COMPUTED = false;}
+//             if(ARUCO_COMPUTED)
+//                 corners.clear();
+//             
+//             for (int i = 0; i < 4 ; i++)
+//                 corners.push_back(_corners[0][i]);
+            
+            ARUCO_COMPUTED = true;
+        }//else{ARUCO_COMPUTED = false;}
 
     }catch (cv_bridge::Exception& e){
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
@@ -337,6 +343,63 @@ void fvc::agent::execControl(double dt)
     {
         if (isNeighbor(i))
         {
+//             //  local speed controll
+//             //  Add velocity contribution
+//             vcc::homograpy_matching_result result;
+//             cv::Mat tmp1 = cv::Mat(corners).reshape(1);
+//             tmp1.copyTo(result.p2);
+//             cv::Mat tmp2 = cv::Mat(aruco_refs[label]).reshape(1);
+//             tmp2.copyTo(result.p1);
+//             
+//             vcc::homograpy_matching_result result_agent;
+//             cv::Mat tmp3 = cv::Mat(complements[i]).reshape(1);
+//             tmp3.copyTo(result_agent.p2);
+//             cv::Mat tmp4 = cv::Mat(aruco_refs[i]).reshape(1);
+//             tmp4.copyTo(result_agent.p1);
+//         
+//             //  save error 
+//             errors[i] = (tmp2 -tmp1)-(tmp4-tmp3);
+//             if (errors[label].empty())
+//                 errors[i].copyTo(errors[label]);
+//             else
+//                 errors[label] = errors[label] + errors[i];
+//             
+//             //  reset partials
+//             States[i].Vx = 0.;
+//             States[i].Vy = 0.;
+//             States[i].Vz = 0.;
+//             States[i].Vroll = 0.;
+//             States[i].Vpitch = 0.;
+//             States[i].Vyaw = 0.;
+//             
+//             vcc::state State_tmp = States[i];
+//             
+//             int ret = controllers[1](States[i],result);
+//             ret += controllers[1](State_tmp,result_agent);
+//             
+//             if(ret !=0)
+//             {
+//                 std::cout << "Controller error" << std::endl;
+//                 return;
+//             }
+//             
+//             //  add new contribution
+//             States[i].Vx -= State_tmp.Vx;
+//             States[i].Vy -= State_tmp.Vy;
+//             States[i].Vz -= State_tmp.Vz;
+//             States[i].Vroll -= State_tmp.Vroll;
+//             States[i].Vpitch -= State_tmp.Vpitch;
+//             States[i].Vyaw -= State_tmp.Vyaw;
+// 
+//             //  add new contribution
+//             States[label].Vx += States[i].Vx;
+//             States[label].Vy += States[i].Vy;
+//             States[label].Vz += States[i].Vz;
+//             States[label].Vroll += States[i].Vroll;
+//             States[label].Vpitch += States[i].Vpitch;
+//             States[label].Vyaw += States[i].Vyaw;
+            
+            //  real control
             //  Add velocity contribution
             vcc::homograpy_matching_result result;
             cv::Mat tmp1 = cv::Mat(corners).reshape(1);
@@ -364,7 +427,7 @@ void fvc::agent::execControl(double dt)
             
             if(ret !=0)
             {
-                std::cout << "Controller error" << std::endl;
+                std::cout << label << " Controller error" << std::endl;
                 return;
             }
             
@@ -413,12 +476,12 @@ void fvc::agent::execControl(double dt)
 //     State.Z += State.Kv * p_d.at<double>(2,0) * dt;
 //     State.Yaw =  (double) angles[2];
 
-//     //  TODO: Simpla state update V2
-//     State.update();
-//     std::cout << State.Vx << ", " <<
-//     State.Vy << ", " <<
-//     State.Vz << ", " <<
-//     State.Vyaw << std::endl << std::flush;
+    //  TODO: Simpla state update V2
+//     States[label].update();
+// //     std::cout << States[label].Vx << ", " <<
+// //     States[label].Vy << ", " <<
+// //     States[label].Vz << ", " <<
+// //     States[label].Vyaw << std::endl << std::flush;
     
 
  //  Rotated state update V2
@@ -440,8 +503,8 @@ void fvc::agent::execControl(double dt)
     cv::Mat R = Rz+States[label].Kw *R_d*dt;
     cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
 
-    std::cout << Vel << std::endl << std::flush ;
-    std::cout << p_d << std::endl << std::flush ;
+//     std::cout << Vel << std::endl << std::flush ;
+//     std::cout << p_d << std::endl << std::flush ;
     
     States[label].X += States[label].Kv * p_d.at<double>(0,0) * dt;
     States[label].Y += States[label].Kv * p_d.at<double>(1,0) * dt;

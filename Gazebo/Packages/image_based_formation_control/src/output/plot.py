@@ -73,7 +73,7 @@ for i in range(n):
             
             #   step Time histogram
             dt = time[1:]-time[:-1]
-            plt.hist(dt,bins=int(dt.max()/dt.min()))
+            plt.hist(dt,bins=int(dt.max()/0.05))
             plt.savefig(dir+'/dt_histogram.pdf',bbox_inches='tight')
             plt.clf()
         

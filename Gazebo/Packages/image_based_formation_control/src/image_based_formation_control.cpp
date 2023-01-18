@@ -128,7 +128,14 @@ int main(int argc, char **argv){
         //-----------------------------------------------------------
         
         //    CORNER PUBLISH
-        if(new_agent.ARUCO_COMPUTED)
+        if(!new_agent.ARUCO_COMPUTED)
+        {
+            if(verbose)
+            std::cout << "----- " << me_str << 
+            "Aruco not  computed -----\n" << std::flush;
+            rate.sleep();
+                continue;
+        }
         image_descriptor_publisher.publish(new_agent.getArUco());	
 
         //  If the velocities are incomplete, wait
@@ -174,7 +181,8 @@ int main(int argc, char **argv){
         if(verbose)
         std::cout << t <<" Control exec in drone "<<
         me_str << std::endl << std::flush;
-
+//         rate.sleep();
+        
         //do we stop?
         if(t > tf ) break;
     }

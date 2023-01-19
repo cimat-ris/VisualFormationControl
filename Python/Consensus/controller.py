@@ -42,11 +42,16 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set):
         Ls = 0.5*( Ls +inv_Ls_set)
     if Ls is None:
             print("Invalid Ls matrix")
-            return None
+            return np.array([0.,0.,0.,0.,0.,0.])
     #print(error.T)
     #print(Ls)
     U = (Ls @ error) / deg
     U[0] = -U[0]
+    #U[1] = -U[1]
+    #U[2] = -U[2]
+    #U[3] = -U[3]
+    #U[4] = -U[4]
+    #U[5] = -U[5]
     return  U
 
 def get_Homographies(agents):

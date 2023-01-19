@@ -68,20 +68,20 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
-def Z_select(depthOp, agent, P, Z_set):
+def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
         Z = agent.camera.p[2]*Z
         Z = Z-P[2,:]
-    elif depthOp ==2:
+    elif depthOp ==2: # 
         Z = p0[2,j]*Z
         Z = Z-P[2,:]
-    elif depthOp == 3:
+    elif depthOp == 3: # distancia al valor inicial
         Z = pd[2,j]*Z
         Z = Z-P[2,:]
-    elif depthOp == 4:
+    elif depthOp == 4: # fijo al valor de Z_set
         Z = Z*Z_set
-    elif depthOp == 5:
+    elif depthOp == 5: # equitativo, = promedio
         tmp = agent.camera.p[2]-np.mean(P[2,:])
         Z = Z*tmp
     else:
@@ -108,28 +108,30 @@ def main():
     directed = False
     
     #Depth estimation for interaction matrix
-    #   1-Updated, 2-Initial, 3-Final, 4-Arbitrary fixed, 5-Average
-    depthOp=4 
+    #   1-Updated, 2-Initial, 3-Referencia, 4-Arbitrary fixed, 5-Average
+    depthOp=1
     Z_set = 1.0
+    depthOp_dict = {1:"Updated at each step",
+                    2:"Distance at the begining",
+                    3:"Distance between reference and points",
+                    4:"Arbirtrary uniform value Z_set",
+                    5:"Uniform value as the mean of all points"}
     
     #   interaction matrix used for the control
     #   1- computed each step 2- Computed at the end 3- average
     case_interactionM = 1
+    case_interactionM_dict = {1:"Computed at each step",
+                              2:"Computed at the end",
+                              3:"Average between 1 and 2"}
     
     #   Controladores
     #   1  - IBVC   2 - Montijano
-    control_type = 2 
+    control_type = 1
+    control_type_dict = {1:"Image based visual control",
+                         2:"montijano"}
     case_controlable=1 #1-All (6), 2-Horizontal (4)
-    
-    #   Random inital positions?
-    init_rand =False
-    #   If True:
-    xymin=-0.9
-    xymax=0.9
-    zmin=0.8
-    zmax=1.8
-    angsmin=-30
-    angsmax=30
+    case_controlable_dict = {1:"6 Degrees of freedom",
+                             2:"4 degrees of freedom"}
     
     #   Read more data
     
@@ -143,12 +145,10 @@ def main():
     if A_ad is None:
         print('File ',name,' does not exist')
         return
-    print(A_ad)
     
     G = gr.graph(A_ad, directed)
     #G.plot()
     L = G.laplacian()
-    print(L)
     
     #   Conectivity graph
     G.plot()
@@ -159,7 +159,6 @@ def main():
     lam_2=S[-2]
     alpha=2./(lam_n+lam_2)
     A_ds=np.eye(n_agents)-alpha*L
-    print(A_ds)
     
     #   Agents array
     agents = []
@@ -171,15 +170,15 @@ def main():
     
     t=0.0
     dt = 0.05
-    t_end = 10.0
+    t_end = 50.0
     steps = int((t_end-t)/dt + 1.0)
-    lamb = 1.5*np.ones(6)
+    lamb = 6.0
     
     #   case selections
     if case_interactionM > 1:
         for i in range(n_agents):
             #   Depth calculation
-            Z = Z_select(depthOp, agents[i], P,Z_set)
+            Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,j)
             if Z is None:
                 return
             agents[i].set_interactionMat(Z)
@@ -197,6 +196,16 @@ def main():
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,3,steps))
+    
+    #   Print simulation data:
+    print("Laplacian selection = "+name)
+    print("Is directed = "+str(directed))
+    print(L)
+    print(A_ds)
+    print("Number of points = "+str(n_points))
+    print("Number of agents = "+str(n_agents))
+    print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
+    print("Control lambda = "+str(lamb))
     
     #   LOOP
     for i in range(steps):
@@ -226,7 +235,7 @@ def main():
             pos_arr[j,:,i] = agents[j].camera.p
             
             #   Depth calculation
-            Z = Z_select(depthOp, agents[j], P,Z_set)
+            Z = Z_select(depthOp, agents[j], P,Z_set,p0,pd,j)
             if Z is None:
                 return
             
@@ -244,7 +253,7 @@ def main():
                 print("invalid control selection")
                 return
             
-            U = agents[j].get_control(control_type,1.0,Z,args)
+            U = agents[j].get_control(control_type,lamb,Z,args)
                                      
             
             if U is None:
@@ -253,6 +262,9 @@ def main():
             
             if case_controlable == 2:
                 U[3:5] = 0.0
+            #if case_controlable == 1:
+                #U[3] = -U[3]
+                #U[4] = -U[4]
             
             #print('U= ',U)
             U_array[j,:,i] = U
@@ -296,8 +308,8 @@ def main():
                 color = colors[i],
                 camera_scale    = 0.02)
     plt.savefig(name+'.png',bbox_inches='tight')
-    #plt.show()
-    plt.close()
+    plt.show()
+    #plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):

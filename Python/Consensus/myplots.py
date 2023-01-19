@@ -29,6 +29,8 @@ def plot_time(t_array,
         symbols.append(mpatches.Patch(color=colors[i]))
     if not(labels is None):
         fig.legend(symbols,labels, loc=2)
+    if (label == "Velocidades" or label == "Features Error"):
+        plt.ylim((-1,1))
     
     plt.tight_layout()
     plt.savefig(name+'.png',bbox_inches='tight')

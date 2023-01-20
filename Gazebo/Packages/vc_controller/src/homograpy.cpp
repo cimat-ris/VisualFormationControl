@@ -5,13 +5,13 @@
 // int homography(cv::Mat img,
 int homography(
                vcc::state & State,
-               vcc::homograpy_matching_result & matching_result
+               vcc::matching_result & result
               ){
     
 //     int test = vcc::compute_homography(
 //         img,State.params,
 //         State.Desired_Configuration,
-//         matching_result);
+//         result);
 //     if (test<0)
 //         return -1;
 
@@ -19,12 +19,12 @@ int homography(
     std::vector<cv::Mat> Rs;
     std::vector<cv::Mat> Ts;
     std::vector<cv::Mat> Ns;
-    cv::decomposeHomographyMat(matching_result.H,State.params.K,Rs,Ts,Ns);
+    cv::decomposeHomographyMat(result.H,State.params.K,Rs,Ts,Ns);
 
     // Select decomposition
     vcc::select_decomposition(
         Rs,Ts,Ns,
-        matching_result,
+        result,
         State.selected,
         State.R_best,
         State.t_best);

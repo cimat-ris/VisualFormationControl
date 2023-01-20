@@ -3,7 +3,7 @@
 using namespace vcc;
  
 void vcc::camera_norm(const parameters & params, 
-                       homograpy_matching_result& result){
+                       matching_result& result){
         //  Normalización in situ
     
     //  p1

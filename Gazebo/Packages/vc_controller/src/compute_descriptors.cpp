@@ -6,7 +6,7 @@ int vcc::compute_descriptors(
     const cv::Mat & img,
     const parameters & params, 
     const desired_configuration & Desired_Configuration,
-    homograpy_matching_result& result) {
+    matching_result& result) {
     
 	/*** kp and descriptors for current image ***/
     cv::Mat descriptors; 

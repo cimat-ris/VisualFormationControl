@@ -6,7 +6,7 @@ int vcc::compute_homography(
     const cv::Mat & img,
     const parameters & params, 
     const desired_configuration & Desired_Configuration,
-    homograpy_matching_result & result) {
+    matching_result & result) {
 	
     /* keypoints and descriptors */
 	cv::Mat descriptors; 

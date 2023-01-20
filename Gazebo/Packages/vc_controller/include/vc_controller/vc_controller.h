@@ -61,38 +61,38 @@ class state {
 
 // int homography(cv::Mat img,
 //                vcc::state & state,
-//                vcc::homograpy_matching_result & matching_result
+//                vcc::matching_result & matching_result
 //               );
 // 
 // int chaumette(cv::Mat img,
 //                vcc::state & state,
-//                vcc::homograpy_matching_result & matching_result
+//                vcc::matching_result & matching_result
 //               );
 int homography(vcc::state & state,
-               vcc::homograpy_matching_result & matching_result
+               vcc::matching_result & matching_result
               );
 
 int chaumette(vcc::state & state,
-               vcc::homograpy_matching_result & matching_result
+               vcc::matching_result & matching_result
               );
 
 // Controller selection array only for vc_controller.h
 #ifdef VC_CONTROLLER_NODE_H
 // typedef int (*funlist) (cv::Mat img,
 //                         vcc::state & state,
-//                         vcc::homograpy_matching_result & matching_result
+//                         vcc::matching_result & matching_result
 //                        );
 // funlist controllers[] = {&homography,&chaumette};
 
 typedef int (*contList) (vcc::state & state,
-                        vcc::homograpy_matching_result & matching_result
+                        vcc::matching_result & matching_result
                        );
 const contList controllers[] = {&homography,&chaumette};
 
 typedef int (*prepList) (const cv::Mat&img,
         const vcc::parameters & params, 
         const vcc::desired_configuration & desired_configuration,
-        vcc::homograpy_matching_result& result);
+        vcc::matching_result& result);
 const prepList preprocessors[] = {&vcc::compute_homography,
                             &vcc::compute_descriptors};
 #endif

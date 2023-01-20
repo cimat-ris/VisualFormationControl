@@ -5,7 +5,7 @@ using namespace vcc;
 int vcc::select_decomposition(const std::vector<cv::Mat> & Rs,
                          const std::vector<cv::Mat> & Ts,
                          const std::vector<cv::Mat> & Ns,
-                         const homograpy_matching_result& matching_result,
+                         const matching_result& matching_result,
                          bool & selected,
                          cv::Mat & Rbest,
                          cv::Mat & tbest) {

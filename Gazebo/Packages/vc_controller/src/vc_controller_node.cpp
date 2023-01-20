@@ -27,7 +27,7 @@ vcc::state State;
 
 
 // Result of the matching operation
-vcc::homograpy_matching_result matching_result;
+vcc::matching_result Matching_result;
 
 //  Selector de control 
 int contr_sel = 0;
@@ -83,14 +83,14 @@ int main(int argc, char **argv){
 
 		//save data
 		time.push_back(ros::Time::now().toSec());
-        errors.push_back((float)matching_result.mean_feature_error);
+        errors.push_back((float)Matching_result.mean_feature_error);
 		vel_x.push_back(State.Vx);
     vel_y.push_back(State.Vy);
     vel_z.push_back(State.Vz);
     vel_yaw.push_back(State.Vyaw);
 
 		// Do we continue?
-        if(matching_result.mean_feature_error < State.params.feature_threshold)
+        if(Matching_result.mean_feature_error < State.params.feature_threshold)
 			break;
 
 		// Publish image of the matching
@@ -139,7 +139,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
 //         funlist controllers[1] = {&homography};
         
-//         if (controllers[contr_sel](img, State, matching_result)< 0)
+//         if (controllers[contr_sel](img, State, Matching_result)< 0)
 //             return;
     
         State.Vx = 0.;
@@ -148,19 +148,19 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
         State.Vroll = 0.;
         State.Vpitch = 0.;
         State.Vyaw = 0.;
-        if (preprocessors[contr_sel](img, State.params, State.Desired_Configuration ,matching_result)!= 0)
+        if (preprocessors[contr_sel](img, State.params, State.Desired_Configuration ,Matching_result)!= 0)
             return;
     
-        if (controllers[contr_sel]( State, matching_result)!= 0)
+        if (controllers[contr_sel]( State, Matching_result)!= 0)
             return;
     
         /************************************************************* Prepare message */
-		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,matching_result.img_matches).toImageMsg();
+		image_msg = cv_bridge::CvImage(std_msgs::Header(),sensor_msgs::image_encodings::BGR8,Matching_result.img_matches).toImageMsg();
 		image_msg->header.frame_id = "matching_image";
-		 image_msg->width = matching_result.img_matches.cols;
-		image_msg->height = matching_result.img_matches.rows;
+		 image_msg->width = Matching_result.img_matches.cols;
+		image_msg->height = Matching_result.img_matches.rows;
 		image_msg->is_bigendian = false;
-		image_msg->step = sizeof(unsigned char) * matching_result.img_matches.cols*3;
+		image_msg->step = sizeof(unsigned char) * Matching_result.img_matches.cols*3;
 		image_msg->header.stamp = ros::Time::now();
         
         
@@ -172,7 +172,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
 		  " Vroll: " << State.Vroll <<
 		  " Vpitch: " << State.Vpitch << 
 		  " Wyaw: " << State.Vyaw <<
-		  " average error: " << matching_result.mean_feature_error <<  endl;
+		  " average error: " << Matching_result.mean_feature_error <<  endl;
 
 	}catch (cv_bridge::Exception& e){
 		 ROS_ERROR("Could not convert from '%s' to 'bgr8'.", 

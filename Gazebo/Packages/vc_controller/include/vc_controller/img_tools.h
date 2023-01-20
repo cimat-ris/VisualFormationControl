@@ -40,13 +40,13 @@ namespace vcc
 
     //  Estructura de datos referente a los resultados
     //      de los emparejamientos de puntos y la homografía
-    typedef struct homograpy_matching_result{
-        cv::Mat H;
-        cv::Mat img_matches;
-        cv::Mat p1;
-        cv::Mat p2;
+    typedef struct matching_result{
+        cv::Mat H;      //  Homografía
+        cv::Mat img_matches;    // Imagen para salida de matches
+        cv::Mat p1;     // puntos de imagen (u,v)
+        cv::Mat p2;     // puntos de imagen (u.v)
         double mean_feature_error=1e10;
-    } homograpy_matching_result;
+    } matching_result;
 
     //  Estructura que contiene la información de
     //      la pose referencia ()
@@ -68,7 +68,7 @@ namespace vcc
         const cv::Mat & img,
         const parameters & params, 
         const desired_configuration & desired_configuration,
-        homograpy_matching_result& result);
+        matching_result& result);
     
     //  Selecciona una pose a partir de poses previamente calculadas
     //  INPUT:
@@ -85,7 +85,7 @@ namespace vcc
         const std::vector<cv::Mat> & Rs,
         const std::vector<cv::Mat> &Ts,
         const std::vector<cv::Mat> &Ns,
-        const homograpy_matching_result& result,
+        const matching_result& result,
         bool & selected,
         cv::Mat & Rbest,
         cv::Mat & tbest);
@@ -101,7 +101,7 @@ namespace vcc
         const cv::Mat&img,
         const parameters & params, 
         const desired_configuration & desired_configuration,
-        homograpy_matching_result& result);
+        matching_result& result);
 
     //  Calcula los ángulos de Euler
     //      a partir de una matriz de rotación
@@ -109,18 +109,16 @@ namespace vcc
     
     //  Aplica la normalización de los puntos de imagen in situ
     //      sobre un objeto de sesultado
-    //      TODO: hacer un metodo propio de vc_homograpy_matching_result
+    //      TODO: hacer un metodo propio de vc_matching_result
     void camera_norm(
         const parameters & params, 
-        homograpy_matching_result& result);
+        matching_result& result);
     
     //  Calcula la matriz de interacción para los puntos actuales
     //      de un objeto de resultado.
-    //      TODO: hacer un método propio de vc_homograpy_matching_result
+    //      TODO: hacer un método propio de vc_matching_result
     //      TODO: Z estimada en forma de vector.
-    cv::Mat interaction_Mat(
-        homograpy_matching_result& result,
-        double Z);
+    cv::Mat interaction_Mat(cv::Mat & p, cv::Mat & Z);
 
     //  Calcula la Pseudo Inversa Moore Penrose de L
     //      Calcula el determinante en el proceso

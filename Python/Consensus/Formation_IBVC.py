@@ -71,6 +71,9 @@ def plot_3Dcam(ax, camera,
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
+        #M = np.c_[ agent.camera.R, -agent.camera.R @ agent.camera.p ]
+        #Z = M @ P
+        #Z = Z[2,:]
         Z = agent.camera.p[2]*Z
         Z = Z-P[2,:]
     elif depthOp ==2: # 
@@ -99,7 +102,7 @@ def main():
     p0 = np.array(ip.p0)    #   init positions
     n_agents = p0.shape[1] #Number of agents
     
-    pd = ip.circle(n_agents,1.0,1.2)  #   Desired pose in a circle
+    pd = ip.circle(n_agents,1.0,2.0)  #   Desired pose in a circle
     
     
     #   Parameters
@@ -170,9 +173,9 @@ def main():
     
     t=0.0
     dt = 0.05
-    t_end = 50.0
+    t_end = 20.0
     steps = int((t_end-t)/dt + 1.0)
-    lamb = 6.0
+    lamb = 1.0
     
     #   case selections
     if case_interactionM > 1:
@@ -254,7 +257,6 @@ def main():
                 return
             
             U = agents[j].get_control(control_type,lamb,Z,args)
-                                     
             
             if U is None:
                 print("Invalid U control")
@@ -262,11 +264,7 @@ def main():
             
             if case_controlable == 2:
                 U[3:5] = 0.0
-            #if case_controlable == 1:
-                #U[3] = -U[3]
-                #U[4] = -U[4]
             
-            #print('U= ',U)
             U_array[j,:,i] = U
             agents[j].update(U,dt,P)
             

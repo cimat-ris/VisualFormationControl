@@ -48,6 +48,8 @@ namespace fvc
         
         //  Variables 
         std::vector<cv::Mat> errors;
+        std::vector<cv::Mat> errors_1;
+        std::vector<cv::Mat> errors_2;
         std::vector<std::vector<cv::Point2f>> complements;
         
         //  directorios

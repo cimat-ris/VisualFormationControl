@@ -137,7 +137,8 @@ int main(int argc, char **argv){
                 continue;
         }
         image_descriptor_publisher.publish(new_agent.getArUco());	
-
+//         std::cout << new_agent.corners << std::endl << std::flush;
+        
         //  If the velocities are incomplete, wait
         if(new_agent.incompleteComputedVelocities() )
         {
@@ -166,7 +167,7 @@ int main(int argc, char **argv){
         dt = t;
         
         //  save data
-        new_agent.save_state(t);
+//         new_agent.save_state(t);
         
         //  PUBLISH NEW POSITION
 //         if (new_agent.label !=1)

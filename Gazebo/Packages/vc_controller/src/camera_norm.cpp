@@ -21,3 +21,15 @@ void vcc::camera_norm(const parameters & params,
 
     return;
 }
+void vcc::camera_norm(const parameters & params, 
+                       cv::Mat & P){
+        //  Normalización in situ
+    
+    //  p1
+    P.col(0) = P.col(0)-params.K.at<double>(0,2);
+    P.col(1) = P.col(1)-params.K.at<double>(1,2);
+    P.col(0) = P.col(0).mul(1.0/params.K.at<double>(0,0));
+    P.col(1) = P.col(1).mul(1.0/params.K.at<double>(1,1));
+
+    return;
+}

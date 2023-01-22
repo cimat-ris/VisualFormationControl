@@ -113,6 +113,9 @@ namespace vcc
     void camera_norm(
         const parameters & params, 
         matching_result& result);
+    void camera_norm(
+        const parameters & params, 
+        cv::Mat & P);
     
     //  Calcula la matriz de interacción para los puntos actuales
     //      de un objeto de resultado.

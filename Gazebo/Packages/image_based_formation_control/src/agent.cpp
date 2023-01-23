@@ -200,13 +200,13 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
         cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     //     aruco::detectMarkers(img, dictionary, _corners, ids);
         cv::aruco::detectMarkers(img, dictionary, _corners, ids,parameters, rejected);
-        std::cout << label << " -- " << _corners.size() << " ArUco search\n" << std::flush;
+//         std::cout << label << " -- " << _corners.size() << " ArUco search\n" << std::flush;
         
         if (_corners.size() > 0)
         {
         
             //  Save message
-            std::cout << label << " -- " << _corners.size() << " ArUco(s) detected\n" << std::flush;
+//             std::cout << label << " -- " << _corners.size() << " ArUco(s) detected\n" << std::flush;
             corners = _corners[0];
             
 //             if(ARUCO_COMPUTED)
@@ -216,7 +216,11 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
 //                 corners.push_back(_corners[0][i]);
             
             ARUCO_COMPUTED = true;
-        }//else{ARUCO_COMPUTED = false;}
+        }else{
+            std::cout << label << " -- " << " ArUco(s) lost\n" << std::flush;
+//             ARUCO_COMPUTED = false;
+            
+        }
 
     }catch (cv_bridge::Exception& e){
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
@@ -407,7 +411,7 @@ void fvc::agent::execControl(double dt)
             //  Add velocity contribution
             cv::Mat tmp1 = cv::Mat(corners).reshape(1);
             cv::Mat tmp2 = cv::Mat(complements[i]).reshape(1);
-            std::cout << label << tmp1 << tmp2 << std::endl << std::flush;
+//             std::cout << label << tmp1 << tmp2 << std::endl << std::flush;
             //  save error 
             tmp2.copyTo(errors_2[i]);
             tmp1.copyTo(errors_1[i]);
@@ -500,13 +504,6 @@ void fvc::agent::execControl(double dt)
 //     State.Y += State.Kv * p_d.at<double>(1,0) * dt;
 //     State.Z += State.Kv * p_d.at<double>(2,0) * dt;
 //     State.Yaw =  (double) angles[2];
-
-    //  TODO: Simpla state update V2
-//     States[label].update();
-// //     std::cout << States[label].Vx << ", " <<
-// //     States[label].Vy << ", " <<
-// //     States[label].Vz << ", " <<
-// //     States[label].Vyaw << std::endl << std::flush;
     
 
 //  testing real scheme
@@ -520,7 +517,7 @@ void fvc::agent::execControl(double dt)
     vcc::camera_norm(States[label].params, result);
     
     //  Err = p2 - p1
-    cv::Mat err = result.p1 - result.p2;
+    errors[label] = result.p1 - result.p2;
     
     //  estimación de Z
     int n = result.p2.rows;
@@ -543,8 +540,10 @@ void fvc::agent::execControl(double dt)
         return;
         
     }
+    
+    std::cout << label << " -- det = " << det << std::endl << std::flush;
 
-    cv::Mat U = - 1.*  L*err.reshape(1,L.cols) / (float) n_neighbors ;     
+    cv::Mat U = - 1.*  L*errors[label].reshape(1,L.cols) / (float) n_neighbors ;     
     
     /**********Updating velocities in the axis*/
     //velocities from homography decomposition
@@ -567,33 +566,40 @@ void fvc::agent::execControl(double dt)
 //         
 //     }
     
-    
- //  Rotated state update V2
-    double yaw = States[label].Yaw;
-//     cv::Mat Rz = cv::rotationZ(States[label].Yaw);
-    cv::Mat Rz = (cv::Mat_<double>(3, 3) <<                 
-                  cos(yaw), -sin(yaw), 0,
-                  sin(yaw),  cos(yaw), 0,
-                         0,         0, 1);
-    cv::Vec3d Vel(States[label].Vx,States[label].Vy,States[label].Vz);
-    cv::Mat p_d = Rz * cv::Mat(Vel);//change in position
 
-    //change in rotation
-    cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-States[label].Vyaw,0,
-                                            States[label].Vyaw,0,0,
-                                            0,0,0);
-    cv::Mat R_d = Rz*S; 
-//     cv::Mat R = Rz+States[label].Kw *R_d*States[label].dt;
-    cv::Mat R = Rz+States[label].Kw *R_d*dt;
-    cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
-
-//     std::cout << Vel << std::endl << std::flush ;
-//     std::cout << p_d << std::endl << std::flush ;
+    //  TODO: Simpla state update V2
+    States[label].update();
+// //     std::cout << States[label].Vx << ", " <<
+// //     States[label].Vy << ", " <<
+// //     States[label].Vz << ", " <<
+// //     States[label].Vyaw << std::endl << std::flush;
     
-    States[label].X += States[label].Kv * p_d.at<double>(0,0) * dt;
-    States[label].Y += States[label].Kv * p_d.at<double>(1,0) * dt;
-    States[label].Z += States[label].Kv * p_d.at<double>(2,0) * dt;
-    States[label].Yaw =  (double) angles[2];
+//  //  Rotated state update V2
+//     double yaw = States[label].Yaw;
+// //     cv::Mat Rz = cv::rotationZ(States[label].Yaw);
+//     cv::Mat Rz = (cv::Mat_<double>(3, 3) <<                 
+//                   cos(yaw), -sin(yaw), 0,
+//                   sin(yaw),  cos(yaw), 0,
+//                          0,         0, 1);
+//     cv::Vec3d Vel(States[label].Vx,States[label].Vy,States[label].Vz);
+//     cv::Mat p_d = Rz * cv::Mat(Vel);//change in position
+// 
+//     //change in rotation
+//     cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-States[label].Vyaw,0,
+//                                             States[label].Vyaw,0,0,
+//                                             0,0,0);
+//     cv::Mat R_d = Rz*S; 
+// //     cv::Mat R = Rz+States[label].Kw *R_d*States[label].dt;
+//     cv::Mat R = Rz+States[label].Kw *R_d*dt;
+//     cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
+// 
+// //     std::cout << Vel << std::endl << std::flush ;
+// //     std::cout << p_d << std::endl << std::flush ;
+//     
+//     States[label].X += States[label].Kv * p_d.at<double>(0,0) * dt;
+//     States[label].Y += States[label].Kv * p_d.at<double>(1,0) * dt;
+//     States[label].Z += States[label].Kv * p_d.at<double>(2,0) * dt;
+//     States[label].Yaw =  (double) angles[2];
     }
 }
 

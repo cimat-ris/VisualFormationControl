@@ -25,7 +25,8 @@ error_case = 0
 for i in range(n):
     print('Processing '+str(i)+'...')
     dir = str(i)
-    for j in range(n):
+    #for j in range(n):
+    for j in range(i,i+1):
         
         
         data = np.loadtxt(dir+'/partial_'+str(j)+'.txt')
@@ -111,7 +112,7 @@ for i in range(n):
             dimention = data.shape[1]
             
             #plot error u
-            error = data[init:,range(1,dimention,2)]/241.4268236
+            error = data[init:,range(1,dimention,2)]#/241.4268236
             #error = data[init:,range(1,int((1+dimention)/2))]
             plt.plot(time, error)
             plt.ylabel('U error $(m)$')
@@ -122,7 +123,7 @@ for i in range(n):
             plt.clf()
             
             #plot error v
-            error = data[init:,range(2,dimention,2)]/241.4268236
+            error = data[init:,range(2,dimention,2)]#/241.4268236
             #error = data[init:,range(int((1+dimention)/2),dimention)]
             plt.plot(time, error)
             plt.ylabel('V error $(m)$')

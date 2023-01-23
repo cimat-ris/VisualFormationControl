@@ -167,7 +167,7 @@ int main(int argc, char **argv){
         dt = t;
         
         //  save data
-//         new_agent.save_state(t);
+        new_agent.save_state(t);
         
         //  PUBLISH NEW POSITION
 //         if (new_agent.label !=1)

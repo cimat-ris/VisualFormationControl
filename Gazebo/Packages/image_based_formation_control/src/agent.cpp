@@ -127,13 +127,17 @@ bool fvc::agent::imageRead()
     //     aruco::detectMarkers(img, dictionary, _corners, ids);
         cv::aruco::detectMarkers(tmp_img, dictionary, _corners, ids,parameters, rejected);
         std::cout << _corners.size() << " ArUco search in ref\n" << std::flush;
+
         
         if(! tmp_img.empty())
         {
-            loaded_imgs++;
             
             if (_corners.size() > 0) 
             {
+                loaded_imgs++;
+                
+                //  add aruco refs interface
+                
                 //  If corners got found, save them
                 aruco_refs.push_back(_corners[0]);
             }
@@ -202,6 +206,7 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
         cv::aruco::detectMarkers(img, dictionary, _corners, ids,parameters, rejected);
 //         std::cout << label << " -- " << _corners.size() << " ArUco search\n" << std::flush;
         
+        
         if (_corners.size() > 0)
         {
         
@@ -214,6 +219,25 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
 //             
 //             for (int i = 0; i < 4 ; i++)
 //                 corners.push_back(_corners[0][i]);
+            //  Draw aruco markers
+            //  Draw ref
+            std::vector<std::vector<cv::Point2f>> aruco_print;
+            aruco_print.push_back(aruco_refs[label]);
+            cv::aruco::drawDetectedMarkers(img, aruco_print, cv::noArray(),cv::Scalar(0,0,255));
+            //  draw current
+            cv::aruco::drawDetectedMarkers(img, _corners, cv::noArray(),cv::Scalar(0,255,0));
+            
+            //  image mesgae contructor
+            image_msg = cv_bridge::CvImage(
+                std_msgs::Header(),
+                sensor_msgs::image_encodings::BGR8,img).toImageMsg();
+            image_msg->header.frame_id = "matching_image";
+            image_msg->width = img.cols;
+            image_msg->height = img.rows;
+            image_msg->is_bigendian = false;
+            image_msg->step = sizeof(unsigned char) * img.cols*3;
+            image_msg->header.stamp = ros::Time::now();
+            
             
             ARUCO_COMPUTED = true;
         }else{

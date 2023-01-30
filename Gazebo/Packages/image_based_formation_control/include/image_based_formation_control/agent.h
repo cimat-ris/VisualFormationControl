@@ -96,6 +96,10 @@ namespace fvc
         //  read reference images
         bool imageRead();
         
+        //  Interface and debuging
+        cv::Mat image_store;
+        sensor_msgs::ImagePtr image_msg;
+        
         //  constructores destructores
         agent();
         agent(std::string name);

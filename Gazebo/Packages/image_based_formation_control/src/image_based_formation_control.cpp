@@ -14,6 +14,7 @@ and process some vision-based image_based_formation_control control.
 //      CUSTOM LIBRARIES
 #include "image_based_formation_control/agent.h"
 
+
 int main(int argc, char **argv){
 
     // INITIAL PARAMETERS
@@ -90,6 +91,9 @@ int main(int argc, char **argv){
             std::flush;
         }
     }
+    
+    //  Aruco image publisher
+    image_transport::Publisher image_pub = it.advertise("Aruco",1);
 
         
     // LOOP
@@ -137,6 +141,8 @@ int main(int argc, char **argv){
                 continue;
         }
         image_descriptor_publisher.publish(new_agent.getArUco());	
+        image_pub.publish(new_agent.image_msg);
+        
 //         std::cout << new_agent.corners << std::endl << std::flush;
         
         //  If the velocities are incomplete, wait
@@ -190,3 +196,4 @@ int main(int argc, char **argv){
 
     return 0;
 }
+

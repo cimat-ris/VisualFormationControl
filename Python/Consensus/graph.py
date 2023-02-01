@@ -50,7 +50,7 @@ class graph:
         
         plt.axis('off')  
         plt.tight_layout()
-        plt.savefig(name+'.png',bbox_inches='tight')
+        plt.savefig(name+'.pdf',bbox_inches='tight')
         #plt.show()
         plt.close()
         

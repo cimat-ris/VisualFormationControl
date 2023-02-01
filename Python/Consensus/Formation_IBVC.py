@@ -92,7 +92,14 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
         return None
     return Z
     
-def main():
+def experiment(directory = "0",
+               h  = 2.0,
+               lamb = 1.0,
+               depthOp=1,
+               gdl = 1,
+               t0 = 0.0,
+               dt = 0.05,
+               t_end = 10.0):
     
     #   Data
     P = np.array(ip.P)      #   Scene points
@@ -102,7 +109,7 @@ def main():
     p0 = np.array(ip.p0)    #   init positions
     n_agents = p0.shape[1] #Number of agents
     
-    pd = ip.circle(n_agents,1.0,2.0)  #   Desired pose in a circle
+    pd = ip.circle(n_agents,1.0,h)  #   Desired pose in a circle
     
     
     #   Parameters
@@ -112,7 +119,6 @@ def main():
     
     #Depth estimation for interaction matrix
     #   1-Updated, 2-Initial, 3-Referencia, 4-Arbitrary fixed, 5-Average
-    depthOp=1
     Z_set = 1.0
     depthOp_dict = {1:"Updated at each step",
                     2:"Distance at the begining",
@@ -131,10 +137,10 @@ def main():
     #   1  - IBVC   2 - Montijano
     control_type = 1
     control_type_dict = {1:"Image based visual control",
-                         2:"montijano"}
-    case_controlable=1 #1-All (6), 2-Horizontal (4)
+                         2:"Montijano"}
     case_controlable_dict = {1:"6 Degrees of freedom",
-                             2:"4 degrees of freedom"}
+                             2:"4 Degrees of freedom",
+                             3:"3 Degrees of freedom"}
     
     #   Read more data
     
@@ -171,11 +177,8 @@ def main():
         
     #   INIT LOOP
     
-    t=0.0
-    dt = 0.05
-    t_end = 20.0
+    t=t0
     steps = int((t_end-t)/dt + 1.0)
-    lamb = 1.0
     
     #   case selections
     if case_interactionM > 1:
@@ -201,6 +204,7 @@ def main():
     pos_arr = np.zeros((n_agents,3,steps))
     
     #   Print simulation data:
+    print("------------------BEGIN-----------------")
     print("Laplacian selection = "+name)
     print("Is directed = "+str(directed))
     print(L)
@@ -209,6 +213,10 @@ def main():
     print("Number of agents = "+str(n_agents))
     print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
     print("Control lambda = "+str(lamb))
+    print("Depth estimation = "+depthOp_dict[depthOp])
+    print("Interaction matrix = "+case_interactionM_dict[case_interactionM])
+    print("Control selection = "+control_type_dict[control_type])
+    print("Controllable case = "+case_controlable_dict[gdl])
     
     #   LOOP
     for i in range(steps):
@@ -262,8 +270,10 @@ def main():
                 print("Invalid U control")
                 break
             
-            if case_controlable == 2:
+            if gdl == 2:
                 U[3:5] = 0.0
+            elif gdl == 3:
+                U[3:] = 0.0
             
             U_array[j,:,i] = U
             agents[j].update(U,dt,P)
@@ -275,6 +285,19 @@ def main():
             gamma = A_ds @ gamma #/ 10.0
         
     
+    ##  Final data
+    
+    print("----------------------")
+    print("Simulation final data")
+    for j in range(n_agents):
+        print("|Error_"+str(j)+"|= "+str(np.linalg.norm(error[j,:])))
+    for j in range(n_agents):
+        print("X_"+str(j)+" = "+str(agents[j].camera.p))
+    for j in range(n_agents):
+        print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
+              ", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
+    print("-------------------END------------------")
+    print()
     
     ####   Plot
     # Colors setup
@@ -288,14 +311,14 @@ def main():
                     pd,
                     lfact,
                     colors,
-                    name = "Cameras_trayectories",
-                    label = "Positions")
+                    name = directory+"/Cameras_trayectories")
+                    #label = "Positions")
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     label = "World setting"
-    name = "3Dplot"
-    fig.suptitle(label)
+    name = directory+"/3Dplot"
+    #fig.suptitle(label)
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
     for i in range(n_agents):
         agents[i].count_points_in_FOV(P)
@@ -305,9 +328,9 @@ def main():
                 pd[:,i],
                 color = colors[i],
                 camera_scale    = 0.02)
-    plt.savefig(name+'.png',bbox_inches='tight')
+    plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.show()
-    #plt.close()
+    plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
@@ -315,7 +338,7 @@ def main():
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
                             colors,
-                            name = "Image_Features_"+str(i),
+                            name = directory+"/Image_Features_"+str(i),
                             label = "Image Features")
     
     #   Errores 
@@ -323,7 +346,7 @@ def main():
         mp.plot_time(t_array,
                     err_array[i,:,:],
                     colors,
-                    name = "Features_Error_"+str(i),
+                    name = directory+"/Features_Error_"+str(i),
                     label = "Features Error")
     
     #   Velocidaes x agente
@@ -331,12 +354,28 @@ def main():
         mp.plot_time(t_array,
                     U_array[i,:,:],
                     colors,
-                    name = "Velocidades_"+str(i),
+                    name = directory+"/Velocidades_"+str(i),
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
     
     
+def main():
+    #   Reference heights
+    #exp_select = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+    #   Lambda values
+    #exp_select = [0.25, 0.5, 0.75, 1., 1.5, 1.25, 1.5, 1.75, 2., 5., 10., 15.]
+    #   gdl
+    exp_select = [1, 2, 3]
     
-if __name__ ==  "__main__":
-    main() 
+    #   TODO: variar la relación p0_z vs h
+    #   TODO: variar z_estimada para depthCte
+    #   TODO: restricción de gdl en matriz de imagen
+    experiment("2")
+    
+    #for i in range(len(exp_select)):
+        #experiment(directory=str(i), h = exp_select[i])
+        #experiment(directory=str(i),gdl = exp_select[i],t_end = 20.0,lamb = 2.0, depthOp = 2, h = 2.0) 
 
+
+if __name__ ==  "__main__":
+    main()

@@ -24,7 +24,7 @@ def Interaction_Matrix(points,Z):
 
 def Inv_Moore_Penrose(L):
     A = L.T@L
-    if np.linalg.det(A) < 1.0e-9:
+    if np.linalg.det(A) < 1.0e-18:
         return None
     return inv(A) @ L.T
 

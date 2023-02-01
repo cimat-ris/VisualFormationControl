@@ -33,7 +33,7 @@ def plot_time(t_array,
         plt.ylim((-1,1))
     
     plt.tight_layout()
-    plt.savefig(name+'.png',bbox_inches='tight')
+    plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
@@ -74,7 +74,7 @@ def plot_descriptors(descriptors_array,
     fig.legend(symbols,labels, loc=2)
     
     plt.tight_layout()
-    plt.savefig(name+'.png',bbox_inches='tight')
+    plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
 
@@ -119,6 +119,6 @@ def plot_position(position_array,
     fig.legend(symbols,labels, loc=2)
     
     plt.tight_layout()
-    plt.savefig(name+'.png',bbox_inches='tight')
+    plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()

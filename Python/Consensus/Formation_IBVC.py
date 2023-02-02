@@ -12,6 +12,7 @@
 import numpy as np
 from numpy.linalg import inv, svd
 from numpy import sin, cos, pi
+from scipy.optimize import minimize_scalar
 
 #   Plot
 import matplotlib.pyplot as plt
@@ -91,11 +92,54 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
         print("Invalid depthOp")
         return None
     return Z
+
+
+#   Error if state calculation
+#   It assumes that the states in the array are ordered and are the same
+#   regresa un error de traslación y orientación
+def error_state(reference, state, params):
+    
+    n = reference.shape[1]
+    
+    #   Obten centroide
+    centroide_ref = reference[:3,:].sum(axis=1)/n
+    centroide_state = state[:3,:].sum(axis=1)/n
+    
+    #   Centrar elementos
+    new_reference = reference,copy
+    new_reference[:3,:] = new_reference[:3,:] - centroide_ref
+    new_state = state.copy()
+    new_state[:3,:] = new_state[:3,:] - centroide_state
+    
+    #   Aplicar rotación promedio
+    theta = np.arctan2(new_reference[1,:],new_reference[0,:])
+    theta -= np.arctan2(new_state[1,:],new_state[0,:])
+    theta = theta.mean()
+    
+    ca = cos(ang)
+    sa = sin(ang)
+    R = np.array([[ ca, -sa],
+                  [ sa,  ca]])
+    new_reference[:2,:] = R@new_reference[:2,:]
+    new_state[:2,:] = R@new_state[:2,:]
+    
+    #       TODO rotate pitch, roll
+    
+    #   TODO normalizar referencia
+    #   Aplicar minimización de radio (como lidiar con mínimos múltiples)
+    f = lambda r : np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0).sum()
+    r_state = minimize_scalar(f, method='brent')
+    t_err = f(r_state)
+    
+    #   Obtencion de error de rotación
+    
+    
     
 def experiment(directory = "0",
                h  = 2.0,
                lamb = 1.0,
                depthOp=1,
+               Z_set = 1.0,
                gdl = 1,
                t0 = 0.0,
                dt = 0.05,
@@ -121,7 +165,6 @@ def experiment(directory = "0",
     
     #Depth estimation for interaction matrix
     #   1-Updated, 2-Initial, 3-Referencia, 4-Arbitrary fixed, 5-Average
-    Z_set = 1.0
     depthOp_dict = {1:"Updated at each step",
                     2:"Distance at the begining",
                     3:"Distance between reference and points",
@@ -218,6 +261,8 @@ def experiment(directory = "0",
     print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
     print("Control lambda = "+str(lamb))
     print("Depth estimation = "+depthOp_dict[depthOp])
+    if depthOp == 4:
+        print("\t Estimated theph set at : "+str(Z_set))
     print("Interaction matrix = "+case_interactionM_dict[case_interactionM])
     print("Control selection = "+control_type_dict[control_type])
     print("Controllable case = "+case_controlable_dict[gdl])
@@ -364,29 +409,22 @@ def experiment(directory = "0",
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
     return ret_err
+
+def experiment_height():
     
-def main():
-    #   Reference heights
-    #exp_select = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-    #   Lambda values
-    #exp_select = [0.25, 0.5, 0.75, 1., 1.5, 1.25, 1.5, 1.75, 2., 5., 10., 15.]
-    #   gdl
-    #exp_select = [1, 2, 3]
-    
-    
-    
-    ##   Revisión con cambio uniforme de zOffset y h
     n_agents = 4
-    #steps = 16
-    #var_arr = np.zeros((n_agents,steps))
-    #ref_arr = np.arange( 0.6, 0.6 + 0.2*(steps-0.9) ,0.2)
     
-    #for i in range(steps):
-        #ret_err = experiment(directory=str(i),depthOp = 1,
-                   #h = 0.6 + 0.2*i,
-                   #zOffset = -0.4 + 0.2*i,
-                   #t_end = 20)
-        #var_arr[:,i] = ret_err
+    #   Revisión con cambio uniforme de zOffset y h
+    steps = 16
+    var_arr = np.zeros((n_agents,steps))
+    ref_arr = np.arange( 0.6, 0.6 + 0.2*(steps-0.9) ,0.2)
+    
+    for i in range(steps):
+        ret_err = experiment(directory=str(i),depthOp = 1,
+                   h = 0.6 + 0.2*i,
+                   zOffset = -0.4 + 0.2*i,
+                   t_end = 20)
+        var_arr[:,i] = ret_err
     
     ##   Revisión con h=2.0
     #exp_select_z = [-0.4 -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4]
@@ -399,27 +437,77 @@ def main():
                    #t_end = 20)
         #var_arr[:,i] = ret_err
     
-    #   Revisión con h=1.0
-    exp_select_z = [-0.4, -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0]
-    var_arr = np.zeros((n_agents,len(exp_select_z)))
-    ref_arr = np.array(exp_select_z)
-    for i in range(len(exp_select_z)):
-        ret_err = experiment(directory=str(i),depthOp = 1,
-                   h = 1.0,
-                   zOffset = exp_select_z[i] ,
-                   t_end = 20)
-        var_arr[:,i] = ret_err
+    ##   Revisión con h=1.0
+    #exp_select_z = [-0.4, -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0]
+    #var_arr = np.zeros((n_agents,len(exp_select_z)))
+    #ref_arr = np.array(exp_select_z)
+    #for i in range(len(exp_select_z)):
+        #ret_err = experiment(directory=str(i),depthOp = 1,
+                   #h = 1.0,
+                   #zOffset = exp_select_z[i] ,
+                   #t_end = 20)
+        #var_arr[:,i] = ret_err
         
+    
+    #   Plot data
     
     fig, ax = plt.subplots()
     fig.suptitle("Error de consenso")
-    plt.ylim([-2.,2.])
+    #plt.ylim([-2.,2.])
     
     colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
     
     for i in range(n_agents):
         ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
     
+    plt.yscale('logit')
+    plt.tight_layout()
+    plt.savefig('Consensus error.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    
+def main():
+    
+    ##   Experimentos de variación de altura
+    #experiment_height()
+    #return
+    
+    
+    ##  Experimentos de variación de parámetros de contol
+    #   Reference heights
+    #exp_select = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+    #   Lambda values
+    #exp_select = [0.25, 0.5, 0.75, 1., 1.5, 1.25, 1.5, 1.75, 2., 5., 10., 15.]
+    #   gdl
+    #exp_select = [1, 2, 3]
+    #   Z_set (depthOp = 4)
+    exp_select = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]
+    exp_select = [ 1.0 ]
+    
+    n_agents = 4
+    var_arr = np.zeros((n_agents,len(exp_select)))
+    ref_arr = np.array(exp_select)
+    for i in range(len(exp_select)):
+        ret_err = experiment(directory=str(i),depthOp = 4,
+                    Z_set = exp_select[i],
+                   #zOffset = 1.0 ,
+                   t_end = 20)
+        var_arr[:,i] = ret_err
+        
+    
+    #   Plot data
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Error de consenso")
+    #plt.ylim([-2.,2.])
+    
+    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    
+    for i in range(n_agents):
+        ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
+    
+    plt.yscale('logit')
     plt.tight_layout()
     plt.savefig('Consensus error.pdf',bbox_inches='tight')
     #plt.show()

@@ -99,7 +99,8 @@ def experiment(directory = "0",
                gdl = 1,
                t0 = 0.0,
                dt = 0.05,
-               t_end = 10.0):
+               t_end = 10.0,
+               zOffset = 0.0):
     
     #   Data
     P = np.array(ip.P)      #   Scene points
@@ -107,6 +108,7 @@ def experiment(directory = "0",
     P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
     
     p0 = np.array(ip.p0)    #   init positions
+    p0[2,:] = p0[2,:]+zOffset
     n_agents = p0.shape[1] #Number of agents
     
     pd = ip.circle(n_agents,1.0,h)  #   Desired pose in a circle
@@ -211,6 +213,8 @@ def experiment(directory = "0",
     print(A_ds)
     print("Number of points = "+str(n_points))
     print("Number of agents = "+str(n_agents))
+    if zOffset != 0.0:
+        print("Z offset for starting conditions = "+str(zOffset))
     print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
     print("Control lambda = "+str(lamb))
     print("Depth estimation = "+depthOp_dict[depthOp])
@@ -289,8 +293,10 @@ def experiment(directory = "0",
     
     print("----------------------")
     print("Simulation final data")
+    ret_err = np.zeros(n_agents)
     for j in range(n_agents):
-        print("|Error_"+str(j)+"|= "+str(np.linalg.norm(error[j,:])))
+        ret_err[j]=np.linalg.norm(error[j,:])
+        print("|Error_"+str(j)+"|= "+str(ret_err[j]))
     for j in range(n_agents):
         print("X_"+str(j)+" = "+str(agents[j].camera.p))
     for j in range(n_agents):
@@ -329,7 +335,7 @@ def experiment(directory = "0",
                 color = colors[i],
                 camera_scale    = 0.02)
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    plt.show()
+    #plt.show()
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
@@ -357,7 +363,7 @@ def experiment(directory = "0",
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
-    
+    return ret_err
     
 def main():
     #   Reference heights
@@ -365,16 +371,59 @@ def main():
     #   Lambda values
     #exp_select = [0.25, 0.5, 0.75, 1., 1.5, 1.25, 1.5, 1.75, 2., 5., 10., 15.]
     #   gdl
-    exp_select = [1, 2, 3]
+    #exp_select = [1, 2, 3]
     
-    #   TODO: variar la relación p0_z vs h
-    #   TODO: variar z_estimada para depthCte
-    #   TODO: restricción de gdl en matriz de imagen
-    experiment("2")
     
-    #for i in range(len(exp_select)):
-        #experiment(directory=str(i), h = exp_select[i])
-        #experiment(directory=str(i),gdl = exp_select[i],t_end = 20.0,lamb = 2.0, depthOp = 2, h = 2.0) 
+    
+    ##   Revisión con cambio uniforme de zOffset y h
+    n_agents = 4
+    #steps = 16
+    #var_arr = np.zeros((n_agents,steps))
+    #ref_arr = np.arange( 0.6, 0.6 + 0.2*(steps-0.9) ,0.2)
+    
+    #for i in range(steps):
+        #ret_err = experiment(directory=str(i),depthOp = 1,
+                   #h = 0.6 + 0.2*i,
+                   #zOffset = -0.4 + 0.2*i,
+                   #t_end = 20)
+        #var_arr[:,i] = ret_err
+    
+    ##   Revisión con h=2.0
+    #exp_select_z = [-0.4 -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4]
+    #var_arr = np.zeros((n_agents,len(exp_select_z)))
+    #ref_arr = np.array(exp_select_z)
+    #for i in range(len(exp_select_z)):
+        #ret_err = experiment(directory=str(i),depthOp = 1,
+                   #h = 2.0,
+                   #zOffset = exp_select_z[i] ,
+                   #t_end = 20)
+        #var_arr[:,i] = ret_err
+    
+    #   Revisión con h=1.0
+    exp_select_z = [-0.4, -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0]
+    var_arr = np.zeros((n_agents,len(exp_select_z)))
+    ref_arr = np.array(exp_select_z)
+    for i in range(len(exp_select_z)):
+        ret_err = experiment(directory=str(i),depthOp = 1,
+                   h = 1.0,
+                   zOffset = exp_select_z[i] ,
+                   t_end = 20)
+        var_arr[:,i] = ret_err
+        
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Error de consenso")
+    plt.ylim([-2.,2.])
+    
+    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    
+    for i in range(n_agents):
+        ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
+    
+    plt.tight_layout()
+    plt.savefig('Consensus error.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
 
 
 if __name__ ==  "__main__":

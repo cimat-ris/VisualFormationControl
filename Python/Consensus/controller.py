@@ -24,8 +24,8 @@ def Interaction_Matrix(points,Z):
 
 def Inv_Moore_Penrose(L):
     A = L.T@L
-    if np.linalg.det(A) < 1.0e-18:
-        return None
+    #if np.linalg.det(A) < 1.0e-18:
+        #return None
     return inv(A) @ L.T
 
 def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set):

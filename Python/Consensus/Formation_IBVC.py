@@ -69,6 +69,20 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
+def plot_3Dcam_end(ax, camera,
+               desired_configuration,
+               color,
+               camera_scale    = 0.02):
+    
+    
+    camera.draw_camera(ax, scale=camera_scale, color='red')
+    camera.pose(desired_configuration)
+    camera.draw_camera(ax, scale=camera_scale, color='brown')
+    ax.set_xlabel("$w_x$")
+    ax.set_ylabel("$w_y$")
+    ax.set_zlabel("$w_z$")
+    ax.grid(True)
+
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
@@ -97,42 +111,69 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
 #   Error if state calculation
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
-def error_state(reference, state, params):
+def error_state(reference,  agents,colors, name):
     
     n = reference.shape[1]
+    state = np.zeros((3,n))
+    for i in range(len(agents)):
+        state[:,i] = agents[i].camera.p
     
     #   Obten centroide
     centroide_ref = reference[:3,:].sum(axis=1)/n
-    centroide_state = state[:3,:].sum(axis=1)/n
+    centroide_state = state.sum(axis=1)/n
     
     #   Centrar elementos
-    new_reference = reference,copy
-    new_reference[:3,:] = new_reference[:3,:] - centroide_ref
+    new_reference = reference.copy()
+    #new_reference[:3,:] = new_reference[:3,:] - centroide_ref
+    new_reference[0] -= centroide_ref[0]
+    new_reference[1] -= centroide_ref[1]
+    new_reference[2] -= centroide_ref[2]
     new_state = state.copy()
-    new_state[:3,:] = new_state[:3,:] - centroide_state
+    #new_state[:3,:] = new_state[:3,:] - centroide_state
+    new_state[0] -= centroide_state[0]
+    new_state[1] -= centroide_state[1]
+    new_state[2] -= centroide_state[2]
     
     #   Aplicar rotación promedio
     theta = np.arctan2(new_reference[1,:],new_reference[0,:])
     theta -= np.arctan2(new_state[1,:],new_state[0,:])
     theta = theta.mean()
     
-    ca = cos(ang)
-    sa = sin(ang)
+    ca = cos(theta)
+    sa = sin(theta)
     R = np.array([[ ca, -sa],
                   [ sa,  ca]])
-    new_reference[:2,:] = R@new_reference[:2,:]
     new_state[:2,:] = R@new_state[:2,:]
     
-    #       TODO rotate pitch, roll
+    #       Updtate normalized and oriented agents
+    for i in range(len(agents)):
+        new_p = np.r_[new_state[:,i] ,agents[i].camera.roll,agents[i].camera.pitch,agents[i].camera.yaw + theta]
+        agents[i].camera.pose(new_p)
+        
+    #   normalizar referencia
+    new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis=0).mean()
     
-    #   TODO normalizar referencia
     #   Aplicar minimización de radio (como lidiar con mínimos múltiples)
     f = lambda r : np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0).sum()
     r_state = minimize_scalar(f, method='brent')
-    t_err = f(r_state)
+    t_err = f(r_state.x)
     
-    #   Obtencion de error de rotación
+    #   Plot
     
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    for i in range(n):
+        agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+        agents[i].camera.pose(new_reference[:,i])
+        agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+    plt.savefig(name+'.pdf',bbox_inches='tight')
+    plt.show()
+    plt.close()
+    
+    #   TODO: Obtencion de error de rotación
+    
+    
+    return t_err
     
     
 def experiment(directory = "0",
@@ -339,6 +380,7 @@ def experiment(directory = "0",
     print("----------------------")
     print("Simulation final data")
     ret_err = np.zeros(n_agents)
+    
     for j in range(n_agents):
         ret_err[j]=np.linalg.norm(error[j,:])
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
@@ -347,14 +389,25 @@ def experiment(directory = "0",
     for j in range(n_agents):
         print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
               ", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
-    print("-------------------END------------------")
-    print()
+    
     
     ####   Plot
     # Colors setup
     
     #        RANDOM X_i
     colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
+    
+    new_agents = []
+    for i in range(n_agents):
+        cam = cm.camera()
+        end_position = np.r_[agents[i].camera.p,agents[i].camera.roll, agents[i].camera.pitch, agents[i].camera.yaw]
+        new_agents.append(ctr.agent(cam,pd[:,i],end_position,P))
+    state_err = error_state(pd,new_agents,colors,directory+"/3D_error")
+    print("State error = "+str(state_err))
+    print("-------------------END------------------")
+    print()
+    
+    
     
     #   Camera positions (init, end, ref) 
     lfact = 1.1
@@ -372,7 +425,7 @@ def experiment(directory = "0",
     #fig.suptitle(label)
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
     for i in range(n_agents):
-        agents[i].count_points_in_FOV(P)
+        #agents[i].count_points_in_FOV(P)
         plot_3Dcam(ax, agents[i].camera,
                 pos_arr[i,:,:],
                 p0[:,i],
@@ -483,14 +536,25 @@ def main():
     #exp_select = [1, 2, 3]
     #   Z_set (depthOp = 4)
     exp_select = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]
-    exp_select = [ 1.0 ]
+    exp_select = [ 2.0 ]
+    experiment(directory='0',depthOp = 1,
+                    Z_set = 1.0,
+                    h = 2.0,
+                    lamb = 0.5,
+                    gdl = 3,
+                   zOffset = 1.0 ,
+                   t_end = 20)
+    
+    return
     
     n_agents = 4
     var_arr = np.zeros((n_agents,len(exp_select)))
     ref_arr = np.array(exp_select)
     for i in range(len(exp_select)):
-        ret_err = experiment(directory=str(i),depthOp = 4,
+        ret_err = experiment(directory=str(i),depthOp = 1,
                     Z_set = exp_select[i],
+                    lamb = 0.1,
+                    gdl = 3,
                    #zOffset = 1.0 ,
                    t_end = 20)
         var_arr[:,i] = ret_err

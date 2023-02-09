@@ -6,21 +6,51 @@ import camera as cm
 import cv2 
 
 
-def Interaction_Matrix(points,Z):
+def Interaction_Matrix(points,Z,gdl):
     
     n = points.shape[1]
-    L = np.zeros((n,12))
-    L[:,0]  =   L[:,7] = -1/Z
-    L[:,2]  =   points[0,:]/Z
-    L[:,3]  =   points[0,:]*points[1,:]
-    L[:,4]  =   -(1+points[0,:]**2)
-    L[:,5]  =   points[1,:]
-    L[:,8]  =   points[1,:]/Z
-    L[:,9]  =   1+points[1,:]**2
-    L[:,10] =   -points[0,:]*points[1,:]
-    L[:,11] =   -points[0,:]
+    if gdl == 1:
+        m = 6
+    if gdl == 2:
+        m = 4
+    if gdl == 3:
+        m = 3
     
-    return L.reshape((2*n,6)) 
+    L = np.zeros((n,2*m))
+    if gdl == 1:
+        L[:,0]  =   L[:,7] = -1/Z
+        L[:,2]  =   points[0,:]/Z
+        L[:,3]  =   points[0,:]*points[1,:]
+        L[:,4]  =   -(1+points[0,:]**2)
+        L[:,5]  =   points[1,:]
+        L[:,8]  =   points[1,:]/Z
+        L[:,9]  =   1+points[1,:]**2
+        L[:,10] =   -points[0,:]*points[1,:]
+        L[:,11] =   -points[0,:]
+    if gdl == 2:
+        L[:,0]  =   L[:,5] = -1/Z
+        L[:,2]  =   points[0,:]/Z
+        L[:,3]  =   points[1,:]
+        L[:,6]  =   points[1,:]/Z
+        L[:,7] =   -points[0,:]
+    if gdl == 3:
+        L[:,0]  =   L[:,4] = -1/Z
+        L[:,2]  =   points[0,:]/Z
+        L[:,5]  =   points[1,:]/Z
+    
+    
+    return L.reshape((2*n,m)) 
+
+def get_angles(R):
+    if (abs(R[2,1] ) > 1.e-18 and abs(R[2,2] ) > 1.e-18):
+        roll = np.arctan2(R[2,1],R[2,2])
+        yaw = np.arctan2(R[1,0],R[0,0])
+    else:
+        roll = np.pi
+        yaw = np.arctan2(R[0,1],-R[1,1])
+    
+    pitch = np.arctan2(-R[2,0],np.sqrt(R[2,1]**2+R[2,2]**2))
+    return [roll, pitch, yaw]
 
 def Inv_Moore_Penrose(L):
     A = L.T@L
@@ -28,15 +58,15 @@ def Inv_Moore_Penrose(L):
         #return None
     return inv(A) @ L.T
 
-def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set):
+def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     if control_sel ==1:
-        Ls = Interaction_Matrix(s_current_n,Z)
+        Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
         Ls = Inv_Moore_Penrose(Ls) 
     elif control_sel ==2:
         Ls = inv_Ls_set
     elif control_sel ==3:
-        Ls = Interaction_Matrix(s_current_n,Z)
+        Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
         Ls = Inv_Moore_Penrose(Ls) 
         Ls = 0.5*( Ls +inv_Ls_set)
@@ -45,13 +75,19 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set):
             return np.array([0.,0.,0.,0.,0.,0.])
     #print(error.T)
     #print(Ls)
+    if gdl == 2:
+        _comp = np.zeros((2,Ls.shape[1]))
+        Ls = np.r_[Ls[:3],_comp,Ls[3]]
+    if gdl == 3:
+        _comp = np.zeros((3,Ls.shape[1]))
+        Ls = np.r_[Ls[:3],_comp]
     U = (Ls @ error) / deg
     U[0] = -U[0]
-    #U[1] = -U[1]
-    #U[2] = -U[2]
-    #U[3] = -U[3]
-    #U[4] = -U[4]
-    #U[5] = -U[5]
+    U[1] = -U[1]
+    U[2] = -U[2]
+    U[3] = -U[3]
+    U[4] = -U[4]
+    U[5] = -U[5]
     return  U
 
 def get_Homographies(agents):
@@ -125,7 +161,8 @@ class agent:
                                self.s_current_n,
                                Z,
                                args["deg"],
-                               self.inv_Ls_set)
+                               self.inv_Ls_set,
+                               args["gdl"])
         elif sel == 2:
             return  -lamb* Homography(args["H"],
                                      args["delta_pref"],
@@ -133,16 +170,52 @@ class agent:
                                      args["gamma"])
         
     
-    def set_interactionMat(self,Z):
-        self.Ls_set = Interaction_Matrix(self.s_ref_n,Z)
+    def set_interactionMat(self,Z,gdl):
+        self.Ls_set = Interaction_Matrix(self.s_ref_n,Z,gdl)
         #print(Ls)
         self.inv_Ls_set = Inv_Moore_Penrose(self.Ls_set) 
         
     def update(self,U,dt, points):
         
-        p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
+        #   DEPRECATED
+        #p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
+        #p += dt*U
         
-        p += dt*U
+        #   BEGIN Testing
+        _U = U.copy()
+        _U[:3] =  self.camera.R.T @ U[:3]
+        
+        
+        p = np.zeros(6)
+        p[:3] = self.camera.p+ dt* _U[:3]
+        
+        #print(U)
+        kw = 1.
+        #   Rotation calc Naive
+        
+        #new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
+        #new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R
+        
+        #   yaw only
+        #new_R = cm.rot(kw*dt*U[5],'z') @  self.camera.R
+        
+        #new_R =   self.camera.R @ cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') 
+        new_R =   self.camera.R @ cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') 
+        
+        #   No rotation 
+        #new_R =  self.camera.R
+        
+        #   Rotation : UPdate
+        #[p[3] , p[4], p[5] ] = get_angles(new_R)
+        
+        #   Rotation: previoues
+        p[3] = self.camera.roll + dt*U[3]
+        p[4] = self.camera.pitch + dt*U[4]
+        p[5] = self.camera.yaw + dt*U[5]
+        
+        print(_U)
+        
+        #   END Testing
         self.camera.pose(p) 
         
         self.s_current = self.camera.project(points)

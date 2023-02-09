@@ -273,7 +273,7 @@ def experiment(directory = "0",
             Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,j)
             if Z is None:
                 return
-            agents[i].set_interactionMat(Z)
+            agents[i].set_interactionMat(Z,gdl)
     
     if control_type == 2:
         delta_pref = np.zeros((n_agents,n_agents,6,1))
@@ -344,7 +344,8 @@ def experiment(directory = "0",
             if control_type == 1:
                 args = {"deg":G.deg[j] , 
                         "control_sel":case_interactionM,
-                        "error": error[j,:]}
+                        "error": error[j,:],
+                        "gdl":gdl}
             elif control_type == 2:
                 args = {"H" : H[j,:,:,:],
                         "delta_pref" : delta_pref[j,:,:,:],
@@ -360,10 +361,6 @@ def experiment(directory = "0",
                 print("Invalid U control")
                 break
             
-            if gdl == 2:
-                U[3:5] = 0.0
-            elif gdl == 3:
-                U[3:] = 0.0
             
             U_array[j,:,i] = U
             agents[j].update(U,dt,P)
@@ -540,10 +537,10 @@ def main():
     experiment(directory='0',depthOp = 1,
                     Z_set = 1.0,
                     h = 2.0,
-                    lamb = 0.5,
+                    lamb = 1,
                     gdl = 3,
                    zOffset = 1.0 ,
-                   t_end = 20)
+                   t_end = 10)
     
     return
     

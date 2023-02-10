@@ -530,9 +530,9 @@ def main():
                     Z_set = 2.0,
                     h = 2.0,
                     lamb = 1.,
-                    gdl = 1,
+                    gdl = 2,
                    zOffset = 1.0 ,
-                   t_end = 20)
+                   t_end = 10)
     
     return
     

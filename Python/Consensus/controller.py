@@ -46,7 +46,7 @@ def get_angles(R):
         if R[2,0] > -1.0:
             pitch = np.arcsin(-R[2,0])
             yaw = np.arctan2(R[1,0],R[0,0])
-            roll = np.atan2(R[2,1],R[2,2])
+            roll = np.arctan2(R[2,1],R[2,2])
         else:
             pitch = np.pi/2.
             yaw = -np.arctan2(-R[1,2],R[1,1])
@@ -89,11 +89,11 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         Ls = np.r_[Ls[:3],_comp]
     U = (Ls @ error) / deg
     U[0] = -U[0]
-    #U[1] = -U[1]
-    #U[2] = -U[2]
-    #U[3] = -U[3]
-    #U[4] = -U[4]
-    #U[5] = -U[5]
+    U[1] = -U[1]
+    U[2] = -U[2]
+    U[3] = -U[3]
+    U[4] = -U[4]
+    U[5] = -U[5]
     return  U
 
 def get_Homographies(agents):
@@ -184,23 +184,23 @@ class agent:
     def update(self,U,dt, points):
         
         #   DEPRECATED
-        p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
-        p += dt*U
+        #p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
+        #p += dt*U
         
         #   BEGIN Testing
         #print(U)
         
         #   INIT
-        #_U = U.copy()
-        #p = np.zeros(6)
+        _U = U.copy()
+        p = np.zeros(6)
         
         
-        ###   Traslation
-        #_U[:3] =  self.camera.R @ U[:3]
-        #p[:3] = self.camera.p+ dt* _U[:3]
+        ##   Traslation
+        _U[:3] =  self.camera.R.T @ U[:3]
+        p[:3] = self.camera.p+ dt* _U[:3]
         
-        ###print(U)
-        #kw = 0.1
+        ##print(U)
+        kw = -1.
         
         #   motion trasformation
         #st = np.sin(-self.camera.roll)
@@ -226,7 +226,7 @@ class agent:
         
         #   Rotation calc Naive
         
-        #new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
+        new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
         #new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R
         
         #   yaw only
@@ -257,7 +257,8 @@ class agent:
         
         #   No rotation 
         #new_R =  self.camera.R
-        #[p[3] , p[4], p[5] ] = get_angles(new_R)
+        #print(get_angles(new_R))
+        [p[3] , p[4], p[5] ] = get_angles(new_R)
         
         
         #   Rotation: previoues

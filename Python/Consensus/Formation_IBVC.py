@@ -69,19 +69,7 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
-def plot_3Dcam_end(ax, camera,
-               desired_configuration,
-               color,
-               camera_scale    = 0.02):
-    
-    
-    camera.draw_camera(ax, scale=camera_scale, color='red')
-    camera.pose(desired_configuration)
-    camera.draw_camera(ax, scale=camera_scale, color='brown')
-    ax.set_xlabel("$w_x$")
-    ax.set_ylabel("$w_y$")
-    ax.set_zlabel("$w_z$")
-    ax.grid(True)
+
 
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
@@ -114,9 +102,12 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
 def error_state(reference,  agents,colors, name):
     
     n = reference.shape[1]
-    state = np.zeros((3,n))
+    state = np.zeros((6,n))
     for i in range(len(agents)):
-        state[:,i] = agents[i].camera.p
+        state[:3,i] = agents[i].camera.p
+        state[3,i] = agents[i].camera.roll
+        state[4,i] = agents[i].camera.pitch
+        state[5,i] = agents[i].camera.yaw
     
     #   Obten centroide
     centroide_ref = reference[:3,:].sum(axis=1)/n
@@ -138,6 +129,7 @@ def error_state(reference,  agents,colors, name):
     theta = np.arctan2(new_reference[1,:],new_reference[0,:])
     theta -= np.arctan2(new_state[1,:],new_state[0,:])
     theta = theta.mean()
+    theta  = 0.
     
     ca = cos(theta)
     sa = sin(theta)
@@ -147,8 +139,10 @@ def error_state(reference,  agents,colors, name):
     
     #       Updtate normalized and oriented agents
     for i in range(len(agents)):
-        new_p = np.r_[new_state[:,i] ,agents[i].camera.roll,agents[i].camera.pitch,agents[i].camera.yaw + theta]
-        agents[i].camera.pose(new_p)
+        #new_p = np.r_[new_state[:,i] ,agents[i].camera.roll,agents[i].camera.pitch,agents[i].camera.yaw + theta]
+        #agents[i].camera.pose(new_p)
+        new_state[5,i] += theta
+        agents[i].camera.pose(new_state[:,i])
         
     #   normalizar referencia
     new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis=0).mean()
@@ -162,7 +156,9 @@ def error_state(reference,  agents,colors, name):
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
+    new_state[:3,:] *= r_state.x
     for i in range(n):
+        agents[i].camera.pose(new_state[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='red')
         agents[i].camera.pose(new_reference[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
@@ -171,9 +167,16 @@ def error_state(reference,  agents,colors, name):
     plt.close()
     
     #   TODO: Obtencion de error de rotación
+    rot_err = np.zeros(n)
+    for i in range(n):
+        _R =  cm.rot(new_state[3,i],'x') @ agents[i].camera.R.T
+        _R = cm.rot(new_state[4,i],'y') @ _R
+        _R = cm.rot(new_state[5,i],'z') @ _R
+        rot_err = np.arccos((_R.trace()-1.)/2.)
+    rot_err = rot_err**2
+    rot_er = rot_err.sum()
     
-    
-    return t_err
+    return [t_err, rot_err]
     
     
 def experiment(directory = "0",
@@ -523,6 +526,16 @@ def main():
     #experiment_height()
     #return
     
+    experiment(directory='0',depthOp = 1,
+                    Z_set = 2.0,
+                    h = 2.0,
+                    lamb = 1.,
+                    gdl = 1,
+                   zOffset = 1.0 ,
+                   t_end = 10)
+    
+    return
+    
     
     ##  Experimentos de variación de parámetros de contol
     #   Reference heights
@@ -534,15 +547,6 @@ def main():
     #   Z_set (depthOp = 4)
     exp_select = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]
     exp_select = [ 2.0 ]
-    experiment(directory='0',depthOp = 1,
-                    Z_set = 1.0,
-                    h = 2.0,
-                    lamb = 1,
-                    gdl = 3,
-                   zOffset = 1.0 ,
-                   t_end = 10)
-    
-    return
     
     n_agents = 4
     var_arr = np.zeros((n_agents,len(exp_select)))

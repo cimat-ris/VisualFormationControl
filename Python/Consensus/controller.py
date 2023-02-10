@@ -226,8 +226,12 @@ class agent:
         
         #   Rotation calc Naive
         
-        new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
-        #new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R
+        #new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R # kw < 0
+        new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R # kw < 0
+        #new_R = self.camera.R @ cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') # kw > 0
+        #new_R =  self.camera.R @ cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') # kw > 0
+        
+       
         
         #   yaw only
         #new_R = cm.rot(kw*dt*U[5],'z') @  self.camera.R

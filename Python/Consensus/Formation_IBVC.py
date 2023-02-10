@@ -129,7 +129,7 @@ def error_state(reference,  agents,colors, name):
     theta = np.arctan2(new_reference[1,:],new_reference[0,:])
     theta -= np.arctan2(new_state[1,:],new_state[0,:])
     theta = theta.mean()
-    theta  = 0.
+    #theta  = 0.
     
     ca = cos(theta)
     sa = sin(theta)
@@ -532,7 +532,7 @@ def main():
                     lamb = 1.,
                     gdl = 1,
                    zOffset = 1.0 ,
-                   t_end = 10)
+                   t_end = 20)
     
     return
     

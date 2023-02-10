@@ -42,14 +42,20 @@ def Interaction_Matrix(points,Z,gdl):
     return L.reshape((2*n,m)) 
 
 def get_angles(R):
-    if (abs(R[2,1] ) > 1.e-18 and abs(R[2,2] ) > 1.e-18):
-        roll = np.arctan2(R[2,1],R[2,2])
-        yaw = np.arctan2(R[1,0],R[0,0])
+    if (R[2,0] < 1.0):
+        if R[2,0] > -1.0:
+            pitch = np.arcsin(-R[2,0])
+            yaw = np.arctan2(R[1,0],R[0,0])
+            roll = np.atan2(R[2,1],R[2,2])
+        else:
+            pitch = np.pi/2.
+            yaw = -np.arctan2(-R[1,2],R[1,1])
+            roll = 0.
     else:
-        roll = np.pi
-        yaw = np.arctan2(R[0,1],-R[1,1])
-    
-    pitch = np.arctan2(-R[2,0],np.sqrt(R[2,1]**2+R[2,2]**2))
+        pitch = -np.pi/2.
+        yaw = -np.arctan2(R[1,2],R[1,1])
+        roll = 0.
+        
     return [roll, pitch, yaw]
 
 def Inv_Moore_Penrose(L):
@@ -83,11 +89,11 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         Ls = np.r_[Ls[:3],_comp]
     U = (Ls @ error) / deg
     U[0] = -U[0]
-    U[1] = -U[1]
-    U[2] = -U[2]
-    U[3] = -U[3]
-    U[4] = -U[4]
-    U[5] = -U[5]
+    #U[1] = -U[1]
+    #U[2] = -U[2]
+    #U[3] = -U[3]
+    #U[4] = -U[4]
+    #U[5] = -U[5]
     return  U
 
 def get_Homographies(agents):
@@ -178,42 +184,42 @@ class agent:
     def update(self,U,dt, points):
         
         #   DEPRECATED
-        #p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
-        #p += dt*U
+        p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
+        p += dt*U
         
         #   BEGIN Testing
         #print(U)
         
         #   INIT
-        _U = U.copy()
-        p = np.zeros(6)
+        #_U = U.copy()
+        #p = np.zeros(6)
         
         
-        #   Traslation
-        _U[:3] =  self.camera.R.T @ U[:3]
-        p[:3] = self.camera.p+ dt* _U[:3]
+        ###   Traslation
+        #_U[:3] =  self.camera.R @ U[:3]
+        #p[:3] = self.camera.p+ dt* _U[:3]
         
-        #print(U)
-        kw = 0.1
+        ###print(U)
+        #kw = 0.1
         
         #   motion trasformation
-        st = np.sin(-self.camera.roll)
-        ct = np.cos(-self.camera.roll)
-        sp = np.sin(-self.camera.yaw)
-        cp = np.cos(-self.camera.yaw)
+        #st = np.sin(-self.camera.roll)
+        #ct = np.cos(-self.camera.roll)
+        #sp = np.sin(-self.camera.yaw)
+        #cp = np.cos(-self.camera.yaw)
         
-        _T = np.array([[cp, st*sp,0.],
-                       [-sp, st*cp,0.],
-                       [0.,ct,1.]])
+        #_T = np.array([[cp, st*sp,0.],
+                       #[-sp, st*cp,0.],
+                       #[0.,ct,1.]])
         
-        _U[3:] =  _T @ U[3:]
-        p[3] = self.camera.roll + kw*dt*_U[3]
-        p[4] = self.camera.pitch + kw*dt*_U[4]
-        p[5] = self.camera.yaw  + kw*dt*_U[5]
+        #_U[3:] =  _T @ U[3:]
+        #p[3] = self.camera.roll + kw*dt*_U[3]
+        #p[4] = self.camera.pitch + kw*dt*_U[4]
+        #p[5] = self.camera.yaw  + kw*dt*_U[5]
         
         
         #   Naive coord change
-        #_U[3:] =  self.camera.R.T @ U[3:]
+        #_U[3:] =  self.camera.R @ U[3:]
         #p[3] = self.camera.roll + kw*dt*_U[3]
         #p[4] = self.camera.pitch + kw*dt*_U[4]
         #p[5] = self.camera.yaw + kw*dt*_U[5]
@@ -255,11 +261,11 @@ class agent:
         
         
         #   Rotation: previoues
-        #p[3] = self.camera.roll + dt*U[3]
-        #p[4] = self.camera.pitch + dt*U[4]
-        #p[5] = self.camera.yaw + dt*U[5]
+        #p[3] = self.camera.roll - dt*U[3]
+        #p[4] = self.camera.pitch - dt*U[4]
+        #p[5] = self.camera.yaw - dt*U[5]
         
-        print(_U)
+        #print(_U)
         
         #   END Testing
         self.camera.pose(p) 

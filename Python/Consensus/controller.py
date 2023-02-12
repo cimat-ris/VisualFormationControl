@@ -59,9 +59,13 @@ def get_angles(R):
     return [roll, pitch, yaw]
 
 def Inv_Moore_Penrose(L):
+    #if L.shape[1] ==6:
+        #return inv(L)
     A = L.T@L
     #if np.linalg.det(A) < 1.0e-18:
         #return None
+    if np.linalg.det(A) == 0:
+        return None
     return inv(A) @ L.T
 
 def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
@@ -88,12 +92,7 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         _comp = np.zeros((3,Ls.shape[1]))
         Ls = np.r_[Ls[:3],_comp]
     U = (Ls @ error) / deg
-    U[0] = -U[0]
-    U[1] = -U[1]
-    U[2] = -U[2]
-    U[3] = -U[3]
-    U[4] = -U[4]
-    U[5] = -U[5]
+    
     return  U
 
 def get_Homographies(agents):
@@ -183,96 +182,23 @@ class agent:
         
     def update(self,U,dt, points):
         
-        #   DEPRECATED
+        #   TODO: reconfigurar con momtijano
         #p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
-        #p += dt*U
+        #p += dt*np.array([-1.,1.,1.,1.,1.,1.])*U
         
-        #   BEGIN Testing
-        #print(U)
-        
-        #   INIT
         _U = U.copy()
         p = np.zeros(6)
         
-        
         ##   Traslation
         _U[:3] =  self.camera.R.T @ U[:3]
-        p[:3] = self.camera.p+ dt* _U[:3]
+        p[:3] = self.camera.p - dt* _U[:3]
         
-        ##print(U)
-        kw = -1.
-        
-        #   motion trasformation
-        #st = np.sin(-self.camera.roll)
-        #ct = np.cos(-self.camera.roll)
-        #sp = np.sin(-self.camera.yaw)
-        #cp = np.cos(-self.camera.yaw)
-        
-        #_T = np.array([[cp, st*sp,0.],
-                       #[-sp, st*cp,0.],
-                       #[0.,ct,1.]])
-        
-        #_U[3:] =  _T @ U[3:]
-        #p[3] = self.camera.roll + kw*dt*_U[3]
-        #p[4] = self.camera.pitch + kw*dt*_U[4]
-        #p[5] = self.camera.yaw  + kw*dt*_U[5]
-        
-        
-        #   Naive coord change
-        #_U[3:] =  self.camera.R @ U[3:]
-        #p[3] = self.camera.roll + kw*dt*_U[3]
-        #p[4] = self.camera.pitch + kw*dt*_U[4]
-        #p[5] = self.camera.yaw + kw*dt*_U[5]
-        
-        #   Rotation calc Naive
-        
-        #new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R # kw < 0
-        new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R # kw < 0
-        #new_R = self.camera.R @ cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') # kw > 0
-        #new_R =  self.camera.R @ cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') # kw > 0
-        
-       
-        
-        #   yaw only
-        #new_R = cm.rot(kw*dt*U[5],'z') @  self.camera.R
-        #new_R = cm.rot(kw*dt*U[5],'z').T @ self.camera.R
-        #new_R = self.camera.R @  cm.rot(kw*dt*U[5],'z') 
-        
-        #new_R =   self.camera.R @ cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') 
-        #new_R =   self.camera.R @ cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') 
-        
-        #[p[3] , p[4], p[5] ] = get_angles(new_R)
-        
-        #   Opción 2 naive teturn
-        
-        #new_R = self.camera.R.T @  cm.rot(kw*dt*U[5],'z')  @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
-        #new_R =   cm.rot(kw*dt*U[5],'z')
-        #new_R =  self.camera.R.T @ np.eye(3) @ self.camera.R
-        #new_R = self.camera.R.T @  cm.rot(kw*dt*U[3],'x').T  @ cm.rot(kw*dt*U[4],'y').T @ cm.rot(kw*dt*U[5],'z').T @ self.camera.R
-        
-        
-        #[_U[3] , _U[4], _U[5] ] = get_angles(new_R)
-        #p[3] = self.camera.roll+  _U[3]
-        #p[4] = self.camera.pitch+  _U[4]
-        #p[5] = self.camera.yaw+  _U[5]
-        
-        #opción 3 naive change of wcoord
-        
-        
-        #   No rotation 
-        #new_R =  self.camera.R
-        #print(get_angles(new_R))
+        #   Rotation
+        kw = 1.
+        new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R
         [p[3] , p[4], p[5] ] = get_angles(new_R)
         
         
-        #   Rotation: previoues
-        #p[3] = self.camera.roll - dt*U[3]
-        #p[4] = self.camera.pitch - dt*U[4]
-        #p[5] = self.camera.yaw - dt*U[5]
-        
-        #print(_U)
-        
-        #   END Testing
         self.camera.pose(p) 
         
         self.s_current = self.camera.project(points)

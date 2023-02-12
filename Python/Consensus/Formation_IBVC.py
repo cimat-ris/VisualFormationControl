@@ -148,7 +148,7 @@ def error_state(reference,  agents,colors, name):
     new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis=0).mean()
     
     #   Aplicar minimización de radio (como lidiar con mínimos múltiples)
-    f = lambda r : np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0).sum()
+    f = lambda r : (np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
     r_state = minimize_scalar(f, method='brent')
     t_err = f(r_state.x)
     
@@ -163,7 +163,7 @@ def error_state(reference,  agents,colors, name):
         agents[i].camera.pose(new_reference[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    plt.show()
+    #plt.show()
     plt.close()
     
     #   TODO: Obtencion de error de rotación
@@ -174,7 +174,7 @@ def error_state(reference,  agents,colors, name):
         _R = cm.rot(new_state[5,i],'z') @ _R
         rot_err = np.arccos((_R.trace()-1.)/2.)
     rot_err = rot_err**2
-    rot_er = rot_err.sum()
+    rot_err = rot_err.sum()/n
     
     return [t_err, rot_err]
     
@@ -188,7 +188,8 @@ def experiment(directory = "0",
                t0 = 0.0,
                dt = 0.05,
                t_end = 10.0,
-               zOffset = 0.0):
+               zOffset = 0.0,
+               case_interactionM = 1):
     
     #   Data
     P = np.array(ip.P)      #   Scene points
@@ -196,6 +197,7 @@ def experiment(directory = "0",
     P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
     
     p0 = np.array(ip.p0)    #   init positions
+    #p0 = cm.rot(np.pi/4.,'x') @ p0
     p0[2,:] = p0[2,:]+zOffset
     n_agents = p0.shape[1] #Number of agents
     
@@ -217,7 +219,6 @@ def experiment(directory = "0",
     
     #   interaction matrix used for the control
     #   1- computed each step 2- Computed at the end 3- average
-    case_interactionM = 1
     case_interactionM_dict = {1:"Computed at each step",
                               2:"Computed at the end",
                               3:"Average between 1 and 2"}
@@ -273,7 +274,7 @@ def experiment(directory = "0",
     if case_interactionM > 1:
         for i in range(n_agents):
             #   Depth calculation
-            Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,j)
+            Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,i)
             if Z is None:
                 return
             agents[i].set_interactionMat(Z,gdl)
@@ -296,8 +297,15 @@ def experiment(directory = "0",
     print("------------------BEGIN-----------------")
     print("Laplacian selection = "+name)
     print("Is directed = "+str(directed))
+    print("Laplacian matrix: ")
     print(L)
     print(A_ds)
+    print("Reference states")
+    print(pd)
+    print("Initial states")
+    print(p0)
+    print("Scene points")
+    print(P[:3,:])
     print("Number of points = "+str(n_points))
     print("Number of agents = "+str(n_agents))
     if zOffset != 0.0:
@@ -359,6 +367,7 @@ def experiment(directory = "0",
                 return
             
             U = agents[j].get_control(control_type,lamb,Z,args)
+            #U[abs(U) > 0.5] = np.sign(U)[abs(U) > 0.5]*0.5
             
             if U is None:
                 print("Invalid U control")
@@ -383,6 +392,7 @@ def experiment(directory = "0",
     
     for j in range(n_agents):
         ret_err[j]=np.linalg.norm(error[j,:])
+        print(error[j,:])
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
     for j in range(n_agents):
         print("X_"+str(j)+" = "+str(agents[j].camera.p))
@@ -461,45 +471,55 @@ def experiment(directory = "0",
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
-    return ret_err
+    return [ret_err, state_err[0],state_err[1]]
 
 def experiment_height():
     
     n_agents = 4
     
     #   Revisión con cambio uniforme de zOffset y h
-    steps = 16
-    var_arr = np.zeros((n_agents,steps))
-    ref_arr = np.arange( 0.6, 0.6 + 0.2*(steps-0.9) ,0.2)
+    #steps = 16
+    #var_arr = np.zeros((n_agents,steps))
+    #ref_arr = np.arange( 0.6, 0.6 + 0.2*(steps-0.9) ,0.2)
     
-    for i in range(steps):
-        ret_err = experiment(directory=str(i),depthOp = 1,
-                   h = 0.6 + 0.2*i,
-                   zOffset = -0.4 + 0.2*i,
-                   t_end = 20)
-        var_arr[:,i] = ret_err
-    
-    ##   Revisión con h=2.0
-    #exp_select_z = [-0.4 -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4]
-    #var_arr = np.zeros((n_agents,len(exp_select_z)))
-    #ref_arr = np.array(exp_select_z)
-    #for i in range(len(exp_select_z)):
+    #for i in range(steps):
         #ret_err = experiment(directory=str(i),depthOp = 1,
-                   #h = 2.0,
-                   #zOffset = exp_select_z[i] ,
+                   #h = 0.6 + 0.2*i,
+                   #zOffset = -0.4 + 0.2*i,
                    #t_end = 20)
         #var_arr[:,i] = ret_err
     
-    ##   Revisión con h=1.0
-    #exp_select_z = [-0.4, -0.2, 0., 0.2, 0.4, 0.6, 0.8, 1.0]
-    #var_arr = np.zeros((n_agents,len(exp_select_z)))
-    #ref_arr = np.array(exp_select_z)
-    #for i in range(len(exp_select_z)):
-        #ret_err = experiment(directory=str(i),depthOp = 1,
-                   #h = 1.0,
-                   #zOffset = exp_select_z[i] ,
-                   #t_end = 20)
-        #var_arr[:,i] = ret_err
+   
+    
+    #   Revisión con zOffset constante
+    #   Offset = 0
+    offset = 0.
+    ##       Caso 1
+    ref_arr = np.arange( 1.0, 2.05 ,0.1)
+    ##       Caso 2
+    #ref_arr = np.arange( 0.6, 2.0 ,0.1)
+    ##       Caso 3
+    #ref_arr = np.arange( 0.6, 1.75 ,0.1)
+    
+    #   Offset = 1
+    #offset = 1.
+    #       Caso 1
+    #ref_arr = np.arange( 1.3, 2.0 ,0.1)
+    
+    #       Caso 2, 3
+    #ref_arr = np.arange( 0.7, 2.0 ,0.2)
+    
+    var_arr = np.zeros((n_agents,len(ref_arr)))
+    var_arr_2 = np.zeros(len(ref_arr))
+    var_arr_3 = np.zeros(len(ref_arr))
+    #ref_arr = np.array(ref_arr)
+    for i in range(len(ref_arr)):
+        ret_err = experiment(directory=str(i),
+                             gdl = 1,
+                             zOffset = offset,
+                             h = ref_arr[i] ,
+                             t_end = 20)
+        [var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
         
     
     #   Plot data
@@ -519,27 +539,39 @@ def experiment_height():
     #plt.show()
     plt.close()
     
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado")
+    ax.plot(ref_arr,var_arr_2, label = "Posición")
+    ax.plot(ref_arr,var_arr_3, label = "Rotación")
+    fig.legend( loc=2)
+    plt.tight_layout()
+    plt.savefig('Formation error.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    print("Total number of simulations = "+str(len(ref_arr)))
     
 def main():
     
     ##   Experimentos de variación de altura
-    #experiment_height()
-    #return
+    experiment_height()
+    return
     
+    #   Pruebas independientes
     experiment(directory='0',depthOp = 1,
                     Z_set = 2.0,
                     h = 2.0,
                     lamb = 1.,
                     gdl = 1,
                    zOffset = 1.0 ,
-                   t_end = 50)
+                   t_end = 50,
+                   case_interactionM = 1)
     
     return
     
     
     ##  Experimentos de variación de parámetros de contol
-    #   Reference heights
-    #exp_select = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+   
     #   Lambda values
     #exp_select = [0.25, 0.5, 0.75, 1., 1.5, 1.25, 1.5, 1.75, 2., 5., 10., 15.]
     #   gdl

@@ -483,21 +483,22 @@ def experiment_height():
     #   Revisión con cambio uniforme de zOffset y h
     #   Casos 1
     #ref_arr = np.arange( 1., 2.55 ,0.1)
+    ref_arr = np.arange( 0.8, 1.25 ,0.1)
     #   Casos 2
     #ref_arr = np.arange( 0.5, 2.05 ,0.1)
     #   Caso 3
     #ref_arr = np.arange( 0.6, 2.15 ,0.1)
-    #var_arr = np.zeros((n_agents,len(ref_arr)))
-    #var_arr_2 = np.zeros(len(ref_arr))
-    #var_arr_3 = np.zeros(len(ref_arr))
+    var_arr = np.zeros((n_agents,len(ref_arr)))
+    var_arr_2 = np.zeros(len(ref_arr))
+    var_arr_3 = np.zeros(len(ref_arr))
     
-    #for i in range(len(ref_arr)):
-        #ret_err = experiment(directory=str(i),
-                             #gdl = 1,
-                             #h = ref_arr[i],
-                             #zOffset = ref_arr[i] -0.8 ,
-                             #t_end = 20)
-        #[var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
+    for i in range(len(ref_arr)):
+        ret_err = experiment(directory=str(i),
+                             gdl = 1,
+                             h = ref_arr[i],
+                             zOffset = ref_arr[i] -0.8 ,
+                             t_end = 60)
+        [var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
     
    
     
@@ -506,30 +507,35 @@ def experiment_height():
     #offset = 0.
     ##       Caso 1
     #ref_arr = np.arange( 1.0, 2.05 ,0.1)
+    #ref_arr = np.arange( 0.8, 1.25 ,0.1)
     ##       Caso 2 = puntos coplanares
     #ref_arr = np.arange( 0.4, 1.75 ,0.1)
     ##       Caso 3 = 4 dof
     #ref_arr = np.arange( 0.6, 1.75 ,0.1)
+    #ref_arr = np.arange( 1.1, 1.75 ,0.2)
     
     #   Offset = 1
-    offset = 1.
+    #offset = 1.
     #       Caso 1
-    ref_arr = np.arange( 1.3, 2.0 ,0.1)
+    #ref_arr = np.arange( 1.3, 2.0 ,0.1)
+    #ref_arr = np.arange( 1.0, 1.5 ,0.1)
     
     #       Caso 2, 3
     #ref_arr = np.arange( 0.7, 2.0 ,0.1)
     
-    var_arr = np.zeros((n_agents,len(ref_arr)))
-    var_arr_2 = np.zeros(len(ref_arr))
-    var_arr_3 = np.zeros(len(ref_arr))
-    #ref_arr = np.array(ref_arr)
-    for i in range(len(ref_arr)):
-        ret_err = experiment(directory=str(i),
-                             gdl = 1,
-                             zOffset = offset,
-                             h = ref_arr[i] ,
-                             t_end = 20)
-        [var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
+    #var_arr = np.zeros((n_agents,len(ref_arr)))
+    #var_arr_2 = np.zeros(len(ref_arr))
+    #var_arr_3 = np.zeros(len(ref_arr))
+    ##ref_arr = np.array(ref_arr)
+    #for i in range(len(ref_arr)):
+        #ret_err = experiment(directory=str(i),
+                             #lamb = 0.5,
+                             #gdl = 1,
+                             #zOffset = offset,
+                             #h = ref_arr[i] ,
+                             #t_end = 80)
+                             ##t_end = 20)
+        #[var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
         
     
     #   Plot data
@@ -564,18 +570,17 @@ def experiment_height():
 def main():
     
     ##   Experimentos de variación de altura
-    experiment_height()
-    return
+    #experiment_height()
+    #return
     
     #   Pruebas independientes
-    experiment(directory='0',depthOp = 1,
-                    Z_set = 2.0,
+    experiment(directory='0',
                     h = 2.0,
                     lamb = 1.,
-                    gdl = 1,
+                    gdl = 2,
                    zOffset = 1.0 ,
-                   t_end = 50,
-                   case_interactionM = 1)
+                   t_end = 10)
+                   #case_interactionM = 1)
     
     return
     

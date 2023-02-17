@@ -16,7 +16,8 @@ def plot_time(t_array,
               colors,
               name="time_plot", 
               label="Variable",
-              labels = None):
+              labels = None,
+              limits = None):
     
     n = var_array.shape[0]
     
@@ -31,6 +32,8 @@ def plot_time(t_array,
         fig.legend(symbols,labels, loc=2)
     if (label == "Velocidades" or label == "Features Error"):
         plt.ylim((-1,1))
+    elif not(limits is None):
+        plt.ylim((limits[1][0],limits[1][1]))
     
     plt.tight_layout()
     plt.savefig(name+'.pdf',bbox_inches='tight')
@@ -55,6 +58,13 @@ def plot_descriptors(descriptors_array,
     plt.xlim([0,camera_iMsize[0]])
     plt.ylim([0,camera_iMsize[1]])
     
+    ax.plot([camera_iMsize[0]/2,camera_iMsize[0]/2],
+            [0,camera_iMsize[0]],
+            color=[0.25,0.25,0.25])
+    ax.plot([0,camera_iMsize[1]],
+            [camera_iMsize[1]/2,camera_iMsize[1]/2],
+            color=[0.25,0.25,0.25])
+    
     symbols = []
     for i in range(n):
         ax.plot(descriptors_array[2*i,0],descriptors_array[2*i+1,0],
@@ -64,6 +74,7 @@ def plot_descriptors(descriptors_array,
         ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
                 color=colors[i])
         ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i])
+        print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
     
     
     symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
@@ -109,7 +120,6 @@ def plot_position(position_array,
                 color=colors[i])
         ax.plot(desired_position[0,i],desired_position[1,i],
                 marker='^',color=colors[i])
-    
     
     symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
                mlines.Line2D([0],[0],marker='o',color='k'),

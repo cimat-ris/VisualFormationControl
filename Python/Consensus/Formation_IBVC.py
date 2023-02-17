@@ -74,11 +74,13 @@ def plot_3Dcam(ax, camera,
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
-        #M = np.c_[ agent.camera.R, -agent.camera.R @ agent.camera.p ]
-        #Z = M @ P
-        #Z = Z[2,:]
-        Z = agent.camera.p[2]*Z
-        Z = Z-P[2,:]
+        #print(P)
+        M = np.c_[ agent.camera.R, -agent.camera.R @ agent.camera.p ]
+        Z = M @ P
+        Z = Z[2,:]
+        #print(Z)
+        #Z = agent.camera.p[2]*Z
+        #Z = Z-P[2,:]
     elif depthOp ==2: # 
         Z = p0[2,j]*Z
         Z = Z-P[2,:]
@@ -189,7 +191,8 @@ def experiment(directory = "0",
                dt = 0.05,
                t_end = 10.0,
                zOffset = 0.0,
-               case_interactionM = 1):
+               case_interactionM = 1,
+               tanhLimit = False):
     
     #   Data
     P = np.array(ip.P)      #   Scene points
@@ -293,6 +296,7 @@ def experiment(directory = "0",
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,3,steps))
+    s_store = np.zeros((n_agents,6,steps))
     
     #   Print simulation data:
     print("------------------BEGIN-----------------")
@@ -367,8 +371,13 @@ def experiment(directory = "0",
                 print("invalid control selection")
                 return
             
-            U = agents[j].get_control(control_type,lamb,Z,args)
-            #U[abs(U) > 0.5] = np.sign(U)[abs(U) > 0.5]*0.5
+            #s = None
+            U,s  = agents[j].get_control(control_type,lamb,Z,args)
+            s_store[j,:,i] = s
+            if tanhLimit:
+                U = 0.5*np.tanh(U)
+            #print(s)
+            #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
             #U_sel = abs(U[3:]) > 0.2
             #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
             
@@ -446,11 +455,26 @@ def experiment(directory = "0",
                 color = colors[i],
                 camera_scale    = 0.02)
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    #plt.show()
+    plt.show()
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
+        print("Agent: "+str(i))
+        L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
+        A = L.T@L
+        if np.linalg.det(A) != 0:
+            print("Matriz de interacción (L): ")
+            print(L)
+            L = inv(A) @ L.T
+            print("Matriz de interacción pseudoinversa (L+): ")
+            print(L)
+            print("Error de consenso final (e): ")
+            print(error[i,:])
+            print("velocidades resultantes (L+ @ e): ")
+            print(L@error[i,:])
+            print("Valores singulares al final (s = SVD(L+)): ")
+            print(s_store[i,:,-1])
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
@@ -474,6 +498,16 @@ def experiment(directory = "0",
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
+    
+    #   Valores propios
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    s_store[i,:,:],
+                    colors,
+                    name = directory+"/ValoresP_"+str(i),
+                    label = "Valores propios (SVD)",
+                    labels = ["0","1","2","3","4","5"],
+                    limits = [[t_array[0],t_array[-1]],[0,20]])
     return [ret_err, state_err[0],state_err[1]]
 
 def experiment_height():
@@ -566,22 +600,70 @@ def experiment_height():
     plt.close()
     
     print("Total number of simulations = "+str(len(ref_arr)))
+
+def experiment_localmin():
+    
+    t = 100
+    #t = 20
+    
+    ##   Casos con formación 
+    ##   Caso minimo local e == 0 
+    ##   P_z = [0.0,  -0.2, 0.5]
+    #experiment(directory='0',
+                    #h = 1.5,
+                    #lamb = 1.,
+                    #gdl = 1,
+                   #zOffset = 0.7 ,
+                   #t_end = t)
+    
+    ###   Caso minimo local e != 0 
+    ###   P_z = [0.0,  -0.2, 0.5]
+    #experiment(directory='1',
+                    #h = 1.3,
+                    #lamb = 1.,
+                    #gdl = 1,
+                   #zOffset = 1.0 ,
+                   #t_end = t)
+    
+    #   Casos solo consenso
+    #   Caso minimo local e == 0 
+    #   P_z = [0.0,  -0.2, 0.5]
+    experiment(directory='0',
+                    h = 1.5,
+                    lamb = 1.,
+                    gdl = 1,
+                   zOffset = 0.7 ,
+                   t_end = t)
+    
+    #   Caso minimo local e != 0 
+    #   P_z = [0.0,  -0.2, 0.5]
+    experiment(directory='1',
+                    h = 0.6,
+                    lamb = 1.,
+                    gdl = 1,
+                   zOffset = -.2 ,
+                   t_end = t)
+    
     
 def main():
+    
+    #   Caso minimo local e != 0 
+    #   P_z = [0.0,  -0.2, 0.5]
+    experiment(directory='0',
+                    h = 1.1,
+                    lamb = 0.1,
+                    gdl = 1,
+                   zOffset = 0.0 ,
+                   t_end = 100,
+                   tanhLimit = True)
+    return
     
     ##   Experimentos de variación de altura
     #experiment_height()
     #return
     
-    #   Pruebas independientes
-    experiment(directory='0',
-                    h = 2.0,
-                    lamb = 1.,
-                    gdl = 2,
-                   zOffset = 1.0 ,
-                   t_end = 10)
-                   #case_interactionM = 1)
-    
+    ##  Experimentos de minimos locales
+    experiment_localmin()
     return
     
     

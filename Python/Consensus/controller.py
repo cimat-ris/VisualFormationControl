@@ -82,9 +82,11 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         Ls = 0.5*( Ls +inv_Ls_set)
     if Ls is None:
             print("Invalid Ls matrix")
-            return np.array([0.,0.,0.,0.,0.,0.])
-    #print(error.T)
-    #print(Ls)
+            return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
+    #   BEGIN L range test
+    u, s, vh  = np.linalg.svd(Ls)
+    #print(s)
+    #   END L range test
     if gdl == 2:
         _comp = np.zeros((2,Ls.shape[1]))
         Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
@@ -93,7 +95,7 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         Ls = np.r_[Ls[:3],_comp]
     U = (Ls @ error) / deg
     
-    return  U
+    return  U, s
 
 def get_Homographies(agents):
     n = len(agents)
@@ -154,20 +156,23 @@ class agent:
         self.inv_Ls_set = None
         
         
-    def get_control(self, sel,lamb, Z,args ):
+    def get_control(self, sel,lamb, Z,args  ):
         
         #if self.count_points_in_FOV(Z) < 4:
             #return np.zeros(6)
         
             #   IBVC
         if sel == 1:
-            return  -lamb* IBVC(args["control_sel"],
+            #return  -lamb* IBVC(args["control_sel"],
+            U, s =  IBVC(args["control_sel"],
                                args["error"],
                                self.s_current_n,
                                Z,
                                args["deg"],
                                self.inv_Ls_set,
                                args["gdl"])
+            #print(s)
+            return -lamb * U, s
         elif sel == 2:
             return  -lamb* Homography(args["H"],
                                      args["delta_pref"],

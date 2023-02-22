@@ -252,7 +252,7 @@ def experiment(directory = "0",
             return
         
         #s = None
-        U,s  = agent.get_control(control_type,lamb,Z,args)
+        U,u,s,vh  = agent.get_control(control_type,lamb,Z,args)
         s_store[0,:,i] = s
         if tanhLimit:
             U = 0.3*np.tanh(U)
@@ -331,7 +331,7 @@ def experiment(directory = "0",
             color = colors[0],
             camera_scale    = 0.02)
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    plt.show()
+    #plt.show()
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
@@ -380,7 +380,7 @@ def experiment(directory = "0",
                 label = "Valores propios (SVD)",
                 labels = ["0","1","2","3","4","5"])
                 #limits = [[t_array[0],t_array[-1]],[0,20]])
-    return ret_err
+    return ret_err, pos_arr[0,:,:], agent.camera
 
 def experiment_height():
     
@@ -531,9 +531,69 @@ def experiment_localmin():
                     gdl = 1,
                    zOffset = -.2 ,
                    t_end = t)
+
+def experiment_mesh(x,y,z):
+    _x, _y = np.meshgrid(x,y)
+    n = _x.size
     
+    pd = np.array([0.,0.,1.,np.pi,0.,0.])
+    p0 = np.array([_x.reshape(n),
+                     _y.reshape(n),
+                     z*np.ones(n),
+                     np.pi*np.ones(n),
+                     np.zeros(n),
+                     np.zeros(n)])
+    #n = mesh.shape[1]
+    print("testing ",n," repeats")
+    #i = 0
+    #p0 = np.r_[mesh,z*np.ones(n),np.pi*np.ones(n),np.zeros(n),np.zeros(n)]
+    pos_arr = []
+    cam_arr = []
+    for i in range( n):
+        err, _pos_arr, _cam = experiment(directory=str(i),
+                                lamb = 1.,
+                                gdl = 1,
+                                #zOffset = 0.6,
+                                h = 1. ,
+                                pd = pd,
+                                p0 = p0[:,i],
+                                #tanhLimit = True,
+                                #depthOp = 4, Z_set=1.,
+                                #depthOp = 6,
+                                t_end = 10.)
+        pos_arr.append(_pos_arr)
+        cam_arr.append(_cam)
+    
+    ##  Prepare data for plot
+    colors = (randint(0,255,3*n)/255.0).reshape((n,3))
+    P = np.array(ip.P)      #   Scene points
+    n_points = P.shape[1] #Number of image points
+    P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
+    
+    #   plot
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    name = "3Dplot"
+    #fig.suptitle(label)
+    ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    #agents[i].count_points_in_FOV(P)
+    for i in range( n):
+        plot_3Dcam(ax, cam_arr[i],
+                pos_arr[i],
+                p0[:,i],
+                pd,
+                color = colors[0],
+                camera_scale    = 0.02)
+    plt.savefig(name+'.pdf',bbox_inches='tight')
+    plt.show()
+    plt.close()
     
 def main():
+    
+    x = np.linspace(-1,1,2)
+    y = np.linspace(-1,1,2)
+    experiment_mesh(x,y,z=2)
+    return
     
     p0=np.array([1.,1.,2.,np.pi,0.,0.])
     p0=np.array([1.,1.,2.,np.pi+0.5,0.5,1.])

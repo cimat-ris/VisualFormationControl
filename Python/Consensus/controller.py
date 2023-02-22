@@ -79,15 +79,15 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     if control_sel ==1:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
-        Ls = Inv_Moore_Penrose(Ls) 
-        #Ls = np.linalg.pinv(Ls) 
+        #Ls = Inv_Moore_Penrose(Ls) 
+        Ls = np.linalg.pinv(Ls) 
     elif control_sel ==2:
         Ls = inv_Ls_set
     elif control_sel ==3:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
-        Ls = Inv_Moore_Penrose(Ls) 
-        #Ls = np.linalg.pinv(Ls) 
+        #Ls = Inv_Moore_Penrose(Ls) 
+        Ls = np.linalg.pinv(Ls) 
         Ls = 0.5*( Ls +inv_Ls_set)
     if Ls is None:
             print("Invalid Ls matrix")
@@ -96,10 +96,12 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     u, s, vh  = np.linalg.svd(Ls)
     #if (s[0] < 1000):
         #print(Interaction_Matrix(s_current_n,Z,gdl))
-    #if(s[0] > 1000):
-        #print("PVAL > 1000")
+    #if(s[0] > 400):
+        ##print("PVAL > 1000")
+        #print(Z)
         #print(Interaction_Matrix(s_current_n,Z,gdl))
         #print(s)
+        #print(s_current_n)
         #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
     #print(s)
     #   END L range test
@@ -113,7 +115,7 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     #print(error)
     U = (Ls @ error) / deg
     
-    return  U.reshape(6), s
+    return  U.reshape(6), u, s, vh
 
 def get_Homographies(agents):
     n = len(agents)
@@ -182,7 +184,7 @@ class agent:
             #   IBVC
         if sel == 1:
             #return  -lamb* IBVC(args["control_sel"],
-            U, s =  IBVC(args["control_sel"],
+            U, u, s, vh =  IBVC(args["control_sel"],
                                args["error"],
                                self.s_current_n,
                                Z,
@@ -190,7 +192,7 @@ class agent:
                                self.inv_Ls_set,
                                args["gdl"])
             #print(s)
-            return -lamb * U, s
+            return -lamb * U,u, s, vh
         elif sel == 2:
             return  -lamb* Homography(args["H"],
                                      args["delta_pref"],

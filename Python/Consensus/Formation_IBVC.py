@@ -51,13 +51,14 @@ def plot_3Dcam(ax, camera,
                positionArray,
                init_configuration,
                desired_configuration,
-               color,
+               color, i,
                camera_scale    = 0.02):
     
     #ax.plot(positionArray[0,:],
     ax.scatter(positionArray[0,:],
             positionArray[1,:],
             positionArray[2,:],
+            label = str(i),
             color = color) # Plot camera trajectory
     
     camera.draw_camera(ax, scale=camera_scale, color='red')
@@ -77,7 +78,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     if depthOp ==1:
         #print(P)
         #   TODO creo que esto está mal calculado
-        M = np.c_[ agent.camera.R, -agent.camera.R @ agent.camera.p ]
+        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
         Z = M @ P
         #print(Z)
         Z = Z[2,:]
@@ -352,7 +353,7 @@ def experiment(directory = "0",
         error = np.zeros((n_agents,2*n_points))
         for j in range(n_agents):
             error[j,:] = agents[j].error
-        error = -L @ error
+        error = L @ error
         
         #   save data
         #print(error)
@@ -390,16 +391,39 @@ def experiment(directory = "0",
                 return
             
             #s = None
-            U,s  = agents[j].get_control(control_type,lamb,Z,args)
+            U,u, s, vh  = agents[j].get_control(control_type,lamb,Z,args)
             s_store[j,:,i] = s
             if tanhLimit:
                 U = 0.3*np.tanh(U)
-                #U[:3] = 0.5*np.tanh(U[:3])
-                #U[3:] = 0.3*np.tanh(U[3:])
-            #print(s)
-            #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
-            #U_sel = abs(U[3:]) > 0.2
-            #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
+            
+            #if any(abs(error[j,:])> 1.):
+                #print("----ERR>--")
+                #print("i ",i)
+                #print("j ",j)
+                #print("error ",error[j,:])
+                #print("U ",U)
+            #if any(abs(U) > 10.):
+                #print("---UPS---")
+                #print("i ",i)
+                #print("j ",j)
+                #print("U ",U)
+            if(s[0] > 200):
+                #print("PVAL > 1000")
+                print("-----JUMP------")
+                print("i ",i)
+                print("j ",j)
+                print("Z  ",Z)
+                print("L ",ctr.Interaction_Matrix(agents[j].s_current_n,Z,gdl))
+                print("Valores propio ",s)
+                print("Puntos normalizados ",agents[j].s_current_n)
+                print("Puntos en pixeles ",agents[j].s_current)
+                print("Posicion  ",agents[j].camera.p)
+                print("error  ",error[j,:])
+                print("Vector propio 0  ",u[:,0])
+                print("Prod int u,err ",u.T@error[j,:]/np.linalg.norm(error[j,:]))
+                print("Prod int v,err ",vh@error[j,:]/np.linalg.norm(error[j,:]))
+                print("U ",U)
+                print("---------------")
             
             if U is None:
                 print("Invalid U control")
@@ -428,6 +452,8 @@ def experiment(directory = "0",
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
     for j in range(n_agents):
         print("X_"+str(j)+" = "+str(agents[j].camera.p))
+    for j in range(n_agents):
+        print("V_"+str(j)+" = "+str(U_array[j,:,-1]))
     for j in range(n_agents):
         print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
               ", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
@@ -473,28 +499,30 @@ def experiment(directory = "0",
                 p0[:,i],
                 pd[:,i],
                 color = colors[i],
+                i = i,
                 camera_scale    = 0.02)
+    fig.legend( loc=2)
     plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.show()
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
-        print("Agent: "+str(i))
-        L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
-        A = L.T@L
-        if np.linalg.det(A) != 0:
-            print("Matriz de interacción (L): ")
-            print(L)
-            L = inv(A) @ L.T
-            print("Matriz de interacción pseudoinversa (L+): ")
-            print(L)
-            print("Error de consenso final (e): ")
-            print(error[i,:])
-            print("velocidades resultantes (L+ @ e): ")
-            print(L@error[i,:])
-            print("Valores singulares al final (s = SVD(L+)): ")
-            print(s_store[i,:,-1])
+        #print("Agent: "+str(i))
+        #L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
+        #A = L.T@L
+        #if np.linalg.det(A) != 0:
+            #print("Matriz de interacción (L): ")
+            #print(L)
+            #L = inv(A) @ L.T
+            #print("Matriz de interacción pseudoinversa (L+): ")
+            #print(L)
+            #print("Error de consenso final (e): ")
+            #print(error[i,:])
+            #print("velocidades resultantes (L+ @ e): ")
+            #print(L@error[i,:])
+            #print("Valores singulares al final (s = SVD(L+)): ")
+            #print(s_store[i,:,-1])
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
@@ -684,14 +712,14 @@ def experiment_localmin():
 def main():
     
     experiment(directory='0',
-                lamb = 1.,
+                lamb = 1,
                 gdl = 1,
-                zOffset = 0.6,
+                #zOffset = 0.6,
                 h = 1. ,
                 #tanhLimit = True,
                 #depthOp = 4, Z_set=2.,
-                depthOp = 6,
-                t_end = 20)
+                depthOp = 1,
+                t_end = 10)
     return
     
     #   Caso minimo local e != 0 

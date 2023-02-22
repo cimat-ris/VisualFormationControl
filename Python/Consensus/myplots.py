@@ -74,7 +74,7 @@ def plot_descriptors(descriptors_array,
         ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
                 color=colors[i])
         ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i])
-        print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
+        #print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
     
     
     symbols = [mlines.Line2D([0],[0],marker='*',color='k'),

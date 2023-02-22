@@ -64,7 +64,7 @@ class camera:
        tmp = np.c_[ self.R, self.p ]
        #print(tmp)
        self.T = np.r_[ tmp, [[0.0,0.0,0.0,1.0]] ]
-       self.P = np.c_[ self.R, -self.R @ self.p ]
+       self.P = np.c_[ self.R.T, -self.R.T @ self.p ]
        self.P = self.K @ self.P
        #print(self.P)
        

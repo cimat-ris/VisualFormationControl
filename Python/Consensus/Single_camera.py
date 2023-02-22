@@ -63,7 +63,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     if depthOp ==1:
         #print(P)
         #   TODO creo que esto está mal calculado
-        M = np.c_[ agent.camera.R, -agent.camera.R @ agent.camera.p ]
+        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
         Z = M @ P
         #print(Z)
         Z = Z[2,:]
@@ -536,7 +536,7 @@ def experiment_localmin():
 def main():
     
     p0=np.array([1.,1.,2.,np.pi,0.,0.])
-    p0=np.array([1.,1.,2.,np.pi,1.,1.])
+    p0=np.array([1.,1.,2.,np.pi+0.5,0.5,1.])
     experiment(directory='0',
                 lamb = 1.,
                 gdl = 1,

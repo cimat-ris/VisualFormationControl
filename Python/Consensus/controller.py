@@ -214,7 +214,7 @@ class agent:
         
         ##   Traslation
         ##   ## TODO transpuesta?
-        _U[:3] =  self.camera.R.T @ U[:3]
+        _U[:3] =  self.camera.R @ U[:3]
         #_U[:3] =  -np.diag([-1.,1.,1.]) @ U[:3]
         p[:3] = self.camera.p + dt* _U[:3]
         
@@ -228,9 +228,9 @@ class agent:
             ##print(self.error)
             ##print()
         ##   Rotation
-        kw = -1
+        kw = 1
         ##kw = 1.
-        new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
+        new_R = self.camera.R @ cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') #@ self.camera.R
         [p[3] , p[4], p[5] ] = get_angles(new_R)
         #p[3] = self.camera.roll #+ kw * dt * U[3]
         #p[4] = self.camera.pitch - kw * dt * U[4]

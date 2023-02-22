@@ -61,6 +61,7 @@ def get_angles(R):
 def Inv_Moore_Penrose(L):
     #if L.shape[1] ==6:
         #return inv(L)
+    #return inv(L)
     A = L.T@L
     #if np.linalg.det(A) < 1.0e-18:
         #return None
@@ -69,22 +70,37 @@ def Inv_Moore_Penrose(L):
     return inv(A) @ L.T
 
 def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
+    #return np.array([0.,0.,0.,0.,0.,np.pi/10,]), np.array([0.,0.,0.,0.,0.,0.])
+    #if any (Z < 0.):
+        #print("Negative depths")
+        #print("")
+        #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
+    
     if control_sel ==1:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
         Ls = Inv_Moore_Penrose(Ls) 
+        #Ls = np.linalg.pinv(Ls) 
     elif control_sel ==2:
         Ls = inv_Ls_set
     elif control_sel ==3:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
         Ls = Inv_Moore_Penrose(Ls) 
+        #Ls = np.linalg.pinv(Ls) 
         Ls = 0.5*( Ls +inv_Ls_set)
     if Ls is None:
             print("Invalid Ls matrix")
             return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
     #   BEGIN L range test
     u, s, vh  = np.linalg.svd(Ls)
+    #if (s[0] < 1000):
+        #print(Interaction_Matrix(s_current_n,Z,gdl))
+    #if(s[0] > 1000):
+        #print("PVAL > 1000")
+        #print(Interaction_Matrix(s_current_n,Z,gdl))
+        #print(s)
+        #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
     #print(s)
     #   END L range test
     if gdl == 2:
@@ -93,9 +109,11 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     if gdl == 3:
         _comp = np.zeros((3,Ls.shape[1]))
         Ls = np.r_[Ls[:3],_comp]
+    #print(Ls)
+    #print(error)
     U = (Ls @ error) / deg
     
-    return  U, s
+    return  U.reshape(6), s
 
 def get_Homographies(agents):
     n = len(agents)
@@ -185,25 +203,39 @@ class agent:
         #print(Ls)
         self.inv_Ls_set = Inv_Moore_Penrose(self.Ls_set) 
         
-    def update(self,U,dt, points):
+    def update(self,U,dt, points,Z):
         
         #   TODO: reconfigurar con momtijano
         #p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
-        #p += dt*np.array([-1.,1.,1.,1.,1.,1.])*U
-        
+        #p += -dt*np.array([-1.,1.,1.,1.,1.,1.])*U
+        #print(U)
         _U = U.copy()
         p = np.zeros(6)
         
         ##   Traslation
+        ##   ## TODO transpuesta?
         _U[:3] =  self.camera.R.T @ U[:3]
-        p[:3] = self.camera.p - dt* _U[:3]
+        #_U[:3] =  -np.diag([-1.,1.,1.]) @ U[:3]
+        p[:3] = self.camera.p + dt* _U[:3]
         
-        #   Rotation
-        kw = 1.
-        new_R = cm.rot(kw*dt*U[3],'x') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[5],'z') @ self.camera.R
+        ##if (np.linalg.norm(dt* _U[:3])> 0.5):
+            ##print(self.s_current_n)
+            ##L=Interaction_Matrix(self.s_current_n,Z,1)
+            ##print(L)
+            ##L=Inv_Moore_Penrose(L)
+            ##print(L)
+            ##print(np.linalg.svd(L))
+            ##print(self.error)
+            ##print()
+        ##   Rotation
+        kw = -1
+        ##kw = 1.
+        new_R = cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') @ self.camera.R
         [p[3] , p[4], p[5] ] = get_angles(new_R)
-        
-        
+        #p[3] = self.camera.roll #+ kw * dt * U[3]
+        #p[4] = self.camera.pitch - kw * dt * U[4]
+        #p[5] = self.camera.yaw# - kw * dt * U[5]
+        #print(U)
         self.camera.pose(p) 
         
         self.s_current = self.camera.project(points)

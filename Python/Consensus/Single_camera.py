@@ -31,21 +31,7 @@ import initial_params as ip
 import controller as ctr
 import myplots as mp
 
-def ReadF(filename):
-    
-    listWords = []
-    try:
-        f =  open(filename)
-    except:
-        return None
-    
-    for line in f:
-        tmp = line.rstrip()
-        tmp = tmp.split(" ")
-        tmp = [eval(i) for i in tmp]
-        listWords.append( tmp )
-    f.close()
-    return listWords
+
 
 def plot_3Dcam(ax, camera,
                positionArray,
@@ -110,87 +96,6 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     return Z
 
 
-#   Error if state calculation
-#   It assumes that the states in the array are ordered and are the same
-#   regresa un error de traslación y orientación
-def error_state(reference,  agents,colors, name):
-    
-    n = reference.shape[1]
-    state = np.zeros((6,n))
-    for i in range(len(agents)):
-        state[:3,i] = agents[i].camera.p
-        state[3,i] = agents[i].camera.roll
-        state[4,i] = agents[i].camera.pitch
-        state[5,i] = agents[i].camera.yaw
-    
-    #   Obten centroide
-    centroide_ref = reference[:3,:].sum(axis=1)/n
-    centroide_state = state.sum(axis=1)/n
-    
-    #   Centrar elementos
-    new_reference = reference.copy()
-    #new_reference[:3,:] = new_reference[:3,:] - centroide_ref
-    new_reference[0] -= centroide_ref[0]
-    new_reference[1] -= centroide_ref[1]
-    new_reference[2] -= centroide_ref[2]
-    new_state = state.copy()
-    #new_state[:3,:] = new_state[:3,:] - centroide_state
-    new_state[0] -= centroide_state[0]
-    new_state[1] -= centroide_state[1]
-    new_state[2] -= centroide_state[2]
-    
-    #   Aplicar rotación promedio
-    theta = np.arctan2(new_reference[1,:],new_reference[0,:])
-    theta -= np.arctan2(new_state[1,:],new_state[0,:])
-    theta = theta.mean()
-    #theta  = 0.
-    
-    ca = cos(theta)
-    sa = sin(theta)
-    R = np.array([[ ca, -sa],
-                  [ sa,  ca]])
-    new_state[:2,:] = R@new_state[:2,:]
-    
-    #       Updtate normalized and oriented agents
-    for i in range(len(agents)):
-        #new_p = np.r_[new_state[:,i] ,agents[i].camera.roll,agents[i].camera.pitch,agents[i].camera.yaw + theta]
-        #agents[i].camera.pose(new_p)
-        new_state[5,i] += theta
-        agents[i].camera.pose(new_state[:,i])
-        
-    #   normalizar referencia
-    new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis=0).mean()
-    
-    #   Aplicar minimización de radio (como lidiar con mínimos múltiples)
-    f = lambda r : (np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
-    r_state = minimize_scalar(f, method='brent')
-    t_err = f(r_state.x)
-    
-    #   Plot
-    
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    new_state[:3,:] *= r_state.x
-    for i in range(n):
-        agents[i].camera.pose(new_state[:,i])
-        agents[i].camera.draw_camera(ax, scale=0.2, color='red')
-        agents[i].camera.pose(new_reference[:,i])
-        agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
-    plt.savefig(name+'.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
-    
-    #   TODO: Obtencion de error de rotación
-    rot_err = np.zeros(n)
-    for i in range(n):
-        _R =  cm.rot(new_state[3,i],'x') @ agents[i].camera.R.T
-        _R = cm.rot(new_state[4,i],'y') @ _R
-        _R = cm.rot(new_state[5,i],'z') @ _R
-        rot_err = np.arccos((_R.trace()-1.)/2.)
-    rot_err = rot_err**2
-    rot_err = rot_err.sum()/n
-    
-    return [t_err, rot_err]
     
     
 def experiment(directory = "0",
@@ -204,20 +109,15 @@ def experiment(directory = "0",
                t_end = 10.0,
                zOffset = 0.0,
                case_interactionM = 1,
+               p0 = np.array([0.,0.,1.,np.pi,0.,0.]),
+               pd = np.array([0.,0.,1.,np.pi,0.,0.]),
+               nameTag = "",
                tanhLimit = False):
     
     #   Data
     P = np.array(ip.P)      #   Scene points
     n_points = P.shape[1] #Number of image points
     P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
-    
-    p0 = np.array(ip.p0)    #   init positions
-    #p0[:3,:] = cm.rot(np.pi/8.,'x') @ p0[:3,:]
-    #p0[3,:] += 0.15
-    p0[2,:] = p0[2,:]+zOffset
-    n_agents = p0.shape[1] #Number of agents
-    
-    pd = ip.circle(n_agents,1.0,h)  #   Desired pose in a circle
     
     
     #   Parameters
@@ -249,38 +149,11 @@ def experiment(directory = "0",
                              2:"4 Degrees of freedom",
                              3:"3 Degrees of freedom"}
     
-    #   Read more data
     
-    name = 'data/ad_mat_'+str(n_agents)
-    if directed:
-        name += 'd_'
-    else:
-        name += 'u_'
-    name += str(case_n)+'.dat'
-    A_ad = ReadF(name)
-    if A_ad is None:
-        print('File ',name,' does not exist')
-        return
-    
-    G = gr.graph(A_ad, directed)
-    #G.plot()
-    L = G.laplacian()
-    
-    #   Conectivity graph
-    G.plot()
-    
-    
-    [U,S,V]=svd(L)
-    lam_n=S[0]
-    lam_2=S[-2]
-    alpha=2./(lam_n+lam_2)
-    A_ds=np.eye(n_agents)-alpha*L
     
     #   Agents array
-    agents = []
-    for i in range(n_agents):
-        cam = cm.camera()
-        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P))
+    cam = cm.camera()
+    agent = ctr.agent(cam,pd,p0,P)
         
     #   INIT LOOP
     
@@ -289,50 +162,42 @@ def experiment(directory = "0",
     
     #   case selections
     if case_interactionM > 1:
-        for i in range(n_agents):
-            #   Depth calculation
-            Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,i)
-            if Z is None:
-                return
-            agents[i].set_interactionMat(Z,gdl)
+        #   Depth calculation
+        Z = Z_select(depthOp, agent, P,Z_set,p0,pd,i)
+        if Z is None:
+            return
+        agent.set_interactionMat(Z,gdl)
     
-    if control_type == 2:
-        delta_pref = np.zeros((n_agents,n_agents,6,1))
-        for i in range(n_agents):
-            for j in range(n_agents):
-                delta_pref[i,j,:,0] = pd[:,j]-pd[:,i]
-        gamma =  p0[2,:]
+    #if control_type == 2:
+        #delta_pref = np.zeros((n_agents,n_agents,6,1))
+        #for i in range(n_agents):
+            #for j in range(n_agents):
+                #delta_pref[i,j,:,0] = pd[:,j]-pd[:,i]
+        #gamma =  p0[2,:]
     
     #   Storage variables
     t_array = np.arange(t,t_end+dt,dt)
-    err_array = np.zeros((n_agents,2*n_points,steps))
-    U_array = np.zeros((n_agents,6,steps))
-    desc_arr = np.zeros((n_agents,2*n_points,steps))
-    pos_arr = np.zeros((n_agents,3,steps))
+    steps = t_array.shape[0]
+    err_array = np.zeros((1,2*n_points,steps))
+    U_array = np.zeros((1,6,steps))
+    desc_arr = np.zeros((1,2*n_points,steps))
+    pos_arr = np.zeros((1,3,steps))
     if gdl == 1:
-        s_store = np.zeros((n_agents,6,steps))
+        s_store = np.zeros((1,6,steps))
     elif gdl == 2:
-        s_store = np.zeros((n_agents,4,steps))
+        s_store = np.zeros((1,4,steps))
     elif gdl == 3:
-        s_store = np.zeros((n_agents,3,steps))
+        s_store = np.zeros((1,3,steps))
     
     #   Print simulation data:
     print("------------------BEGIN-----------------")
-    print("Laplacian selection = "+name)
-    print("Is directed = "+str(directed))
-    print("Laplacian matrix: ")
-    print(L)
-    print(A_ds)
-    print("Reference states")
+    print("Reference state")
     print(pd)
-    print("Initial states")
+    print("Initial state")
     print(p0)
     print("Scene points")
     print(P[:3,:])
     print("Number of points = "+str(n_points))
-    print("Number of agents = "+str(n_agents))
-    if zOffset != 0.0:
-        print("Z offset for starting conditions = "+str(zOffset))
     print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
     print("Control lambda = "+str(lamb))
     print("Depth estimation = "+depthOp_dict[depthOp])
@@ -341,6 +206,7 @@ def experiment(directory = "0",
     print("Interaction matrix = "+case_interactionM_dict[case_interactionM])
     print("Control selection = "+control_type_dict[control_type])
     print("Controllable case = "+case_controlable_dict[gdl])
+    print("Total steps = "+str(steps))
     
     #   LOOP
     for i in range(steps):
@@ -348,109 +214,100 @@ def experiment(directory = "0",
         print("loop",i, end="\r")
         
         #   Error:
-        
-        error = np.zeros((n_agents,2*n_points))
-        for j in range(n_agents):
-            error[j,:] = agents[j].error
-        error = -L @ error
+        error = agent.error.copy().reshape(2*n_points)
         
         #   save data
         #print(error)
-        err_array[:,:,i] = error
+        err_array[0,:,i] = error
         
         
         ####   Image based formation
-        if control_type ==2:
-            H = ctr.get_Homographies(agents)
+        #if control_type ==2:
+            #H = ctr.get_Homographies(agents)
         #   Get control
-        for j in range(n_agents):
-            
-            #   save data 
-            desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
-            pos_arr[j,:,i] = agents[j].camera.p
-            
-            #   Depth calculation
-            Z = Z_select(depthOp, agents[j], P,Z_set,p0,pd,j)
-            if Z is None:
-                return
-            
-            #   Control
-            if control_type == 1:
-                args = {"deg":G.deg[j] , 
-                        "control_sel":case_interactionM,
-                        "error": error[j,:],
-                        "gdl":gdl}
-            elif control_type == 2:
-                args = {"H" : H[j,:,:,:],
-                        "delta_pref" : delta_pref[j,:,:,:],
-                        "Adj_list":G.list_adjacency[j][0],
-                        "gamma": gamma[j]}
-            else:
-                print("invalid control selection")
-                return
-            
-            #s = None
-            U,s  = agents[j].get_control(control_type,lamb,Z,args)
-            s_store[j,:,i] = s
-            if tanhLimit:
-                U = 0.3*np.tanh(U)
-                #U[:3] = 0.5*np.tanh(U[:3])
-                #U[3:] = 0.3*np.tanh(U[3:])
-            #print(s)
-            #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
-            #U_sel = abs(U[3:]) > 0.2
-            #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
-            
-            if U is None:
-                print("Invalid U control")
-                break
-            
-            
-            U_array[j,:,i] = U
-            agents[j].update(U,dt,P, Z)
-            
         
+        
+        #   save data 
+        desc_arr[0,:,i] = agent.s_current.T.reshape(2*n_points)
+        pos_arr[0,:,i] = agent.camera.p
+        
+        #   Depth calculation
+        Z = Z_select(depthOp, agent, P,Z_set,p0,pd,0)
+        if Z is None:
+            return
+        
+        #   Control
+        if control_type == 1:
+            args = {"deg":1 , 
+                    "control_sel":case_interactionM,
+                    "error": error,
+                    "gdl":gdl}
+        #elif control_type == 2:
+            #args = {"H" : H[j,:,:,:],
+                    #"delta_pref" : delta_pref[j,:,:,:],
+                    #"Adj_list":G.list_adjacency[j][0],
+                    #"gamma": gamma[j]}
+        else:
+            print("invalid control selection")
+            return
+        
+        #s = None
+        U,s  = agent.get_control(control_type,lamb,Z,args)
+        s_store[0,:,i] = s
+        if tanhLimit:
+            U = 0.3*np.tanh(U)
+            #U[:3] = 0.5*np.tanh(U[:3])
+            #U[3:] = 0.3*np.tanh(U[3:])
+        #print(s)
+        #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
+        #U_sel = abs(U[3:]) > 0.2
+        #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
+        
+        if U is None:
+            print("Invalid U control")
+            break
+        
+        
+        U_array[0,:,i] = U
+        agent.update(U,dt,P, Z)
+        
+    
         #   Update
         t += dt
-        if control_type ==2:
-            gamma = A_ds @ gamma #/ 10.0
+        #if control_type ==2:
+            #gamma = A_ds @ gamma #/ 10.0
         
     
     ##  Final data
     
     print("----------------------")
     print("Simulation final data")
-    ret_err = np.zeros(n_agents)
     
-    for j in range(n_agents):
-        ret_err[j]=np.linalg.norm(error[j,:])
-        print(error[j,:])
-        print("|Error_"+str(j)+"|= "+str(ret_err[j]))
-    for j in range(n_agents):
-        print("X_"+str(j)+" = "+str(agents[j].camera.p))
-    for j in range(n_agents):
-        print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
-              ", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
+    ret_err=np.linalg.norm(error)
+    print(error)
+    print("|Error|= "+str(ret_err))
+    print("X = "+str(agent.camera.p))
+    print("Angles = "+str(agent.camera.roll)+
+            ", "+str(agent.camera.pitch)+", "+str(agent.camera.yaw))
     
     
     ####   Plot
     # Colors setup
     
     #        RANDOM X_i
-    colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
+    colors = (randint(0,255,3*2*n_points)/255.0).reshape((2*n_points,3))
     
-    new_agents = []
-    for i in range(n_agents):
-        cam = cm.camera()
-        end_position = np.r_[agents[i].camera.p,agents[i].camera.roll, agents[i].camera.pitch, agents[i].camera.yaw]
-        new_agents.append(ctr.agent(cam,pd[:,i],end_position,P))
-    state_err = error_state(pd,new_agents,colors,directory+"/3D_error")
-    print("State error = "+str(state_err))
+    #cam = cm.camera()
+    #end_position = np.r_[agent.camera.p,agent.camera.roll, agent.camera.pitch, agent.camera.yaw]
+    #new_agent = ctr.agent(cam,pd,end_position,P)
+    #state_err = error_state(pd,new_agent,colors,directory+"/3D_error")
+    #print("State error = "+str(state_err))
     print("-------------------END------------------")
     print()
     
     
-    
+    pd = pd.reshape((6,1))
+    p0 = p0.reshape((6,1))
     #   Camera positions (init, end, ref) 
     lfact = 1.1
     mp.plot_position(pos_arr,
@@ -466,69 +323,64 @@ def experiment(directory = "0",
     name = directory+"/3Dplot"
     #fig.suptitle(label)
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
-    for i in range(n_agents):
-        #agents[i].count_points_in_FOV(P)
-        plot_3Dcam(ax, agents[i].camera,
-                pos_arr[i,:,:],
-                p0[:,i],
-                pd[:,i],
-                color = colors[i],
-                camera_scale    = 0.02)
+    #agents[i].count_points_in_FOV(P)
+    plot_3Dcam(ax, agent.camera,
+            pos_arr[0,:,:],
+            p0[:,0],
+            pd[:,0],
+            color = colors[0],
+            camera_scale    = 0.02)
     plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.show()
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
-    for i in range(n_agents):
-        print("Agent: "+str(i))
-        L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
-        A = L.T@L
-        if np.linalg.det(A) != 0:
-            print("Matriz de interacción (L): ")
-            print(L)
-            L = inv(A) @ L.T
-            print("Matriz de interacción pseudoinversa (L+): ")
-            print(L)
-            print("Error de consenso final (e): ")
-            print(error[i,:])
-            print("velocidades resultantes (L+ @ e): ")
-            print(L@error[i,:])
-            print("Valores singulares al final (s = SVD(L+)): ")
-            print(s_store[i,:,-1])
-        mp.plot_descriptors(desc_arr[i,:,:],
-                            agents[i].camera.iMsize,
-                            agents[i].s_ref,
-                            colors,
-                            name = directory+"/Image_Features_"+str(i),
-                            label = "Image Features")
+    print("Agent: "+nameTag)
+    L = ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
+    A = L.T@L
+    if np.linalg.det(A) != 0:
+        print("Matriz de interacción (L): ")
+        print(L)
+        L = inv(A) @ L.T
+        print("Matriz de interacción pseudoinversa (L+): ")
+        print(L)
+        print("Error de consenso final (e): ")
+        print(error)
+        print("velocidades resultantes (L+ @ e): ")
+        print(L@error)
+        print("Valores singulares al final (s = SVD(L+)): ")
+        print(s_store[0,:,-1])
+    mp.plot_descriptors(desc_arr[0,:,:],
+                        agent.camera.iMsize,
+                        agent.s_ref,
+                        colors,
+                        name = directory+"/Image_Features_"+nameTag,
+                        label = "Image Features")
     
     #   Errores 
-    for i in range(n_agents):
-        mp.plot_time(t_array,
-                    err_array[i,:,:],
-                    colors,
-                    name = directory+"/Features_Error_"+str(i),
-                    label = "Features Error")
+    mp.plot_time(t_array,
+                err_array[0,:,:],
+                colors,
+                name = directory+"/Features_Error_"+nameTag,
+                label = "Features Error")
     
     #   Velocidaes x agente
-    for i in range(n_agents):
-        mp.plot_time(t_array,
-                    U_array[i,:,:],
-                    colors,
-                    name = directory+"/Velocidades_"+str(i),
-                    label = "Velocidades",
-                    labels = ["X","Y","Z","Wx","Wy","Wz"])
+    mp.plot_time(t_array,
+                U_array[0,:,:],
+                colors,
+                name = directory+"/Velocidades_"+nameTag,
+                label = "Velocidades",
+                labels = ["X","Y","Z","Wx","Wy","Wz"])
     
     #   Valores propios
-    for i in range(n_agents):
-        mp.plot_time(t_array,
-                    s_store[i,:,:],
-                    colors,
-                    name = directory+"/ValoresP_"+str(i),
-                    label = "Valores propios (SVD)",
-                    labels = ["0","1","2","3","4","5"])
-                    #limits = [[t_array[0],t_array[-1]],[0,20]])
-    return [ret_err, state_err[0],state_err[1]]
+    mp.plot_time(t_array,
+                s_store[0,:,:],
+                colors,
+                name = directory+"/ValoresP_"+nameTag,
+                label = "Valores propios (SVD)",
+                labels = ["0","1","2","3","4","5"])
+                #limits = [[t_array[0],t_array[-1]],[0,20]])
+    return ret_err
 
 def experiment_height():
     
@@ -683,15 +535,18 @@ def experiment_localmin():
     
 def main():
     
+    p0=np.array([1.,1.,2.,np.pi,0.,0.])
+    p0=np.array([1.,1.,2.,np.pi,1.,1.])
     experiment(directory='0',
                 lamb = 1.,
                 gdl = 1,
-                zOffset = 0.6,
+                #zOffset = 0.6,
                 h = 1. ,
+                p0 = p0,
                 #tanhLimit = True,
-                #depthOp = 4, Z_set=2.,
-                depthOp = 6,
-                t_end = 20)
+                #depthOp = 4, Z_set=1.,
+                #depthOp = 6,
+                t_end = 10.)
     return
     
     #   Caso minimo local e != 0 

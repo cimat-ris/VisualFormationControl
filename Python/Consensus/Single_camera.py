@@ -38,12 +38,14 @@ def plot_3Dcam(ax, camera,
                init_configuration,
                desired_configuration,
                color,
+               label = "0",
                camera_scale    = 0.02):
     
     #ax.plot(positionArray[0,:],
     ax.scatter(positionArray[0,:],
             positionArray[1,:],
             positionArray[2,:],
+            label = label,
             color = color) # Plot camera trajectory
     
     camera.draw_camera(ax, scale=camera_scale, color='red')
@@ -252,16 +254,31 @@ def experiment(directory = "0",
             return
         
         #s = None
-        U,u,s,vh  = agent.get_control(control_type,lamb,Z,args)
-        s_store[0,:,i] = s
-        if tanhLimit:
-            U = 0.3*np.tanh(U)
-            #U[:3] = 0.5*np.tanh(U[:3])
-            #U[3:] = 0.3*np.tanh(U[3:])
-        #print(s)
-        #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
-        #U_sel = abs(U[3:]) > 0.2
-        #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
+        Z_test =  Z_select(1, agent, P,Z_set,p0,pd,0)
+        if (any(Z_test) < 0.):
+            print("Image plane Colision")
+            U = np.zeros(6)
+        else:
+            U,u,s,vh  = agent.get_control(control_type,lamb,Z,args)
+            
+            s_store[0,:,i] = s
+            if tanhLimit:
+                U = 0.3*np.tanh(U)
+                #U[:3] = 0.5*np.tanh(U[:3])
+                #U[3:] = 0.3*np.tanh(U[3:])
+            #print(s)
+            #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
+            #U_sel = abs(U[3:]) > 0.2
+            #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
+            
+            if any(abs(U) > 5.):
+                print("U = ",U)
+                print("p = ",agent.camera.p)
+                print("(u,v) pix = ",agent.s_current)
+                print("(u,v) nrom = ",agent.s_current_n)
+                L=ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
+                print("L = ",L)
+                print("L = ",np.linalg.pinv(L))
         
         if U is None:
             print("Invalid U control")
@@ -279,6 +296,7 @@ def experiment(directory = "0",
         
     
     ##  Final data
+    pf = np.r_[agent.camera.p.T , agent.camera.roll, agent.camera.pitch, agent.camera.yaw]
     
     print("----------------------")
     print("Simulation final data")
@@ -335,21 +353,21 @@ def experiment(directory = "0",
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
-    print("Agent: "+nameTag)
-    L = ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
-    A = L.T@L
-    if np.linalg.det(A) != 0:
-        print("Matriz de interacción (L): ")
-        print(L)
-        L = inv(A) @ L.T
-        print("Matriz de interacción pseudoinversa (L+): ")
-        print(L)
-        print("Error de consenso final (e): ")
-        print(error)
-        print("velocidades resultantes (L+ @ e): ")
-        print(L@error)
-        print("Valores singulares al final (s = SVD(L+)): ")
-        print(s_store[0,:,-1])
+    #print("Agent: "+nameTag)
+    #L = ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
+    #A = L.T@L
+    #if np.linalg.det(A) != 0:
+        #print("Matriz de interacción (L): ")
+        #print(L)
+        #L = inv(A) @ L.T
+        #print("Matriz de interacción pseudoinversa (L+): ")
+        #print(L)
+        #print("Error de consenso final (e): ")
+        #print(error)
+        #print("velocidades resultantes (L+ @ e): ")
+        #print(L@error)
+        #print("Valores singulares al final (s = SVD(L+)): ")
+        #print(s_store[0,:,-1])
     mp.plot_descriptors(desc_arr[0,:,:],
                         agent.camera.iMsize,
                         agent.s_ref,
@@ -380,6 +398,8 @@ def experiment(directory = "0",
                 label = "Valores propios (SVD)",
                 labels = ["0","1","2","3","4","5"])
                 #limits = [[t_array[0],t_array[-1]],[0,20]])
+    
+    agent.camera.pose(pf)
     return ret_err, pos_arr[0,:,:], agent.camera
 
 def experiment_height():
@@ -532,16 +552,16 @@ def experiment_localmin():
                    zOffset = -.2 ,
                    t_end = t)
 
-def experiment_mesh(x,y,z):
+def experiment_mesh(x,y,z,pd):
     _x, _y = np.meshgrid(x,y)
     n = _x.size
     
-    pd = np.array([0.,0.,1.,np.pi,0.,0.])
+    #pd = np.array([0.,0.,2.,np.pi,0.,0.])
     p0 = np.array([_x.reshape(n),
                      _y.reshape(n),
                      z*np.ones(n),
                      np.pi*np.ones(n),
-                     np.zeros(n),
+                     0.1*np.ones(n),
                      np.zeros(n)])
     #n = mesh.shape[1]
     print("testing ",n," repeats")
@@ -551,16 +571,14 @@ def experiment_mesh(x,y,z):
     cam_arr = []
     for i in range( n):
         err, _pos_arr, _cam = experiment(directory=str(i),
-                                lamb = 1.,
+                                lamb = 1,
                                 gdl = 1,
-                                #zOffset = 0.6,
-                                h = 1. ,
                                 pd = pd,
                                 p0 = p0[:,i],
                                 #tanhLimit = True,
-                                #depthOp = 4, Z_set=1.,
+                                #depthOp = 4, Z_set=10.,
                                 #depthOp = 6,
-                                t_end = 10.)
+                                t_end =20.)
         pos_arr.append(_pos_arr)
         cam_arr.append(_cam)
     
@@ -582,17 +600,23 @@ def experiment_mesh(x,y,z):
                 pos_arr[i],
                 p0[:,i],
                 pd,
-                color = colors[0],
+                color = colors[i],
+                label = str(i),
                 camera_scale    = 0.02)
+    ax.set_xlim(-1,1)
+    ax.set_ylim(-1,1)
+    ax.set_zlim(0,3)
+    fig.legend( loc=2)
     plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.show()
     plt.close()
     
 def main():
     
-    x = np.linspace(-1,1,2)
-    y = np.linspace(-1,1,2)
-    experiment_mesh(x,y,z=2)
+    x = np.linspace(-1,1,5)
+    y = np.linspace(-1,1,5)
+    pd = np.array([0.,0.,1.,np.pi,0.,0.])
+    experiment_mesh(x,y,z=3, pd = pd)
     return
     
     p0=np.array([1.,1.,2.,np.pi,0.,0.])

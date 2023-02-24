@@ -5,7 +5,6 @@ import camera as cm
  
 import cv2 
 
-
 def Interaction_Matrix(points,Z,gdl):
     
     n = points.shape[1]
@@ -106,11 +105,14 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     #print(s)
     #   END L range test
     if gdl == 2:
-        _comp = np.zeros((2,Ls.shape[1]))
-        Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
+        Ls = np.insert(Ls, 3, 0., axis = 0)
+        Ls = np.insert(Ls, 4, 0., axis = 0)
+        #_comp = np.zeros((2,Ls.shape[1]))
+        #Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
     if gdl == 3:
-        _comp = np.zeros((3,Ls.shape[1]))
-        Ls = np.r_[Ls[:3],_comp]
+        np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
+        #_comp = np.zeros((3,Ls.shape[1]))
+        #Ls = np.r_[Ls[:3],_comp]
     #print(Ls)
     #print(error)
     U = (Ls @ error) / deg
@@ -154,12 +156,14 @@ def Homography(H, delta_pref,adj_list,gamma):
 
 class agent:
     
-    def __init__(self,camera,p_obj,p_current,points ):
+    def __init__(self,camera,p_obj,p_current,points,set_consensoRef = True ):
         
         self.n_points = points.shape[1]
         #self.deg = deg
         
         self.camera = camera
+        
+        self.set_consensoRef = set_consensoRef 
         
         self.camera.pose(p_obj)
         self.s_ref = self.camera.project(points)
@@ -169,7 +173,11 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.error =  self.s_current_n - self.s_ref_n
+        if self.set_consensoRef:
+            self.error =  self.s_current_n - self.s_ref_n
+        else:
+            self.error =  self.s_current_n
+        
         self.error = self.error.T.reshape((1,2*self.n_points))
         
         self.Ls_set = None
@@ -209,7 +217,7 @@ class agent:
         
         #   TODO: reconfigurar con momtijano
         #p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
-        #p += -dt*np.array([-1.,1.,1.,1.,1.,1.])*U
+        #p += dt*np.array([-1.,1.,1.,1.,1.,1.])*U
         #print(U)
         _U = U.copy()
         p = np.zeros(6)
@@ -243,7 +251,11 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.error =  self.s_current_n  - self.s_ref_n
+        if self.set_consensoRef:
+            self.error =  self.s_current_n - self.s_ref_n
+        else:
+            self.error =  self.s_current_n
+        
         #print(self.error)
         self.error = self.error.T.reshape((1,2*self.n_points))
         #print(self.error)

@@ -196,6 +196,7 @@ def error_state(reference,  agents,colors, name):
     
 def experiment(directory = "0",
                h  = 2.0,
+               r = 1.0,
                lamb = 1.0,
                depthOp=1,
                Z_set = 1.0,
@@ -205,6 +206,10 @@ def experiment(directory = "0",
                t_end = 10.0,
                zOffset = 0.0,
                case_interactionM = 1,
+               p0 = None,
+               pd = None,
+               set_consensoRef = True,
+               atTarget = False,
                tanhLimit = False):
     
     #   Data
@@ -212,14 +217,21 @@ def experiment(directory = "0",
     n_points = P.shape[1] #Number of image points
     P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
     
-    p0 = np.array(ip.p0)    #   init positions
-    #p0[:3,:] = cm.rot(np.pi/8.,'x') @ p0[:3,:]
-    #p0[3,:] += 0.15
-    p0[2,:] = p0[2,:]+zOffset
+    #   Posiciones de inicio
+    if p0 is None:
+        p0 = np.array(ip.p0)    
+        p0[2,:] = p0[2,:]+zOffset
     n_agents = p0.shape[1] #Number of agents
     
-    pd = ip.circle(n_agents,1.0,h)  #   Desired pose in a circle
+    if pd is None:
+        pd = ip.circle(n_agents,r,h)  #   Desired pose in a circle
     
+    if atTarget:
+        p0[:3,:] = pd[:3,:]
+    
+    if pd.shape != p0.shape:
+        print("Error: Init and reference position missmatch")
+        return 
     
     #   Parameters
     
@@ -281,7 +293,7 @@ def experiment(directory = "0",
     agents = []
     for i in range(n_agents):
         cam = cm.camera()
-        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P))
+        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,set_consensoRef = set_consensoRef))
         
     #   INIT LOOP
     
@@ -420,8 +432,8 @@ def experiment(directory = "0",
                 print("Posicion  ",agents[j].camera.p)
                 print("error  ",error[j,:])
                 print("Vector propio 0  ",u[:,0])
-                print("Prod int u,err ",u.T@error[j,:]/np.linalg.norm(error[j,:]))
-                print("Prod int v,err ",vh@error[j,:]/np.linalg.norm(error[j,:]))
+                #print("Prod int u,err ",u.T@error[j,:]/np.linalg.norm(error[j,:]))
+                #print("Prod int v,err ",vh@error[j,:]/np.linalg.norm(error[j,:]))
                 print("U ",U)
                 print("---------------")
             
@@ -501,6 +513,12 @@ def experiment(directory = "0",
                 color = colors[i],
                 i = i,
                 camera_scale    = 0.02)
+    
+    f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
+    
+    ax.set_xlim(-f_size,f_size)
+    ax.set_ylim(-f_size,f_size)
+    ax.set_zlim(0,f_size*2)
     fig.legend( loc=2)
     plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.show()
@@ -714,11 +732,13 @@ def main():
     experiment(directory='0',
                 lamb = 1,
                 gdl = 1,
-                #zOffset = 0.6,
-                h = 1. ,
+                #zOffset = -0.4,
+                h = 1 ,
+                r = 1.,
                 #tanhLimit = True,
                 #depthOp = 4, Z_set=2.,
                 depthOp = 1,
+                atTarget = True,
                 t_end = 10)
     return
     

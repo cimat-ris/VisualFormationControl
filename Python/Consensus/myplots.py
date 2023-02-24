@@ -82,7 +82,7 @@ def plot_descriptors(descriptors_array,
                mlines.Line2D([0],[0],marker='^',color='k'),
                mlines.Line2D([0],[0],linestyle='-',color='k')]
     labels = ["Start","End","reference","trayectory"]
-    fig.legend(symbols,labels, loc=2)
+    fig.legend(symbols,labels, loc=1)
     
     plt.tight_layout()
     plt.savefig(name+'.pdf',bbox_inches='tight')

@@ -114,7 +114,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
 #   Error if state calculation
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
-def error_state(reference,  agents,colors, name):
+def error_state(reference,  agents, name):
     
     n = reference.shape[1]
     state = np.zeros((6,n))
@@ -190,6 +190,36 @@ def error_state(reference,  agents,colors, name):
         rot_err = np.arccos((_R.trace()-1.)/2.)
     rot_err = rot_err**2
     rot_err = rot_err.sum()/n
+    
+    return [t_err, rot_err]
+
+#   Difference between agents
+#   It assumes that the states in the array are ordered and are the same
+#   regresa un error de traslación y orientación
+def error_state_equal(  agents, name):
+    
+    n = len(agents)
+    state = np.zeros((6,n))
+    for i in range(n):
+        state[:3,i] = agents[i].camera.p
+        state[3,i] = agents[i].camera.roll
+        state[4,i] = agents[i].camera.pitch
+        state[5,i] = agents[i].camera.yaw
+    
+    reference = np.average(state,axis =1)
+    
+    t_err =  (np.linalg.norm(reference[:3].reshape((3,1)) - state[:3,:],axis = 0)**2).sum()/n
+    rot_err =  (np.linalg.norm(reference[3:].reshape((3,1)) - state[3:,:],axis = 0)**2).sum()/n
+    
+    #   Plot
+    
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    for i in range(n):
+        agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+    plt.savefig(name+'.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
     
     return [t_err, rot_err]
     
@@ -321,7 +351,7 @@ def experiment(directory = "0",
     err_array = np.zeros((n_agents,2*n_points,steps))
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
-    pos_arr = np.zeros((n_agents,3,steps))
+    pos_arr = np.zeros((n_agents,6,steps))
     if gdl == 1:
         s_store = np.zeros((n_agents,6,steps))
     elif gdl == 2:
@@ -380,7 +410,10 @@ def experiment(directory = "0",
             
             #   save data 
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
-            pos_arr[j,:,i] = agents[j].camera.p
+            pos_arr[j,:,i] = np.r_[agents[j].camera.p.T ,
+                                   agents[j].camera.roll,
+                                   agents[j].camera.pitch,
+                                   agents[j].camera.yaw]
             
             #   Depth calculation
             Z = Z_select(depthOp, agents[j], P,Z_set,p0,pd,j)
@@ -482,7 +515,11 @@ def experiment(directory = "0",
         cam = cm.camera()
         end_position = np.r_[agents[i].camera.p,agents[i].camera.roll, agents[i].camera.pitch, agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position,P))
-    state_err = error_state(pd,new_agents,colors,directory+"/3D_error")
+    if set_consensoRef:
+        state_err = error_state(pd,new_agents,directory+"/3D_error")
+    else:
+        state_err = error_state_equal(new_agents,directory+"/3D_error")
+        
     print("State error = "+str(state_err))
     print("-------------------END------------------")
     print()
@@ -514,33 +551,40 @@ def experiment(directory = "0",
                 i = i,
                 camera_scale    = 0.02)
     
-    f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
+    #f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
+    lfact = 1.1
+    x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
+    x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
+    y_min = lfact*min(p0[1,:].min(),pd[1,:].min())
+    y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
+    z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
     
-    ax.set_xlim(-f_size,f_size)
-    ax.set_ylim(-f_size,f_size)
-    ax.set_zlim(0,f_size*2)
-    fig.legend( loc=2)
+    ax.set_xlim(x_min,x_max)
+    ax.set_ylim(y_min,y_max)
+    ax.set_zlim(0,z_max)
+    
+    fig.legend( loc=1)
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    plt.show()
+    #plt.show()
     plt.close()
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
-        #print("Agent: "+str(i))
-        #L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
-        #A = L.T@L
-        #if np.linalg.det(A) != 0:
-            #print("Matriz de interacción (L): ")
-            #print(L)
-            #L = inv(A) @ L.T
-            #print("Matriz de interacción pseudoinversa (L+): ")
-            #print(L)
-            #print("Error de consenso final (e): ")
-            #print(error[i,:])
-            #print("velocidades resultantes (L+ @ e): ")
-            #print(L@error[i,:])
-            #print("Valores singulares al final (s = SVD(L+)): ")
-            #print(s_store[i,:,-1])
+        print("Agent: "+str(i))
+        L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
+        A = L.T@L
+        if np.linalg.det(A) != 0 and ret_err[i] > 1.e-2:
+            print("Matriz de interacción (L): ")
+            print(L)
+            L = inv(A) @ L.T
+            print("Matriz de interacción pseudoinversa (L+): ")
+            print(L)
+            print("Error de consenso final (e): ")
+            print(error[i,:])
+            print("velocidades resultantes (L+ @ e): ")
+            print(L@error[i,:])
+            print("Valores singulares al final (s = SVD(L+)): ")
+            print(s_store[i,:,-1])
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
@@ -564,6 +608,21 @@ def experiment(directory = "0",
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
+    
+    #   Posiciones x agente
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    pos_arr[i,:3,:],
+                    colors,
+                    name = directory+"/Traslaciones_"+str(i),
+                    label = "Traslaciones",
+                    labels = ["X","Y","Z"])
+        mp.plot_time(t_array,
+                    pos_arr[i,3:,:],
+                    colors,
+                    name = directory+"/Angulos_"+str(i),
+                    label = "Angulos",
+                    labels = ["Roll","Pitch","yaw"])
     
     #   Valores propios
     for i in range(n_agents):
@@ -725,21 +784,84 @@ def experiment_localmin():
                     gdl = 1,
                    zOffset = -.2 ,
                    t_end = t)
+
+def experiment_randomInit():
+    r = 0.8
+    n = 5
     
+    ref_arr = np.arange(n)
+    arr_error = np.zeros((2,4,n))
+    arr_epsilon = np.zeros((2,2,n))
+    for i in range(n):
+        p0=[[0.8,0.8,-0.8,-.8],
+            [-0.8,0.8,0.8,-0.8],
+        #p0=[[-0.8,0.8,0.8,-.8],
+            #[0.8,0.8,-0.8,-0.8],
+            #[1.4,0.8,1.2,1.6],
+            [1.2,1.2,1.2,1.2],
+            [np.pi,np.pi,np.pi,np.pi],
+            [0,0,0,0],
+            [0,0,0,0]]
+        
+        p0 = np.array(p0)
+        p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+        
+        ret = experiment(directory=str(i*2),
+                    h = 1 ,
+                    r = 1.,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set=2.,
+                    depthOp = 1,
+                    p0 = p0,
+                    t_end = 100)
+        
+        [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
+        
+        ret = experiment(directory=str(i*2+1),
+                    h = 1 ,
+                    r = 1.,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set=2.,
+                    depthOp = 1,
+                    p0 = p0,
+                    set_consensoRef = False,
+                    t_end = 10)
+        [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
+    #   Plot data
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Error de consenso")
+    #plt.ylim([-2.,2.])
+    
+    colors = (randint(0,255,3*2*4)/255.0).reshape((2*4,3))
+    for i in range(4):
+        ax.plot(ref_arr,arr_error[0,i,:] , color=colors[0])
+        ax.plot(ref_arr,arr_error[1,i,:] , color=colors[1])
+    
+    symbols = [mpatches.Patch(color=colors[0]),
+               mpatches.Patch(color=colors[1])]
+    fig.legend(symbols,["Ref*","No ref"], loc=1)
+    plt.yscale('logit')
+    plt.tight_layout()
+    plt.savefig('Consensus error.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado")
+    ax.plot(ref_arr,arr_epsilon[0,0,:], label = "Posición*", color = colors[0])
+    ax.plot(ref_arr,arr_epsilon[0,1,:], label = "Rotación*", color = colors[1])
+    ax.plot(ref_arr,arr_epsilon[1,0,:], label = "Posición", color = colors[2])
+    ax.plot(ref_arr,arr_epsilon[1,1,:], label = "Rotación", color = colors[3])
+    fig.legend( loc=1)
+    plt.tight_layout()
+    plt.savefig('Formation error.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
     
 def main():
     
-    experiment(directory='0',
-                lamb = 1,
-                gdl = 1,
-                #zOffset = -0.4,
-                h = 1 ,
-                r = 1.,
-                #tanhLimit = True,
-                #depthOp = 4, Z_set=2.,
-                depthOp = 1,
-                atTarget = True,
-                t_end = 10)
+    experiment_randomInit()
     return
     
     #   Caso minimo local e != 0 

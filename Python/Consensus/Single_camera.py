@@ -284,6 +284,8 @@ def experiment(directory = "0",
             print("Invalid U control")
             break
         
+        #   Test image in straigt line
+        #U = 0.2*(pd-np.r_[agent.camera.p.T,np.pi,np.zeros(2)])
         
         U_array[0,:,i] = U
         agent.update(U,dt,P, Z)
@@ -561,8 +563,8 @@ def experiment_mesh(x,y,z,pd):
                      _y.reshape(n),
                      z*np.ones(n),
                      np.pi*np.ones(n),
-                     0.1*np.ones(n),
-                     np.zeros(n)])
+                     0.*np.ones(n),
+                     .5*np.ones(n)])
     #n = mesh.shape[1]
     print("testing ",n," repeats")
     #i = 0
@@ -613,10 +615,10 @@ def experiment_mesh(x,y,z,pd):
     
 def main():
     
-    x = np.linspace(-1,1,5)
-    y = np.linspace(-1,1,5)
-    pd = np.array([0.,0.,1.,np.pi,0.,0.])
-    experiment_mesh(x,y,z=3, pd = pd)
+    x = np.linspace(-1,1,3)
+    y = np.linspace(-1,1,3)
+    pd = np.array([0.,0.,1,np.pi,0.,0.])
+    experiment_mesh(x,y,z=2, pd = pd)
     return
     
     p0=np.array([1.,1.,2.,np.pi,0.,0.])

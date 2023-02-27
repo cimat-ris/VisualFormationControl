@@ -787,16 +787,16 @@ def experiment_localmin():
 
 def experiment_randomInit():
     r = 0.8
-    n = 5
+    n = 2
     
     ref_arr = np.arange(n)
     arr_error = np.zeros((2,4,n))
     arr_epsilon = np.zeros((2,2,n))
     for i in range(n):
-        p0=[[0.8,0.8,-0.8,-.8],
-            [-0.8,0.8,0.8,-0.8],
-        #p0=[[-0.8,0.8,0.8,-.8],
-            #[0.8,0.8,-0.8,-0.8],
+        #p0=[[0.8,0.8,-0.8,-.8],
+            #[-0.8,0.8,0.8,-0.8],
+        p0=[[-0.8,0.8,0.8,-.8],
+            [0.8,0.8,-0.8,-0.8],
             #[1.4,0.8,1.2,1.6],
             [1.2,1.2,1.2,1.2],
             [np.pi,np.pi,np.pi,np.pi],
@@ -825,7 +825,7 @@ def experiment_randomInit():
                     depthOp = 1,
                     p0 = p0,
                     set_consensoRef = False,
-                    t_end = 10)
+                    t_end = 100)
         [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
     #   Plot data
     

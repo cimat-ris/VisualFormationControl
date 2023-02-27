@@ -174,11 +174,12 @@ class agent:
         self.s_current_n = self.camera.normalize(self.s_current)
         
         if self.set_consensoRef:
-            self.error =  self.s_current_n - self.s_ref_n
+            self.error_p =  self.s_current_n - self.s_ref_n
         else:
-            self.error =  self.s_current_n
-        
-        self.error = self.error.T.reshape((1,2*self.n_points))
+            self.error_p =  self.s_current_n
+        self.error_p = self.error_p.T.reshape((1,2*self.n_points))
+        self.error = self.error_p
+        self.error_int = np.zeros(self.error.shape)
         
         self.Ls_set = None
         self.inv_Ls_set = None
@@ -251,14 +252,18 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
+        self.error_int += self.error_p
+        
         if self.set_consensoRef:
-            self.error =  self.s_current_n - self.s_ref_n
+            self.error_p =  self.s_current_n - self.s_ref_n
         else:
-            self.error =  self.s_current_n
+            self.error_p =  self.s_current_n
         
         #print(self.error)
-        self.error = self.error.T.reshape((1,2*self.n_points))
+        self.error_p = self.error_p.T.reshape((1,2*self.n_points))
         #print(self.error)
+        self.error = self.error_p + 0.1 * dt *self.error_int 
+        
     def count_points_in_FOV(self,Z):
         xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)
         ylim = self.camera.rho[1]*self.camera.iMsize[1]/(2*self.camera.foco)

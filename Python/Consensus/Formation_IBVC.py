@@ -228,6 +228,7 @@ def experiment(directory = "0",
                h  = 2.0,
                r = 1.0,
                lamb = 1.0,
+               k_int = 0,
                depthOp=1,
                Z_set = 1.0,
                gdl = 1,
@@ -323,7 +324,9 @@ def experiment(directory = "0",
     agents = []
     for i in range(n_agents):
         cam = cm.camera()
-        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,set_consensoRef = set_consensoRef))
+        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,
+                                k_int = k_int,
+                                set_consensoRef = set_consensoRef))
         
     #   INIT LOOP
     
@@ -393,13 +396,16 @@ def experiment(directory = "0",
         #   Error:
         
         error = np.zeros((n_agents,2*n_points))
+        error_p = np.zeros((n_agents,2*n_points))
         for j in range(n_agents):
             error[j,:] = agents[j].error
+            error_p[j,:] = agents[j].error_p
         error = L @ error
+        error_p = L @ error_p
         
         #   save data
         #print(error)
-        err_array[:,:,i] = error
+        err_array[:,:,i] = error_p
         
         
         ####   Image based formation
@@ -785,62 +791,112 @@ def experiment_localmin():
                    zOffset = -.2 ,
                    t_end = t)
 
-def experiment_randomInit():
-    r = 0.8
-    n = 2
+def experiment_randomInit(justPlot = False,
+                          r = 0.8,
+                        n = 1,
+                        k_int = 0.1,
+                        t_f = 100):
     
-    ref_arr = np.arange(n)
-    arr_error = np.zeros((2,4,n))
-    arr_epsilon = np.zeros((2,2,n))
-    for i in range(n):
-        #p0=[[0.8,0.8,-0.8,-.8],
-            #[-0.8,0.8,0.8,-0.8],
-        p0=[[-0.8,0.8,0.8,-.8],
-            [0.8,0.8,-0.8,-0.8],
-            #[1.4,0.8,1.2,1.6],
-            [1.2,1.2,1.2,1.2],
-            [np.pi,np.pi,np.pi,np.pi],
-            [0,0,0,0],
-            [0,0,0,0]]
+    if justPlot:
         
-        p0 = np.array(p0)
-        p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+        #   Load
+        arr_error = np.load('arr_err.npy')
+        arr_epsilon = np.load('arr_epsilon.npy')
+        n = arr_epsilon.shape[2]
+        ref_arr = np.arange(n)
         
-        ret = experiment(directory=str(i*2),
-                    h = 1 ,
-                    r = 1.,
-                    #tanhLimit = True,
-                    #depthOp = 4, Z_set=2.,
-                    depthOp = 1,
-                    p0 = p0,
-                    t_end = 100)
+    else:
         
-        [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
+        r = 0.8
+        n = 1
+        k_int = 0.1
+        t_f = 100
         
-        ret = experiment(directory=str(i*2+1),
-                    h = 1 ,
-                    r = 1.,
-                    #tanhLimit = True,
-                    #depthOp = 4, Z_set=2.,
-                    depthOp = 1,
-                    p0 = p0,
-                    set_consensoRef = False,
-                    t_end = 100)
-        [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
+        ref_arr = np.arange(n)
+        #   4 variantes X 4 agentes X n repeticiones
+        arr_error = np.zeros((4,4,n))
+        #   4 variantes X 2 componentes X n repeticiones
+        arr_epsilon = np.zeros((4,2,n))
+        for i in range(n):
+            #p0=[[0.8,0.8,-0.8,-.8],
+                #[-0.8,0.8,0.8,-0.8],
+            p0=[[-0.8,0.8,0.8,-.8],
+                [0.8,0.8,-0.8,-0.8],
+                #[1.4,0.8,1.2,1.6],
+                [1.2,1.2,1.2,1.2],
+                [np.pi,np.pi,np.pi,np.pi],
+                [0,0,0,0],
+                [0,0,0,0]]
+            
+            p0 = np.array(p0)
+            p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+            
+            ret = experiment(directory=str(i*4),
+                        k_int =k_int,
+                        h = 1 ,
+                        r = 1.,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set=2.,
+                        depthOp = 1,
+                        p0 = p0,
+                        t_end = t_f)
+            
+            [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
+            
+            ret = experiment(directory=str(i*4+1),
+                        k_int = k_int,
+                        h = 1 ,
+                        r = 1.,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set=2.,
+                        depthOp = 1,
+                        p0 = p0,
+                        set_consensoRef = False,
+                        t_end = 20)
+            [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
+            ret = experiment(directory=str(i*4+2),
+                        h = 1 ,
+                        r = 1.,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set=2.,
+                        depthOp = 1,
+                        p0 = p0,
+                        t_end = t_f)
+            
+            [arr_error[2,:,i], arr_epsilon[2,0,i], arr_epsilon[2,1,i]] = ret
+            
+            ret = experiment(directory=str(i*4+3),
+                        h = 1 ,
+                        r = 1.,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set=2.,
+                        depthOp = 1,
+                        p0 = p0,
+                        set_consensoRef = False,
+                        t_end = 20)
+            [arr_error[3,:,i], arr_epsilon[3,0,i], arr_epsilon[3,1,i]] = ret
+        np.save('arr_err.npy',arr_error)
+        np.save('arr_epsilon.npy',arr_epsilon)
+        
+        
     #   Plot data
     
     fig, ax = plt.subplots()
     fig.suptitle("Error de consenso")
     #plt.ylim([-2.,2.])
     
-    colors = (randint(0,255,3*2*4)/255.0).reshape((2*4,3))
+    colors = (randint(0,255,3*4*4)/255.0).reshape((4*4,3))
     for i in range(4):
-        ax.plot(ref_arr,arr_error[0,i,:] , color=colors[0])
-        ax.plot(ref_arr,arr_error[1,i,:] , color=colors[1])
+        ax.scatter(ref_arr,arr_error[0,i,:], marker = "x", alpha = 0.5, color=colors[0])
+        ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
+        ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
+        ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
     
     symbols = [mpatches.Patch(color=colors[0]),
-               mpatches.Patch(color=colors[1])]
-    fig.legend(symbols,["Ref*","No ref"], loc=1)
+               mpatches.Patch(color=colors[1]),
+               mpatches.Patch(color=colors[2]),
+               mpatches.Patch(color=colors[3])]
+    fig.legend(symbols,["Ref (PI)","No ref (PI)","Ref (P)","No ref (P)"], loc=1)
     plt.yscale('logit')
     plt.tight_layout()
     plt.savefig('Consensus error.pdf',bbox_inches='tight')
@@ -849,10 +905,16 @@ def experiment_randomInit():
     
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado")
-    ax.plot(ref_arr,arr_epsilon[0,0,:], label = "Posición*", color = colors[0])
-    ax.plot(ref_arr,arr_epsilon[0,1,:], label = "Rotación*", color = colors[1])
-    ax.plot(ref_arr,arr_epsilon[1,0,:], label = "Posición", color = colors[2])
-    ax.plot(ref_arr,arr_epsilon[1,1,:], label = "Rotación", color = colors[3])
+    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "Ref (PI) Tras", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "Ref (PI) Rot", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[1,0,:], marker='.', label  = "No ref (PI) Tras", alpha = 0.5, color = colors[1])
+    ax.scatter(ref_arr,arr_epsilon[1,1,:], marker='*', label  = "No ref (PI) Rot", alpha = 0.5, color = colors[1])
+    ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "Ref (P) Tras", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "Ref (P) Tras Rot", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[3,0,:], marker='.', label  = "No ref (P) Tras", alpha = 0.5, color = colors[3])
+    ax.scatter(ref_arr,arr_epsilon[3,1,:], marker='*', label  = "No ref (P) Rot", alpha = 0.5, color = colors[3])
+    
+    plt.ylim([0,0.01])
     fig.legend( loc=1)
     plt.tight_layout()
     plt.savefig('Formation error.pdf',bbox_inches='tight')
@@ -861,7 +923,8 @@ def experiment_randomInit():
     
 def main():
     
-    experiment_randomInit()
+    #experiment_randomInit(n = 10)
+    experiment_randomInit(justPlot = True)
     return
     
     #   Caso minimo local e != 0 

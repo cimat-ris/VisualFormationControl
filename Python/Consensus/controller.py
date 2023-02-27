@@ -156,10 +156,20 @@ def Homography(H, delta_pref,adj_list,gamma):
 
 class agent:
     
-    def __init__(self,camera,p_obj,p_current,points,set_consensoRef = True ):
+    def __init__(self,
+                 camera,
+                 p_obj,
+                 p_current,
+                 points,
+                 k = 1,
+                 k_int = 0,
+                 set_consensoRef = True ):
         
         self.n_points = points.shape[1]
         #self.deg = deg
+        
+        self.k = k
+        self.k_int = k_int
         
         self.camera = camera
         
@@ -252,7 +262,7 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.error_int += self.error_p
+        self.error_int += self.error_p*dt
         
         if self.set_consensoRef:
             self.error_p =  self.s_current_n - self.s_ref_n
@@ -262,7 +272,7 @@ class agent:
         #print(self.error)
         self.error_p = self.error_p.T.reshape((1,2*self.n_points))
         #print(self.error)
-        self.error = self.error_p + 0.1 * dt *self.error_int 
+        self.error = self.k * self.error_p + self.k_int * self.error_int 
         
     def count_points_in_FOV(self,Z):
         xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)

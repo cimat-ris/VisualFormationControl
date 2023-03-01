@@ -578,19 +578,19 @@ def experiment(directory = "0",
     for i in range(n_agents):
         print("Agent: "+str(i))
         L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
-        A = L.T@L
-        if np.linalg.det(A) != 0 and ret_err[i] > 1.e-2:
-            print("Matriz de interacción (L): ")
-            print(L)
-            L = inv(A) @ L.T
-            print("Matriz de interacción pseudoinversa (L+): ")
-            print(L)
-            print("Error de consenso final (e): ")
-            print(error[i,:])
-            print("velocidades resultantes (L+ @ e): ")
-            print(L@error[i,:])
-            print("Valores singulares al final (s = SVD(L+)): ")
-            print(s_store[i,:,-1])
+        print("Matriz de interacción (L): ")
+        print(L)
+        L = np.linalg.pinv(L) 
+        print("Matriz de interacción pseudoinversa (L+): ")
+        print(L)
+        print("Error de consenso final (e): ")
+        print(error[i,:])
+        print("velocidades resultantes (L+ @ e): ")
+        print(L@error[i,:])
+        print("Valores singulares al final (s = SVD(L+)): ")
+        print(s_store[i,:,-1])
+        #print("Prod int u,err ",u@error[i,:]/np.linalg.norm(error[i,:]))
+        print("Prod int v,err ",vh@error[i,:]/np.linalg.norm(error[i,:]))
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
@@ -821,11 +821,12 @@ def experiment_randomInit(justPlot = False,
                 #[1.4,0.8,1.2,1.6],
                 [1.2,1.2,1.2,1.2],
                 [np.pi,np.pi,np.pi,np.pi],
-                [0,0,0,0],
+                [0.1,0.1,-0.1,0.1],
                 [0,0,0,0]]
             
             p0 = np.array(p0)
             p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+            p0[2,p0[2,:]<0.6] = 0.6
             
             #   Con referencia PI
             ret = experiment(directory=str(i*4),
@@ -883,6 +884,7 @@ def experiment_randomInit(justPlot = False,
     #   Plot data
     colors = (randint(0,255,3*4*4)/255.0).reshape((4*4,3))
     
+    #   Consenso con referencia 
     fig, ax = plt.subplots()
     fig.suptitle("Error de consenso con referencia")
     #plt.ylim([-2.,2.])
@@ -904,6 +906,7 @@ def experiment_randomInit(justPlot = False,
     #plt.show()
     plt.close()
     
+    #   Consenso sin referencia
     fig, ax = plt.subplots()
     fig.suptitle("Error de consenso sin referencia")
     #plt.ylim([-2.,2.])
@@ -938,6 +941,7 @@ def experiment_randomInit(justPlot = False,
     ##plt.show()
     #plt.close()
     
+    #   Formación con referencia
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado con referencia")
     
@@ -953,7 +957,7 @@ def experiment_randomInit(justPlot = False,
     #plt.show()
     plt.close()
     
-    
+    #   Formación sin referencia
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado sin referencia")
     

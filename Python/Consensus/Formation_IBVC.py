@@ -391,7 +391,7 @@ def experiment(directory = "0",
     #   LOOP
     for i in range(steps):
         
-        print("loop",i, end="\r")
+        #print("loop",i, end="\r")
         
         #   Error:
         
@@ -458,23 +458,23 @@ def experiment(directory = "0",
                 #print("i ",i)
                 #print("j ",j)
                 #print("U ",U)
-            if(s[0] > 200):
-                #print("PVAL > 1000")
-                print("-----JUMP------")
-                print("i ",i)
-                print("j ",j)
-                print("Z  ",Z)
-                print("L ",ctr.Interaction_Matrix(agents[j].s_current_n,Z,gdl))
-                print("Valores propio ",s)
-                print("Puntos normalizados ",agents[j].s_current_n)
-                print("Puntos en pixeles ",agents[j].s_current)
-                print("Posicion  ",agents[j].camera.p)
-                print("error  ",error[j,:])
-                print("Vector propio 0  ",u[:,0])
-                #print("Prod int u,err ",u.T@error[j,:]/np.linalg.norm(error[j,:]))
-                #print("Prod int v,err ",vh@error[j,:]/np.linalg.norm(error[j,:]))
-                print("U ",U)
-                print("---------------")
+            #if(s[0] > 200):
+                ##print("PVAL > 1000")
+                #print("-----JUMP------")
+                #print("i ",i)
+                #print("j ",j)
+                #print("Z  ",Z)
+                #print("L ",ctr.Interaction_Matrix(agents[j].s_current_n,Z,gdl))
+                #print("Valores propio ",s)
+                #print("Puntos normalizados ",agents[j].s_current_n)
+                #print("Puntos en pixeles ",agents[j].s_current)
+                #print("Posicion  ",agents[j].camera.p)
+                #print("error  ",error[j,:])
+                #print("Vector propio 0  ",u[:,0])
+                ##print("Prod int u,err ",u.T@error[j,:]/np.linalg.norm(error[j,:]))
+                ##print("Prod int v,err ",vh@error[j,:]/np.linalg.norm(error[j,:]))
+                #print("U ",U)
+                #print("---------------")
             
             if U is None:
                 print("Invalid U control")
@@ -498,7 +498,7 @@ def experiment(directory = "0",
     ret_err = np.zeros(n_agents)
     
     for j in range(n_agents):
-        ret_err[j]=np.linalg.norm(error[j,:])
+        ret_err[j]=np.linalg.norm(error_p[j,:])
         print(error[j,:])
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
     for j in range(n_agents):
@@ -807,10 +807,6 @@ def experiment_randomInit(justPlot = False,
         
     else:
         
-        r = 0.8
-        n = 1
-        k_int = 0.1
-        t_f = 100
         
         ref_arr = np.arange(n)
         #   4 variantes X 4 agentes X n repeticiones
@@ -831,18 +827,20 @@ def experiment_randomInit(justPlot = False,
             p0 = np.array(p0)
             p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
             
+            #   Con referencia PI
             ret = experiment(directory=str(i*4),
                         k_int =k_int,
                         h = 1 ,
                         r = 1.,
                         #tanhLimit = True,
-                        #depthOp = 4, Z_set=2.,
+                        ##depthOp = 4, Z_set=2.,
                         depthOp = 1,
                         p0 = p0,
                         t_end = t_f)
             
             [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
             
+            #   Sin referencia PI
             ret = experiment(directory=str(i*4+1),
                         k_int = k_int,
                         h = 1 ,
@@ -852,8 +850,10 @@ def experiment_randomInit(justPlot = False,
                         depthOp = 1,
                         p0 = p0,
                         set_consensoRef = False,
-                        t_end = 20)
+                        t_end = t_f)
             [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
+            
+            #   Con referencia P
             ret = experiment(directory=str(i*4+2),
                         h = 1 ,
                         r = 1.,
@@ -865,6 +865,7 @@ def experiment_randomInit(justPlot = False,
             
             [arr_error[2,:,i], arr_epsilon[2,0,i], arr_epsilon[2,1,i]] = ret
             
+            #   Sin referencia P
             ret = experiment(directory=str(i*4+3),
                         h = 1 ,
                         r = 1.,
@@ -880,51 +881,100 @@ def experiment_randomInit(justPlot = False,
         
         
     #   Plot data
+    colors = (randint(0,255,3*4*4)/255.0).reshape((4*4,3))
     
     fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso")
+    fig.suptitle("Error de consenso con referencia")
     #plt.ylim([-2.,2.])
     
-    colors = (randint(0,255,3*4*4)/255.0).reshape((4*4,3))
     for i in range(4):
         ax.scatter(ref_arr,arr_error[0,i,:], marker = "x", alpha = 0.5, color=colors[0])
-        ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
+        #ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
         ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
-        ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
+        #ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
     
     symbols = [mpatches.Patch(color=colors[0]),
-               mpatches.Patch(color=colors[1]),
-               mpatches.Patch(color=colors[2]),
-               mpatches.Patch(color=colors[3])]
-    fig.legend(symbols,["Ref (PI)","No ref (PI)","Ref (P)","No ref (P)"], loc=1)
+               #mpatches.Patch(color=colors[1]),
+               mpatches.Patch(color=colors[2])]
+               #mpatches.Patch(color=colors[3])]
+    fig.legend(symbols,["PI","P"], loc=1)
     plt.yscale('logit')
     plt.tight_layout()
-    plt.savefig('Consensus error.pdf',bbox_inches='tight')
+    plt.savefig('Consensus error_WRef.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado")
-    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "Ref (PI) Tras", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "Ref (PI) Rot", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[1,0,:], marker='.', label  = "No ref (PI) Tras", alpha = 0.5, color = colors[1])
-    ax.scatter(ref_arr,arr_epsilon[1,1,:], marker='*', label  = "No ref (PI) Rot", alpha = 0.5, color = colors[1])
-    ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "Ref (P) Tras", alpha = 0.5, color = colors[2])
-    ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "Ref (P) Tras Rot", alpha = 0.5, color = colors[2])
-    ax.scatter(ref_arr,arr_epsilon[3,0,:], marker='.', label  = "No ref (P) Tras", alpha = 0.5, color = colors[3])
-    ax.scatter(ref_arr,arr_epsilon[3,1,:], marker='*', label  = "No ref (P) Rot", alpha = 0.5, color = colors[3])
+    fig.suptitle("Error de consenso sin referencia")
+    #plt.ylim([-2.,2.])
     
-    plt.ylim([0,0.01])
+    for i in range(4):
+        #ax.scatter(ref_arr,arr_error[0,i,:], marker = "x", alpha = 0.5, color=colors[0])
+        ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
+        #ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
+        ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
+    
+    symbols = [mpatches.Patch(color=colors[1]),
+               mpatches.Patch(color=colors[3])]
+    fig.legend(symbols,["PI","P"], loc=1)
+    plt.yscale('logit')
+    plt.tight_layout()
+    plt.savefig('Consensus error_WoRef.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #fig, ax = plt.subplots()
+    #fig.suptitle("Errores de estado con referencia")
+    
+    #ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[0])
+    #ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[0])
+    #ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[2])
+    #ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[2])
+    
+    #plt.ylim([0,0.05])
+    #fig.legend( loc=1)
+    #plt.tight_layout()
+    #plt.savefig('Formation error_WRef_zoom.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado con referencia")
+    
+    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[2])
+    
+    #plt.ylim([0,0.05])
     fig.legend( loc=1)
     plt.tight_layout()
-    plt.savefig('Formation error.pdf',bbox_inches='tight')
+    plt.savefig('Formation error_WRef.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado sin referencia")
+    
+    ax.scatter(ref_arr,arr_epsilon[1,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[1])
+    ax.scatter(ref_arr,arr_epsilon[1,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[1])
+    ax.scatter(ref_arr,arr_epsilon[3,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[3])
+    ax.scatter(ref_arr,arr_epsilon[3,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[3])
+    
+    #plt.ylim([0,0.01])
+    fig.legend( loc=1)
+    plt.tight_layout()
+    plt.savefig('Formation error_WoRef.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
 def main():
     
     #experiment_randomInit(n = 10)
-    experiment_randomInit(justPlot = True)
+    #experiment_randomInit(n = 2)
+    experiment_randomInit(n = 10, k_int = 1)
+    #experiment_randomInit(justPlot = True)
     return
     
     #   Caso minimo local e != 0 

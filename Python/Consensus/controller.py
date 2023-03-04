@@ -72,8 +72,13 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     #return np.array([0.,0.,0.,0.,0.,np.pi/10,]), np.array([0.,0.,0.,0.,0.,0.])
     #if any (Z < 0.):
         #print("Negative depths")
-        #print("")
-        #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
+        ##print("")
+        #Ls = Interaction_Matrix(s_current_n,Z,gdl)
+        ##print(Ls)
+        ##Ls = Inv_Moore_Penrose(Ls) 
+        #Ls = np.linalg.pinv(Ls) 
+        #u, s, vh  = np.linalg.svd(Ls)
+        #return np.array([0.,0.,0.,0.,0.,0.]), u,s,vh
     
     if control_sel ==1:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)

@@ -349,12 +349,16 @@ def experiment(directory = "0",
                 delta_pref[i,j,:,0] = pd[:,j]-pd[:,i]
         gamma =  p0[2,:]
     
+    depthFlags =  [0. for i in range(n_agents)]
+    
     #   Storage variables
     t_array = np.arange(t,t_end+dt,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,6,steps))
+    svdProy_p = np.zeros((n_agents,2*n_points,steps))
+    svdProy = np.zeros((n_agents,2*n_points,steps))
     if gdl == 1:
         s_store = np.zeros((n_agents,6,steps))
     elif gdl == 2:
@@ -447,34 +451,16 @@ def experiment(directory = "0",
             if tanhLimit:
                 U = 0.3*np.tanh(U)
             
-            #if any(abs(error[j,:])> 1.):
-                #print("----ERR>--")
-                #print("i ",i)
-                #print("j ",j)
-                #print("error ",error[j,:])
-                #print("U ",U)
-            #if any(abs(U) > 10.):
-                #print("---UPS---")
-                #print("i ",i)
-                #print("j ",j)
-                #print("U ",U)
-            #if(s[0] > 200):
-                ##print("PVAL > 1000")
-                #print("-----JUMP------")
-                #print("i ",i)
-                #print("j ",j)
-                #print("Z  ",Z)
-                #print("L ",ctr.Interaction_Matrix(agents[j].s_current_n,Z,gdl))
-                #print("Valores propio ",s)
-                #print("Puntos normalizados ",agents[j].s_current_n)
-                #print("Puntos en pixeles ",agents[j].s_current)
-                #print("Posicion  ",agents[j].camera.p)
-                #print("error  ",error[j,:])
-                #print("Vector propio 0  ",u[:,0])
-                ##print("Prod int u,err ",u.T@error[j,:]/np.linalg.norm(error[j,:]))
-                ##print("Prod int v,err ",vh@error[j,:]/np.linalg.norm(error[j,:]))
-                #print("U ",U)
-                #print("---------------")
+            #   Detección de choque del plano de cámara y los puntos de escena
+            Z_test = Z_select(1, agents[j], P,Z_set,p0,pd,j)
+            if any(Z_test < 0.):
+                if depthFlags[j] == 0. :
+                    depthFlags[j] = t
+                U =  np.array([0.,0.,0.,0.,0.,0.])
+            
+            #   Save error proyection in SVD:
+            svdProy[j,:,i] = vh@error[j,:]/np.linalg.norm(error[j,:])
+            svdProy_p[j,:,i] = vh@error_p[j,:]/np.linalg.norm(error_p[j,:])
             
             if U is None:
                 print("Invalid U control")
@@ -527,6 +513,8 @@ def experiment(directory = "0",
         state_err = error_state_equal(new_agents,directory+"/3D_error")
         
     print("State error = "+str(state_err))
+    if depthFlags.count(0.) < n_agents:
+        print("WARNING : Cammera plane hit scene points: ", depthFlags)
     print("-------------------END------------------")
     print()
     
@@ -639,6 +627,27 @@ def experiment(directory = "0",
                     label = "Valores propios (SVD)",
                     labels = ["0","1","2","3","4","5"])
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
+    
+    #   Proyección del error proporcional en los vectores principales 
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    svdProy_p[i,:,:],
+                    colors,
+                    name = directory+"/Proy_eP_VH_"+str(i),
+                    label = "Proy($e_p$) en $V^h$ ",
+                    labels = ["0","1","2","3","4","5","6","7"])
+                    #limits = [[t_array[0],t_array[-1]],[0,20]])
+    
+    #   Valores propios
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    svdProy[i,:,:],
+                    colors,
+                    name = directory+"/Proy_et_VH_"+str(i),
+                    label = "Proy($e$) en $V^h$ ",
+                    labels = ["0","1","2","3","4","5","6","7"])
+                    #limits = [[t_array[0],t_array[-1]],[0,20]])
+    
     return [ret_err, state_err[0],state_err[1]]
 
 def experiment_height():
@@ -814,6 +823,10 @@ def experiment_randomInit(justPlot = False,
         #   4 variantes X 2 componentes X n repeticiones
         arr_epsilon = np.zeros((4,2,n))
         for i in range(n):
+            
+            print(" ---  Case ", i, " --- ")
+            
+            #   TODO: inicio cruzado, extender el valor del ángulo
             #p0=[[0.8,0.8,-0.8,-.8],
                 #[-0.8,0.8,0.8,-0.8],
             p0=[[-0.8,0.8,0.8,-.8],
@@ -821,12 +834,16 @@ def experiment_randomInit(justPlot = False,
                 #[1.4,0.8,1.2,1.6],
                 [1.2,1.2,1.2,1.2],
                 [np.pi,np.pi,np.pi,np.pi],
-                [0.1,0.1,-0.1,0.1],
+                #[0.1,0.1,-0.1,0.1],
+                [0.,0.,-0.,0.],
                 [0,0,0,0]]
             
             p0 = np.array(p0)
             p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
             p0[2,p0[2,:]<0.6] = 0.6
+            p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /9 #4
+            #p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
+            #p0[5,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi 
             
             #   Con referencia PI
             ret = experiment(directory=str(i*4),
@@ -926,20 +943,20 @@ def experiment_randomInit(justPlot = False,
     #plt.show()
     plt.close()
     
-    #fig, ax = plt.subplots()
-    #fig.suptitle("Errores de estado con referencia")
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado con referencia")
     
-    #ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[0])
-    #ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[0])
-    #ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[2])
-    #ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[2])
     
-    #plt.ylim([0,0.05])
-    #fig.legend( loc=1)
-    #plt.tight_layout()
-    #plt.savefig('Formation error_WRef_zoom.pdf',bbox_inches='tight')
-    ##plt.show()
-    #plt.close()
+    plt.ylim([0,0.1])
+    fig.legend( loc=1)
+    plt.tight_layout()
+    plt.savefig('Formation error_WRef_zoom.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
     
     #   Formación con referencia
     fig, ax = plt.subplots()
@@ -975,9 +992,9 @@ def experiment_randomInit(justPlot = False,
     
 def main():
     
-    #experiment_randomInit(n = 10)
+    experiment_randomInit(n = 10)
     #experiment_randomInit(n = 2)
-    experiment_randomInit(n = 10, k_int = 1)
+    #experiment_randomInit(n = 10, k_int = 1)
     #experiment_randomInit(justPlot = True)
     return
     

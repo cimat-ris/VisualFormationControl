@@ -71,7 +71,54 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
-
+def view3D(directory):
+    
+    #   load
+    fileName = directory + "/data3DPlot.npz"
+    npzfile = np.load(fileName)
+    P = npzfile['P']
+    pos_arr = npzfile['pos_arr']
+    p0 = npzfile['p0']
+    pd = npzfile['pd']
+    end_position = npzfile['end_position']
+    
+    n_agents = p0.shape[1]
+    
+    #   Plot
+    
+    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    name = directory+"/3Dplot"
+    #fig.suptitle(label)
+    ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    for i in range(n_agents):
+        cam = cm.camera()
+        cam.pose(end_position[i,:])
+        plot_3Dcam(ax, cam,
+                pos_arr[i,:,:],
+                p0[:,i],
+                pd[:,i],
+                color = colors[i],
+                i = i,
+                camera_scale    = 0.02)
+    
+    #f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
+    lfact = 1.1
+    x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
+    x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
+    y_min = lfact*min(p0[1,:].min(),pd[1,:].min())
+    y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
+    z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
+    
+    ax.set_xlim(x_min,x_max)
+    ax.set_ylim(y_min,y_max)
+    ax.set_zlim(0,z_max)
+    
+    fig.legend( loc=1)
+    plt.show()
+    plt.close()
 
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
@@ -327,7 +374,12 @@ def experiment(directory = "0",
         agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,
                                 k_int = k_int,
                                 set_consensoRef = set_consensoRef))
-        
+    
+    #   Check initial params 
+    for i in range(n_agents):
+        if any(Z_select(1, agents[i], P, Z_set, p0, pd, i) < 0.):
+            return None
+    
     #   INIT LOOP
     
     t=t0
@@ -503,10 +555,11 @@ def experiment(directory = "0",
     colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
     
     new_agents = []
+    end_position = np.zeros((n_agents,6))
     for i in range(n_agents):
         cam = cm.camera()
-        end_position = np.r_[agents[i].camera.p,agents[i].camera.roll, agents[i].camera.pitch, agents[i].camera.yaw]
-        new_agents.append(ctr.agent(cam,pd[:,i],end_position,P))
+        end_position[i,:] = np.r_[agents[i].camera.p,agents[i].camera.roll, agents[i].camera.pitch, agents[i].camera.yaw]
+        new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
         state_err = error_state(pd,new_agents,directory+"/3D_error")
     else:
@@ -531,9 +584,7 @@ def experiment(directory = "0",
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    label = "World setting"
     name = directory+"/3Dplot"
-    #fig.suptitle(label)
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
     for i in range(n_agents):
         #agents[i].count_points_in_FOV(P)
@@ -561,6 +612,11 @@ def experiment(directory = "0",
     plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+    
+    #   Save 3D plot data:
+    np.savez(directory + "/data3DPlot.npz",
+             P = P, pos_arr=pos_arr, p0 = p0,
+             pd = pd, end_position = end_position )
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
@@ -824,41 +880,45 @@ def experiment_randomInit(justPlot = False,
         arr_epsilon = np.zeros((4,2,n))
         for i in range(n):
             
-            print(" ---  Case ", i, " --- ")
+            print(" ---  Case ", i, " RPI--- ")
             
-            #   TODO: inicio cruzado, extender el valor del ángulo
-            #p0=[[0.8,0.8,-0.8,-.8],
-                #[-0.8,0.8,0.8,-0.8],
-            p0=[[-0.8,0.8,0.8,-.8],
-                [0.8,0.8,-0.8,-0.8],
-                #[1.4,0.8,1.2,1.6],
-                [1.2,1.2,1.2,1.2],
-                [np.pi,np.pi,np.pi,np.pi],
-                #[0.1,0.1,-0.1,0.1],
-                [0.,0.,-0.,0.],
-                [0,0,0,0]]
-            
-            p0 = np.array(p0)
-            p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
-            p0[2,p0[2,:]<0.6] = 0.6
-            p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /9 #4
-            #p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
-            #p0[5,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi 
-            
-            #   Con referencia PI
-            ret = experiment(directory=str(i*4),
-                        k_int =k_int,
-                        h = 1 ,
-                        r = 1.,
-                        #tanhLimit = True,
-                        ##depthOp = 4, Z_set=2.,
-                        depthOp = 1,
-                        p0 = p0,
-                        t_end = t_f)
+            ret = None
+            while ret is None:
+                
+                #   TODO: inicio cruzado, extender el valor del ángulo
+                #p0=[[0.8,0.8,-0.8,-.8],
+                    #[-0.8,0.8,0.8,-0.8],
+                p0=[[-0.8,0.8,0.8,-.8],
+                    [0.8,0.8,-0.8,-0.8],
+                    #[1.4,0.8,1.2,1.6],
+                    [1.2,1.2,1.2,1.2],
+                    [np.pi,np.pi,np.pi,np.pi],
+                    #[0.1,0.1,-0.1,0.1],
+                    [0.,0.,-0.,0.],
+                    [0,0,0,0]]
+                
+                p0 = np.array(p0)
+                p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+                p0[2,p0[2,:]<0.6] = 0.6
+                p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /9 #4
+                #p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
+                #p0[5,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi 
+                
+                #   Con referencia PI
+                ret = experiment(directory=str(i*4),
+                            k_int =k_int,
+                            h = 1 ,
+                            r = 1.,
+                            #tanhLimit = True,
+                            ##depthOp = 4, Z_set=2.,
+                            depthOp = 1,
+                            p0 = p0,
+                            t_end = t_f)
             
             [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
             
             #   Sin referencia PI
+            print(" ---  Case ", i, " PI--- ")
             ret = experiment(directory=str(i*4+1),
                         k_int = k_int,
                         h = 1 ,
@@ -872,6 +932,7 @@ def experiment_randomInit(justPlot = False,
             [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
             
             #   Con referencia P
+            print(" ---  Case ", i, " RP--- ")
             ret = experiment(directory=str(i*4+2),
                         h = 1 ,
                         r = 1.,
@@ -884,6 +945,7 @@ def experiment_randomInit(justPlot = False,
             [arr_error[2,:,i], arr_epsilon[2,0,i], arr_epsilon[2,1,i]] = ret
             
             #   Sin referencia P
+            print(" ---  Case ", i, " P--- ")
             ret = experiment(directory=str(i*4+3),
                         h = 1 ,
                         r = 1.,
@@ -992,7 +1054,9 @@ def experiment_randomInit(justPlot = False,
     
 def main():
     
-    experiment_randomInit(n = 10)
+    view3D('0')
+    return 
+    experiment_randomInit(n = 1)
     #experiment_randomInit(n = 2)
     #experiment_randomInit(n = 10, k_int = 1)
     #experiment_randomInit(justPlot = True)

@@ -874,8 +874,8 @@ def experiment_randomInit(justPlot = False,
                         t_f = 100):
     
     #   For grid
-    n = n**2
-    sqrtn = int(np.sqrt(n))
+    #n = n**2
+    #sqrtn = int(np.sqrt(n))
     
     if justPlot:
         
@@ -901,29 +901,10 @@ def experiment_randomInit(justPlot = False,
             while ret is None:
                 
                 #   Aleatorio
-                ##p0=[[0.8,0.8,-0.8,-.8],
-                    ##[-0.8,0.8,0.8,-0.8],
-                #p0=[[-0.8,0.8,0.8,-.8],
-                    #[0.8,0.8,-0.8,-0.8],
-                    ##[1.4,0.8,1.2,1.6],
-                    #[1.2,1.2,1.2,1.2],
-                    #[np.pi,np.pi,np.pi,np.pi],
-                    ##[0.1,0.1,-0.1,0.1],
-                    #[0.,0.,-0.,0.],
-                    #[0,0,0,0]]
-                
-                #p0 = np.array(p0)
-                #p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
-                #p0[2,p0[2,:]<0.6] = 0.6
-                ##p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /7 #4
-                ##p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
-                #p0[5,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /2
-                
-                #   Grid
-                p0=[[0.8,0.8,-0.8,-.8],
-                    [-0.8,0.8,0.8,-0.8],
-                #p0=[[-0.8,0.8,0.8,-.8],
-                    #[0.8,0.8,-0.8,-0.8],
+                #p0=[[0.8,0.8,-0.8,-.8],
+                    #[-0.8,0.8,0.8,-0.8],
+                p0=[[-0.8,0.8,0.8,-.8],
+                    [0.8,0.8,-0.8,-0.8],
                     #[1.4,0.8,1.2,1.6],
                     [1.2,1.2,1.2,1.2],
                     [np.pi,np.pi,np.pi,np.pi],
@@ -932,8 +913,27 @@ def experiment_randomInit(justPlot = False,
                     [0,0,0,0]]
                 
                 p0 = np.array(p0)
-                p0[0,:] += 1.*2*(int(i/sqrtn)-sqrtn/2)
-                p0[1,:] += 1.*(i%sqrtn-sqrtn/2)
+                p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+                p0[2,p0[2,:]<0.6] = 0.6
+                #p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /7 #4
+                #p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
+                p0[5,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /2
+                
+                ##   Grid
+                #p0=[[0.8,0.8,-0.8,-.8],
+                    #[-0.8,0.8,0.8,-0.8],
+                ##p0=[[-0.8,0.8,0.8,-.8],
+                    ##[0.8,0.8,-0.8,-0.8],
+                    ##[1.4,0.8,1.2,1.6],
+                    #[1.2,1.2,1.2,1.2],
+                    #[np.pi,np.pi,np.pi,np.pi],
+                    ##[0.1,0.1,-0.1,0.1],
+                    #[0.,0.,-0.,0.],
+                    #[0,0,0,0]]
+                
+                #p0 = np.array(p0)
+                #p0[0,:] += 1.*2*(int(i/sqrtn)-sqrtn/2)
+                #p0[1,:] += 1.*(i%sqrtn-sqrtn/2)
                 
                 
                 
@@ -1096,7 +1096,7 @@ def main():
     #view3D('16')
     #view3D('18')
     #return 
-    experiment_randomInit(n = 3, midMarker = True)
+    experiment_randomInit(n = 1, midMarker = True)
     #experiment_randomInit(n = 2)
     #experiment_randomInit(n = 10, k_int = 1)
     #experiment_randomInit(justPlot = True)

@@ -112,9 +112,9 @@ def view3D(directory):
     y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
     z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
     
-    ax.set_xlim(x_min,x_max)
-    ax.set_ylim(y_min,y_max)
-    ax.set_zlim(0,z_max)
+    #ax.set_xlim(x_min,x_max)
+    #ax.set_ylim(y_min,y_max)
+    #ax.set_zlim(0,z_max)
     
     fig.legend( loc=1)
     plt.show()
@@ -288,7 +288,8 @@ def experiment(directory = "0",
                pd = None,
                set_consensoRef = True,
                atTarget = False,
-               tanhLimit = False):
+               tanhLimit = False,
+               midMarker = False):
     
     #   Data
     P = np.array(ip.P)      #   Scene points
@@ -547,6 +548,8 @@ def experiment(directory = "0",
         print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
               ", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
     
+    print("Mean inital heights = ",np.mean(p0[2,:]))
+    print("Mean camera heights = ",np.mean(np.r_[p0[2,:],pd[2,:]]))
     
     ####   Plot
     # Colors setup
@@ -595,6 +598,13 @@ def experiment(directory = "0",
                 color = colors[i],
                 i = i,
                 camera_scale    = 0.02)
+        #   Plot cammera position at intermediate time
+    step_sel = int(pos_arr.shape[2]/2)
+    if midMarker:
+        ax.scatter(pos_arr[:,0,step_sel],
+                pos_arr[:,1,step_sel],
+                pos_arr[:,2,step_sel],
+                    marker = '+',s = 200, color = 'black')
     
     #f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
     lfact = 1.1
@@ -620,21 +630,21 @@ def experiment(directory = "0",
     
     #   Descriptores (init, end, ref) x agente
     for i in range(n_agents):
-        print("Agent: "+str(i))
-        L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
-        print("Matriz de interacción (L): ")
-        print(L)
-        L = np.linalg.pinv(L) 
-        print("Matriz de interacción pseudoinversa (L+): ")
-        print(L)
-        print("Error de consenso final (e): ")
-        print(error[i,:])
-        print("velocidades resultantes (L+ @ e): ")
-        print(L@error[i,:])
-        print("Valores singulares al final (s = SVD(L+)): ")
-        print(s_store[i,:,-1])
-        #print("Prod int u,err ",u@error[i,:]/np.linalg.norm(error[i,:]))
-        print("Prod int v,err ",vh@error[i,:]/np.linalg.norm(error[i,:]))
+        #print("Agent: "+str(i))
+        #L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
+        #print("Matriz de interacción (L): ")
+        #print(L)
+        #L = np.linalg.pinv(L) 
+        #print("Matriz de interacción pseudoinversa (L+): ")
+        #print(L)
+        #print("Error de consenso final (e): ")
+        #print(error[i,:])
+        #print("velocidades resultantes (L+ @ e): ")
+        #print(L@error[i,:])
+        #print("Valores singulares al final (s = SVD(L+)): ")
+        #print(s_store[i,:,-1])
+        ##print("Prod int u,err ",u@error[i,:]/np.linalg.norm(error[i,:]))
+        #print("Prod int v,err ",vh@error[i,:]/np.linalg.norm(error[i,:]))
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
@@ -857,10 +867,15 @@ def experiment_localmin():
                    t_end = t)
 
 def experiment_randomInit(justPlot = False,
+                          midMarker = False,
                           r = 0.8,
                         n = 1,
                         k_int = 0.1,
                         t_f = 100):
+    
+    #   For grid
+    n = n**2
+    sqrtn = int(np.sqrt(n))
     
     if justPlot:
         
@@ -885,11 +900,30 @@ def experiment_randomInit(justPlot = False,
             ret = None
             while ret is None:
                 
-                #   TODO: inicio cruzado, extender el valor del ángulo
-                #p0=[[0.8,0.8,-0.8,-.8],
-                    #[-0.8,0.8,0.8,-0.8],
-                p0=[[-0.8,0.8,0.8,-.8],
-                    [0.8,0.8,-0.8,-0.8],
+                #   Aleatorio
+                ##p0=[[0.8,0.8,-0.8,-.8],
+                    ##[-0.8,0.8,0.8,-0.8],
+                #p0=[[-0.8,0.8,0.8,-.8],
+                    #[0.8,0.8,-0.8,-0.8],
+                    ##[1.4,0.8,1.2,1.6],
+                    #[1.2,1.2,1.2,1.2],
+                    #[np.pi,np.pi,np.pi,np.pi],
+                    ##[0.1,0.1,-0.1,0.1],
+                    #[0.,0.,-0.,0.],
+                    #[0,0,0,0]]
+                
+                #p0 = np.array(p0)
+                #p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
+                #p0[2,p0[2,:]<0.6] = 0.6
+                ##p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /7 #4
+                ##p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
+                #p0[5,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /2
+                
+                #   Grid
+                p0=[[0.8,0.8,-0.8,-.8],
+                    [-0.8,0.8,0.8,-0.8],
+                #p0=[[-0.8,0.8,0.8,-.8],
+                    #[0.8,0.8,-0.8,-0.8],
                     #[1.4,0.8,1.2,1.6],
                     [1.2,1.2,1.2,1.2],
                     [np.pi,np.pi,np.pi,np.pi],
@@ -898,19 +932,19 @@ def experiment_randomInit(justPlot = False,
                     [0,0,0,0]]
                 
                 p0 = np.array(p0)
-                p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
-                p0[2,p0[2,:]<0.6] = 0.6
-                p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /9 #4
-                #p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
-                #p0[5,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi 
+                p0[0,:] += 1.*2*(int(i/sqrtn)-sqrtn/2)
+                p0[1,:] += 1.*(i%sqrtn-sqrtn/2)
+                
+                
                 
                 #   Con referencia PI
                 ret = experiment(directory=str(i*4),
+                                 midMarker = midMarker,
                             k_int =k_int,
                             h = 1 ,
                             r = 1.,
                             #tanhLimit = True,
-                            ##depthOp = 4, Z_set=2.,
+                            #depthOp = 4, Z_set=2.,
                             depthOp = 1,
                             p0 = p0,
                             t_end = t_f)
@@ -920,6 +954,7 @@ def experiment_randomInit(justPlot = False,
             #   Sin referencia PI
             print(" ---  Case ", i, " PI--- ")
             ret = experiment(directory=str(i*4+1),
+                        midMarker = midMarker,
                         k_int = k_int,
                         h = 1 ,
                         r = 1.,
@@ -934,6 +969,7 @@ def experiment_randomInit(justPlot = False,
             #   Con referencia P
             print(" ---  Case ", i, " RP--- ")
             ret = experiment(directory=str(i*4+2),
+                        midMarker = midMarker,
                         h = 1 ,
                         r = 1.,
                         #tanhLimit = True,
@@ -947,6 +983,7 @@ def experiment_randomInit(justPlot = False,
             #   Sin referencia P
             print(" ---  Case ", i, " P--- ")
             ret = experiment(directory=str(i*4+3),
+                        midMarker = midMarker,
                         h = 1 ,
                         r = 1.,
                         #tanhLimit = True,
@@ -1054,9 +1091,12 @@ def experiment_randomInit(justPlot = False,
     
 def main():
     
-    view3D('0')
-    return 
-    experiment_randomInit(n = 1)
+    #view3D('8')
+    #view3D('9')
+    #view3D('16')
+    #view3D('18')
+    #return 
+    experiment_randomInit(n = 3, midMarker = True)
     #experiment_randomInit(n = 2)
     #experiment_randomInit(n = 10, k_int = 1)
     #experiment_randomInit(justPlot = True)

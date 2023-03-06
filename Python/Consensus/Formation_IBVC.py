@@ -487,7 +487,7 @@ def experiment(directory = "0",
             if control_type == 1:
                 args = {"deg":G.deg[j] , 
                         "control_sel":case_interactionM,
-                        "error": error[j,:],
+                        "error": error[j,:]+G.deg[j]*agents[j].dot_s_current_n,
                         "gdl":gdl}
             elif control_type == 2:
                 args = {"H" : H[j,:,:,:],
@@ -887,15 +887,18 @@ def experiment_randomInit(justPlot = False,
         
     else:
         
-        
+        if k_int != 0.:
+            variantes = 4
+        else:
+            variantes = 2
         ref_arr = np.arange(n)
         #   4 variantes X 4 agentes X n repeticiones
-        arr_error = np.zeros((4,4,n))
+        arr_error = np.zeros((variantes,4,n))
         #   4 variantes X 2 componentes X n repeticiones
-        arr_epsilon = np.zeros((4,2,n))
+        arr_epsilon = np.zeros((variantes,2,n))
         for i in range(n):
             
-            print(" ---  Case ", i, " RPI--- ")
+            print(" ---  Case ", i, " RP--- ")
             
             ret = None
             while ret is None:
@@ -937,10 +940,9 @@ def experiment_randomInit(justPlot = False,
                 
                 
                 
-                #   Con referencia PI
-                ret = experiment(directory=str(i*4),
+                #   Con referencia P
+                ret = experiment(directory=str(i*variantes),
                                  midMarker = midMarker,
-                            k_int =k_int,
                             h = 1 ,
                             r = 1.,
                             #tanhLimit = True,
@@ -951,11 +953,10 @@ def experiment_randomInit(justPlot = False,
             
             [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
             
-            #   Sin referencia PI
-            print(" ---  Case ", i, " PI--- ")
-            ret = experiment(directory=str(i*4+1),
+            #   Sin referencia P
+            print(" ---  Case ", i, " P--- ")
+            ret = experiment(directory=str(i*variantes+1),
                         midMarker = midMarker,
-                        k_int = k_int,
                         h = 1 ,
                         r = 1.,
                         #tanhLimit = True,
@@ -966,33 +967,36 @@ def experiment_randomInit(justPlot = False,
                         t_end = t_f)
             [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
             
-            #   Con referencia P
-            print(" ---  Case ", i, " RP--- ")
-            ret = experiment(directory=str(i*4+2),
-                        midMarker = midMarker,
-                        h = 1 ,
-                        r = 1.,
-                        #tanhLimit = True,
-                        #depthOp = 4, Z_set=2.,
-                        depthOp = 1,
-                        p0 = p0,
-                        t_end = t_f)
-            
-            [arr_error[2,:,i], arr_epsilon[2,0,i], arr_epsilon[2,1,i]] = ret
-            
-            #   Sin referencia P
-            print(" ---  Case ", i, " P--- ")
-            ret = experiment(directory=str(i*4+3),
-                        midMarker = midMarker,
-                        h = 1 ,
-                        r = 1.,
-                        #tanhLimit = True,
-                        #depthOp = 4, Z_set=2.,
-                        depthOp = 1,
-                        p0 = p0,
-                        set_consensoRef = False,
-                        t_end = 20)
-            [arr_error[3,:,i], arr_epsilon[3,0,i], arr_epsilon[3,1,i]] = ret
+            if k_int != 0.:
+                #   Con referencia PI
+                print(" ---  Case ", i, " RPI--- ")
+                ret = experiment(directory=str(i*variantes+2),
+                            midMarker = midMarker,
+                            k_int =k_int,
+                            h = 1 ,
+                            r = 1.,
+                            #tanhLimit = True,
+                            #depthOp = 4, Z_set=2.,
+                            depthOp = 1,
+                            p0 = p0,
+                            t_end = t_f)
+                
+                [arr_error[2,:,i], arr_epsilon[2,0,i], arr_epsilon[2,1,i]] = ret
+                
+                #   Sin referencia PI
+                print(" ---  Case ", i, " PI--- ")
+                ret = experiment(directory=str(i*variantes+3),
+                            midMarker = midMarker,
+                            k_int = k_int,
+                            h = 1 ,
+                            r = 1.,
+                            #tanhLimit = True,
+                            #depthOp = 4, Z_set=2.,
+                            depthOp = 1,
+                            p0 = p0,
+                            set_consensoRef = False,
+                            t_end = 20)
+                [arr_error[3,:,i], arr_epsilon[3,0,i], arr_epsilon[3,1,i]] = ret
         np.save('arr_err.npy',arr_error)
         np.save('arr_epsilon.npy',arr_epsilon)
         
@@ -1007,15 +1011,13 @@ def experiment_randomInit(justPlot = False,
     
     for i in range(4):
         ax.scatter(ref_arr,arr_error[0,i,:], marker = "x", alpha = 0.5, color=colors[0])
-        #ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
-        ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
-        #ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
+        if k_int != 0.:
+            ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
     
-    symbols = [mpatches.Patch(color=colors[0]),
-               #mpatches.Patch(color=colors[1]),
-               mpatches.Patch(color=colors[2])]
-               #mpatches.Patch(color=colors[3])]
-    fig.legend(symbols,["PI","P"], loc=1)
+    if k_int != 0.:
+        symbols = [mpatches.Patch(color=colors[0]),mpatches.Patch(color=colors[2])]
+        fig.legend(symbols,["P","PI"], loc=1)
+    
     plt.yscale('logit')
     plt.tight_layout()
     plt.savefig('Consensus error_WRef.pdf',bbox_inches='tight')
@@ -1028,14 +1030,14 @@ def experiment_randomInit(justPlot = False,
     #plt.ylim([-2.,2.])
     
     for i in range(4):
-        #ax.scatter(ref_arr,arr_error[0,i,:], marker = "x", alpha = 0.5, color=colors[0])
         ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
-        #ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
-        ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
+        if k_int != 0.:
+            ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
     
-    symbols = [mpatches.Patch(color=colors[1]),
-               mpatches.Patch(color=colors[3])]
-    fig.legend(symbols,["PI","P"], loc=1)
+    if k_int != 0.:
+        symbols = [mpatches.Patch(color=colors[1]), mpatches.Patch(color=colors[3])]
+        fig.legend(symbols,["P","PI"], loc=1)
+    
     plt.yscale('logit')
     plt.tight_layout()
     plt.savefig('Consensus error_WoRef.pdf',bbox_inches='tight')
@@ -1045,10 +1047,11 @@ def experiment_randomInit(justPlot = False,
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado con referencia")
     
-    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[2])
-    ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[0])
+    if k_int != 0.:
+        ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[2])
+        ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[2])
     
     plt.ylim([0,0.1])
     fig.legend( loc=1)
@@ -1061,10 +1064,11 @@ def experiment_randomInit(justPlot = False,
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado con referencia")
     
-    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[2])
-    ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[2])
+    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[0])
+    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[0])
+    if k_int != 0.:
+        ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[2])
+        ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[2])
     
     #plt.ylim([0,0.05])
     fig.legend( loc=1)
@@ -1077,10 +1081,11 @@ def experiment_randomInit(justPlot = False,
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado sin referencia")
     
-    ax.scatter(ref_arr,arr_epsilon[1,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[1])
-    ax.scatter(ref_arr,arr_epsilon[1,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[1])
-    ax.scatter(ref_arr,arr_epsilon[3,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[3])
-    ax.scatter(ref_arr,arr_epsilon[3,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[3])
+    ax.scatter(ref_arr,arr_epsilon[1,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[1])
+    ax.scatter(ref_arr,arr_epsilon[1,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[1])
+    if k_int != 0.:
+        ax.scatter(ref_arr,arr_epsilon[3,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[3])
+        ax.scatter(ref_arr,arr_epsilon[3,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[3])
     
     #plt.ylim([0,0.01])
     fig.legend( loc=1)
@@ -1091,12 +1096,13 @@ def experiment_randomInit(justPlot = False,
     
 def main():
     
-    #view3D('8')
-    #view3D('9')
-    #view3D('16')
-    #view3D('18')
+    #view3D('4')
+    #view3D('5')
+    #view3D('6')
+    #view3D('7')
     #return 
-    experiment_randomInit(n = 1, midMarker = True)
+    experiment_randomInit(n = 10, midMarker = True, k_int = 0.)
+    #experiment_randomInit(n = 10, midMarker = True)
     #experiment_randomInit(n = 2)
     #experiment_randomInit(n = 10, k_int = 1)
     #experiment_randomInit(justPlot = True)

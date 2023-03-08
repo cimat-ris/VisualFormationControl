@@ -528,6 +528,9 @@ def experiment(directory = "0",
             error[j,:] = agents[j].error
             error_p[j,:] = agents[j].error_p
         error = L @ error
+        if set_derivative:
+            for j in range(n_agents):
+                error[j,:] = error[j,:]+0.2*G.deg[j]*agents[j].dot_s_current_n
         error_p = L @ error_p
         
         #   save data
@@ -555,13 +558,9 @@ def experiment(directory = "0",
             
             #   Control
             if control_type == 1:
-                if set_derivative:
-                    tmp_err = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
-                else:
-                    tmp_err = error[j,:]
                 args = {"deg":G.deg[j] , 
                         "control_sel":case_interactionM,
-                        "error": tmp_err,
+                        "error": error[j,:],
                         "gdl":gdl}
             elif control_type == 2:
                 args = {"H" : H[j,:,:,:],
@@ -1196,7 +1195,7 @@ def experiment_randomInit(justPlot = False,
                       limits = [0,0.1],
                       title = "Error de formación con referencia",
                       filename = "FormationError_WRef_zoom.pdf")
-    print(arr_error)
+    
     #   Sin referencia
     if noRef:
         #   Consenso sin referencia
@@ -1221,14 +1220,19 @@ def main():
     
     #view3D('4')
     #view3D('5')
-    #view3D('6')
-    #view3D('7')
-    #return 
-    experiment_randomInit(n = 2,
-                          midMarker = True, 
+    view3D('4')
+    view3D('5')
+    return 
+    #experiment_randomInit(n = 2,
+                          #midMarker = True, 
+                          #k_int = 0.,
+                          #noRef = True,
+                          #set_derivative = True)
+                          ##justPlot = True)
+    experiment_randomInit(n = 10,
                           k_int = 0.,
-                          noRef = True,
-                          set_derivative = True)
+                          noRef = False,
+                          midMarker = True)
                           #justPlot = True)
     #experiment_randomInit(n = 10, midMarker = True)
     #experiment_randomInit(n = 2)

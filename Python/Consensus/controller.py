@@ -195,8 +195,8 @@ class agent:
             self.error_p =  self.s_current_n - self.s_ref_n
         else:
             self.error_p =  self.s_current_n
-        self.error_p = self.error_p.T.reshape((1,2*self.n_points))
-        self.error = self.error_p
+        self.error_p = self.error_p.T.reshape(2*self.n_points)
+        self.error = self.error_p.copy()
         self.error_int = np.zeros(self.error.shape)
         
         self.Ls_set = None
@@ -283,9 +283,9 @@ class agent:
             self.error_p =  self.s_current_n
         
         #print(self.error)
-        self.error_p = self.error_p.T.reshape((1,2*self.n_points))
+        self.error_p = self.error_p.T.reshape(2*self.n_points)
         #print(self.error)
-        self.error = self.k * self.error_p - self.dot_s_current_n + self.k_int * self.error_int  
+        self.error = self.k * self.error_p - 0.5* self.dot_s_current_n + self.k_int * self.error_int  
         
     def count_points_in_FOV(self,Z):
         xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)

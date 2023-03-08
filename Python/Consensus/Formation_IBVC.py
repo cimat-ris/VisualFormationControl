@@ -27,25 +27,59 @@ import csv
 #   Custom
 import graph as gr
 import camera as cm
-import initial_params as ip
 import controller as ctr
 import myplots as mp
 
-def ReadF(filename):
-    
-    listWords = []
-    try:
-        f =  open(filename)
-    except:
-        return None
-    
-    for line in f:
-        tmp = line.rstrip()
-        tmp = tmp.split(" ")
-        tmp = [eval(i) for i in tmp]
-        listWords.append( tmp )
-    f.close()
-    return listWords
+
+#case 1
+#SceneP=[[-0.5],
+#[-0.5],
+#[0  ]] 
+##case 2
+#SceneP=[[-0.5, -0.5],
+#[-0.5,  0.5],
+#[0,   0.2]] 
+##case 3
+#SceneP=[[0,   -0.5,  0.5],
+#[-0.5,  0.5, 0],
+##[0.,  0., 0.]]
+#[0.0,  -0.2, 0.5]]
+#[0.0,  0.2, 0.3]]
+#[0.0,  -0.0, 0.0]]
+#case 4
+SceneP=[[-0.5, -0.5, 0.5,  0.5],
+[-0.5,  0.5, 0.5, -0.5],
+[0,    0.2, 0.3,  -0.1]]           
+#[0,    0.0, 0.0,  0.0]] 
+#case 5
+#SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1],
+#[-0.5, 0.5, 0.5, -0.5, -0.3],
+#[0, 0.0, 0.0,  -0.0, 0.0]]
+##[0, 0.2, 0.3, -0.1, 0.1]]
+##case 6
+#SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1, -0.1],
+#[-0.5, 0.5, 0.5, -0.5, -0.3, 0.2],
+#[0, 0.0, 0.0, -0.0, 0.0, 0.0]]
+##[0, 0.2, 0.3, -0.1, 0.1, 0.15]]
+##otherwise
+#SceneP=[[-0.5, -0.5, 0.5, 0.5],
+#[-0.5, 0.5, 0.5, -0.5],
+#[0, 0.2, 0.3, -0.1]]
+
+
+
+def circle(n_agents,r,h):
+    Objective = np.zeros((6,n_agents))
+    step = 2*pi/n_agents
+    ang_arange = np.arange(0,2*pi,step)-step/2.0
+    Objective[0,:] = r*cos(ang_arange)
+    Objective[1,:] = r*sin(ang_arange)
+    Objective[2,:] = h
+    Objective[3,:] = pi
+    return Objective
+
+
+
 
 def plot_3Dcam(ax, camera,
                positionArray,
@@ -347,44 +381,21 @@ def experiment(directory = "0",
                depthOp=1,
                Z_set = 1.0,
                gdl = 1,
-               t0 = 0.0,
                dt = 0.05,
                t_end = 10.0,
                zOffset = 0.0,
                case_interactionM = 1,
+               adjMat = None,
                p0 = None,
                pd = None,
                set_consensoRef = True,
                set_derivative = False,
                atTarget = False,
                tanhLimit = False,
-               midMarker = False):
+               midMarker = False,
+               repeat = None):
     
-    #   Data
-    P = np.array(ip.P)      #   Scene points
-    n_points = P.shape[1] #Number of image points
-    P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
-    
-    #   Posiciones de inicio
-    if p0 is None:
-        p0 = np.array(ip.p0)    
-        p0[2,:] = p0[2,:]+zOffset
-    n_agents = p0.shape[1] #Number of agents
-    
-    if pd is None:
-        pd = ip.circle(n_agents,r,h)  #   Desired pose in a circle
-    
-    if atTarget:
-        p0[:3,:] = pd[:3,:]
-    
-    if pd.shape != p0.shape:
-        print("Error: Init and reference position missmatch")
-        return 
-    
-    #   Parameters
-    
-    case_n = 1  #   Case selector if needed
-    directed = False
+    #   Referencia de selecciones
     
     #Depth estimation for interaction matrix
     #   1-Updated, 2-Initial, 3-Referencia, 4-Arbitrary fixed, 5-Average
@@ -410,26 +421,65 @@ def experiment(directory = "0",
                              2:"4 Degrees of freedom",
                              3:"3 Degrees of freedom"}
     
-    #   Read more data
-    
-    name = 'data/ad_mat_'+str(n_agents)
-    if directed:
-        name += 'd_'
+    if repeat:
+        npzfile = np.load(directory+'/data.npz')
+        P = npzfile["P"]
+        n_points = P.shape[1] #Number of image points
+        p0 = npzfile["p0"]
+        n_agents = p0.shape[1] #Number of agents
+        pd = npzfile["pd"]
+        adjMat = npzfile["adjMat"]
     else:
-        name += 'u_'
-    name += str(case_n)+'.dat'
-    A_ad = ReadF(name)
-    if A_ad is None:
-        print('File ',name,' does not exist')
-        return
-    
-    G = gr.graph(A_ad, directed)
+        #   Data
+        P = np.array(SceneP)      #   Scene points
+        n_points = P.shape[1] #Number of image points
+        P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
+        
+        #   Posiciones de inicio
+        if p0 is None:
+            print("Invalid inital positions")
+            return
+        p0[2,:] = p0[2,:]+zOffset
+        n_agents = p0.shape[1] #Number of agents
+        
+        if set_consensoRef:
+            if pd is None:
+                pd = circle(n_agents,r,h)  #   Desired pose in a circle
+            
+            if atTarget:
+                p0[:3,:] = pd[:3,:]
+            
+            if pd.shape != p0.shape:
+                print("Error: Init and reference position missmatch")
+                return 
+        else:
+            pd = np.zeros(p0.shape)
+        
+        #   Parameters
+        
+        case_n = 1  #   Case selector if needed
+        directed = False
+        
+        #   Graphs
+        if adjMat is None:
+            #   Make a complete graph
+            adjMat = []
+            for i in range(n_agents):
+                tmp = [1 for j in range(n_agents)]
+                tmp[i] = 0
+                adjMat.append(tmp)
+        
+        np.savez(directory+'/data.npz',
+                 P = P,
+                p0 = p0,
+                pd = pd,
+                adjMat = adjMat)
+        
+    #   Conectivity graph
+    G = gr.graph(adjMat, directed)
     #G.plot()
     L = G.laplacian()
-    
-    #   Conectivity graph
     G.plot()
-    
     
     [U,S,V]=svd(L)
     lam_n=S[0]
@@ -453,7 +503,7 @@ def experiment(directory = "0",
     
     #   INIT LOOP
     
-    t=t0
+    t=0
     steps = int((t_end-t)/dt + 1.0)
     
     #   case selections
@@ -491,13 +541,15 @@ def experiment(directory = "0",
     
     #   Print simulation data:
     print("------------------BEGIN-----------------")
-    print("Laplacian selection = "+name)
     print("Is directed = "+str(directed))
     print("Laplacian matrix: ")
     print(L)
     print(A_ds)
-    print("Reference states")
-    print(pd)
+    if set_consensoRef:
+        print("No reference states")
+    else:
+        print("Reference states")
+        print(pd)
     print("Initial states")
     print(p0)
     print("Scene points")
@@ -507,13 +559,20 @@ def experiment(directory = "0",
     if zOffset != 0.0:
         print("Z offset for starting conditions = "+str(zOffset))
     print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
-    print("Control lambda = "+str(lamb))
+    print("\t Control lambda = "+str(lamb))
+    if k_int != 0.:
+        print("\t Control Integral gain = "+str(k_int))
+    if set_derivative:
+        print("\t Derivative component enabled")
+    if tanhLimit:
+        print("Hyperbolic tangent limit enabled")
     print("Depth estimation = "+depthOp_dict[depthOp])
     if depthOp == 4:
-        print("\t Estimated theph set at : "+str(Z_set))
+        print("\t Estimated depth set at : "+str(Z_set))
     print("Interaction matrix = "+case_interactionM_dict[case_interactionM])
     print("Control selection = "+control_type_dict[control_type])
     print("Controllable case = "+case_controlable_dict[gdl])
+    
     
     #   LOOP
     for i in range(steps):
@@ -607,10 +666,9 @@ def experiment(directory = "0",
     
     print("----------------------")
     print("Simulation final data")
-    ret_err = np.zeros(n_agents)
     
+    ret_err = np.linalg.norm(error_p,axis=1)
     for j in range(n_agents):
-        ret_err[j]=np.linalg.norm(error_p[j,:])
         print(error[j,:])
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
     for j in range(n_agents):
@@ -625,16 +683,17 @@ def experiment(directory = "0",
     print("Mean camera heights = ",np.mean(np.r_[p0[2,:],pd[2,:]]))
     
     ####   Plot
-    # Colors setup
     
-    #        RANDOM X_i
-    colors = (randint(0,255,3*max(n_agents,2*n_points))/255.0).reshape((max(n_agents,2*n_points),3))
     
+    #   Space errors
     new_agents = []
     end_position = np.zeros((n_agents,6))
     for i in range(n_agents):
         cam = cm.camera()
-        end_position[i,:] = np.r_[agents[i].camera.p,agents[i].camera.roll, agents[i].camera.pitch, agents[i].camera.yaw]
+        end_position[i,:] = np.r_[agents[i].camera.p,
+                                  agents[i].camera.roll,
+                                  agents[i].camera.pitch,
+                                  agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
         state_err = error_state(pd,new_agents,directory+"/3D_error")
@@ -647,23 +706,24 @@ def experiment(directory = "0",
     print("-------------------END------------------")
     print()
     
+    # Colors setup
+    n_colors = max(n_agents,2*n_points)
+    colors = randint(0,255,3*n_colors)/255.0
+    colors = colors.reshape((n_colors,3))
     
-    
-    #   Camera positions (init, end, ref) 
-    lfact = 1.1
+    #   Camera positions in X,Y 
     mp.plot_position(pos_arr,
                     pd,
-                    lfact,
-                    colors,
+                    lfact = 1.1,
+                    colors = colors,
                     name = directory+"/Cameras_trayectories")
-                    #label = "Positions")
     
+    #   3D plots
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     name = directory+"/3Dplot"
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
     for i in range(n_agents):
-        #agents[i].count_points_in_FOV(P)
         plot_3Dcam(ax, agents[i].camera,
                 pos_arr[i,:,:],
                 p0[:,i],
@@ -671,15 +731,14 @@ def experiment(directory = "0",
                 color = colors[i],
                 i = i,
                 camera_scale    = 0.02)
-        #   Plot cammera position at intermediate time
-    step_sel = int(pos_arr.shape[2]/2)
+    #   Plot cammera position at intermediate time
     if midMarker:
+        step_sel = int(pos_arr.shape[2]/2)
         ax.scatter(pos_arr[:,0,step_sel],
                 pos_arr[:,1,step_sel],
                 pos_arr[:,2,step_sel],
                     marker = '+',s = 200, color = 'black')
     
-    #f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
     lfact = 1.1
     x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
     x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
@@ -693,7 +752,6 @@ def experiment(directory = "0",
     
     fig.legend( loc=1)
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    #plt.show()
     plt.close()
     
     #   Save 3D plot data:
@@ -701,23 +759,8 @@ def experiment(directory = "0",
              P = P, pos_arr=pos_arr, p0 = p0,
              pd = pd, end_position = end_position )
     
-    #   Descriptores (init, end, ref) x agente
+    #   Descriptores x agente
     for i in range(n_agents):
-        #print("Agent: "+str(i))
-        #L = ctr.Interaction_Matrix(agents[i].s_current_n,Z,gdl)
-        #print("Matriz de interacción (L): ")
-        #print(L)
-        #L = np.linalg.pinv(L) 
-        #print("Matriz de interacción pseudoinversa (L+): ")
-        #print(L)
-        #print("Error de consenso final (e): ")
-        #print(error[i,:])
-        #print("velocidades resultantes (L+ @ e): ")
-        #print(L@error[i,:])
-        #print("Valores singulares al final (s = SVD(L+)): ")
-        #print(s_store[i,:,-1])
-        ##print("Prod int u,err ",u@error[i,:]/np.linalg.norm(error[i,:]))
-        #print("Prod int v,err ",vh@error[i,:]/np.linalg.norm(error[i,:]))
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
@@ -725,7 +768,7 @@ def experiment(directory = "0",
                             name = directory+"/Image_Features_"+str(i),
                             label = "Image Features")
     
-    #   Errores 
+    #   Errores x agentes
     for i in range(n_agents):
         mp.plot_time(t_array,
                     err_array[i,:,:],
@@ -788,6 +831,16 @@ def experiment(directory = "0",
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
     return [ret_err, state_err[0],state_err[1]]
+
+
+
+###########################################################################
+#
+#   Experiment Height vatuation
+#
+###########################################################################
+
+
 
 def experiment_height():
     
@@ -896,50 +949,18 @@ def experiment_height():
     
     print("Total number of simulations = "+str(len(ref_arr)))
 
-def experiment_localmin():
-    
-    t = 100
-    #t = 20
-    
-    ##   Casos con formación 
-    ##   Caso minimo local e == 0 
-    ##   P_z = [0.0,  -0.2, 0.5]
-    #experiment(directory='0',
-                    #h = 1.5,
-                    #lamb = 1.,
-                    #gdl = 1,
-                   #zOffset = 0.7 ,
-                   #t_end = t)
-    
-    ###   Caso minimo local e != 0 
-    ###   P_z = [0.0,  -0.2, 0.5]
-    #experiment(directory='1',
-                    #h = 1.3,
-                    #lamb = 1.,
-                    #gdl = 1,
-                   #zOffset = 1.0 ,
-                   #t_end = t)
-    
-    #   Casos solo consenso
-    #   Caso minimo local e == 0 
-    #   P_z = [0.0,  -0.2, 0.5]
-    experiment(directory='0',
-                    h = 1.5,
-                    lamb = 1.,
-                    gdl = 1,
-                   zOffset = 0.7 ,
-                   t_end = t)
-    
-    #   Caso minimo local e != 0 
-    #   P_z = [0.0,  -0.2, 0.5]
-    experiment(directory='1',
-                    h = 0.6,
-                    lamb = 1.,
-                    gdl = 1,
-                   zOffset = -.2 ,
-                   t_end = t)
 
-def experiment_randomInit(justPlot = False,
+
+###########################################################################
+#
+#   Experiment Initial condiditon variation
+#
+###########################################################################
+
+
+
+
+def experiment_initalConds(justPlot = False,
                           midMarker = False,
                           noRef = True, # graph WoRef
                           set_derivative = True,
@@ -1031,7 +1052,9 @@ def experiment_randomInit(justPlot = False,
                             p0 = p0,
                             t_end = t_f)
             
-            [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+            arr_error[idx%variantes,:,i] = ret[0]
+            arr_epsilon[idx%variantes,0,i] = ret[1]
+            arr_epsilon[idx%variantes,1,i] = ret[2]
             idx += 1
             
             #   Sin referencia P
@@ -1220,28 +1243,19 @@ def main():
     
     #view3D('4')
     #view3D('5')
-    view3D('4')
-    view3D('5')
-    return 
-    #experiment_randomInit(n = 2,
-                          #midMarker = True, 
-                          #k_int = 0.,
-                          #noRef = True,
-                          #set_derivative = True)
-                          ##justPlot = True)
-    experiment_randomInit(n = 10,
+    #view3D('4')
+    #view3D('5')
+    #return 
+    
+    experiment_initalConds(n = 1,
                           k_int = 0.,
                           noRef = False,
                           midMarker = True)
                           #justPlot = True)
-    #experiment_randomInit(n = 10, midMarker = True)
-    #experiment_randomInit(n = 2)
-    #experiment_randomInit(n = 10, k_int = 1)
-    #experiment_randomInit(justPlot = True)
+    
+    
     return
     
-    #   Caso minimo local e != 0 
-    #   P_z = [0.0,  -0.2, 0.5]
     #experiment(directory='14',
                     #h = 1.1,
                     #lamb = 0.1,
@@ -1249,20 +1263,10 @@ def main():
                    #zOffset = 0.0 ,
                    #t_end = 100,
                    #tanhLimit = True)
-    #experiment(directory='12',
-                    #gdl = 1,
-                    #h = 1.5,
-                    #zOffset = 0.7 ,
-                    #t_end = 90,
-                    #tanhLimit = True)
     #return
     
     ##   Experimentos de variación de altura
     experiment_height()
-    #return
-    
-    ##  Experimentos de minimos locales
-    #experiment_localmin()
     return
     
     
@@ -1277,35 +1281,28 @@ def main():
     exp_select = [ 2.0 ]
     
     n_agents = 4
-    var_arr = np.zeros((n_agents,len(exp_select)))
+    var_arr = np.zeros((len(exp_select),n_agents,1))
     ref_arr = np.array(exp_select)
     for i in range(len(exp_select)):
-        ret_err = experiment(directory=str(i),depthOp = 1,
-                    Z_set = exp_select[i],
-                    lamb = 0.1,
-                    gdl = 3,
-                   #zOffset = 1.0 ,
-                   t_end = 20)
-        var_arr[:,i] = ret_err
+        ret = experiment(directory=str(i),
+                        depthOp = 1,
+                        Z_set = exp_select[i],
+                        lamb = 0.1,
+                        gdl = 3,
+                        #zOffset = 1.0 ,
+                        t_end = 20)
+        var_arr[i,:,0] = ret[0]
         
     
     #   Plot data
     
-    fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso")
-    #plt.ylim([-2.,2.])
-    
     colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    plot_err_consenso(ref_arr,
+                      var_arr,
+                      colors,
+                      labels)
     
-    for i in range(n_agents):
-        ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
     
-    plt.yscale('logit')
-    plt.tight_layout()
-    plt.savefig('Consensus error.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
-
 
 if __name__ ==  "__main__":
     main()

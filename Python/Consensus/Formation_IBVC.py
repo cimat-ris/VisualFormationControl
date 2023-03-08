@@ -120,6 +120,74 @@ def view3D(directory):
     plt.show()
     plt.close()
 
+def plot_err_consenso(ref_arr,
+                      arr_error,
+                      colors,
+                      labels,
+                      limits = None,
+                      enableShow = False,
+                      title = "Error de consenso",
+                      filename = "ConsensusError.pdf"):
+    
+    #   Variantes
+    n = arr_error.shape[0]
+    #   agentes
+    m = arr_error.shape[0]
+    
+    fig, ax = plt.subplots()
+    fig.suptitle(title)
+    
+    symbols = []
+    for i in range(n):
+        for j in range(m):
+            ax.scatter(ref_arr,arr_error[i,j,:],
+                        marker = "x", alpha = 0.5, color=colors[i])
+        symbols.append(mpatches.Patch(color=colors[i]))
+        
+    
+    fig.legend(symbols,labels, loc=1)
+    
+    plt.yscale('logit')
+    if not limits is None:
+        plt.ylim(limits)
+    plt.tight_layout()
+    plt.savefig(filename,bbox_inches='tight')
+    if enableShow:
+        plt.show()
+    plt.close()
+
+def plot_err_formacion(ref_arr,
+                      arr_error,
+                      colors,
+                      labels,
+                      limits = None,
+                      enableShow = False,
+                      title = "Error de formación",
+                      filename = "FormationError.pdf"):
+    #   Variantes
+    n = arr_error.shape[0]
+    
+    fig, ax = plt.subplots()
+    fig.suptitle(title)
+    
+    symbols = []
+    for i in range(n):
+        ax.scatter(ref_arr,arr_error[i,0,:],
+                   marker='.', label  = labels[i]+ " Tras", 
+                   alpha = 0.5, color = colors[i])
+        ax.scatter(ref_arr,arr_error[i,1,:],
+                   marker='*', label  = labels[i]+ " Rot", 
+                   alpha = 0.5, color = colors[i])
+    
+    fig.legend( loc=1)
+    if not limits is None:
+        plt.ylim(limits)
+    plt.tight_layout()
+    plt.savefig(filename,bbox_inches='tight')
+    if enableShow:
+        plt.show()
+    plt.close()
+    
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
@@ -287,6 +355,7 @@ def experiment(directory = "0",
                p0 = None,
                pd = None,
                set_consensoRef = True,
+               set_derivative = False,
                atTarget = False,
                tanhLimit = False,
                midMarker = False):
@@ -374,7 +443,8 @@ def experiment(directory = "0",
         cam = cm.camera()
         agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,
                                 k_int = k_int,
-                                set_consensoRef = set_consensoRef))
+                                set_consensoRef = set_consensoRef,
+                                set_derivative = set_derivative))
     
     #   Check initial params 
     for i in range(n_agents):
@@ -485,9 +555,13 @@ def experiment(directory = "0",
             
             #   Control
             if control_type == 1:
+                if set_derivative:
+                    tmp_err = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
+                else:
+                    tmp_err = error[j,:]
                 args = {"deg":G.deg[j] , 
                         "control_sel":case_interactionM,
-                        "error": error[j,:]+G.deg[j]*agents[j].dot_s_current_n,
+                        "error": tmp_err,
                         "gdl":gdl}
             elif control_type == 2:
                 args = {"H" : H[j,:,:,:],
@@ -868,6 +942,8 @@ def experiment_localmin():
 
 def experiment_randomInit(justPlot = False,
                           midMarker = False,
+                          noRef = True, # graph WoRef
+                          set_derivative = True,
                           r = 0.8,
                         n = 1,
                         k_int = 0.1,
@@ -884,18 +960,23 @@ def experiment_randomInit(justPlot = False,
         arr_epsilon = np.load('arr_epsilon.npy')
         n = arr_epsilon.shape[2]
         ref_arr = np.arange(n)
+        variantes = arr_error.shape[0]
         
     else:
         
+        variantes = 1
         if k_int != 0.:
-            variantes = 4
-        else:
-            variantes = 2
+            variantes *= 2
+        if noRef:
+            variantes *= 2
+        if set_derivative:
+            variantes *= 2
         ref_arr = np.arange(n)
         #   4 variantes X 4 agentes X n repeticiones
         arr_error = np.zeros((variantes,4,n))
         #   4 variantes X 2 componentes X n repeticiones
         arr_epsilon = np.zeros((variantes,2,n))
+        idx = 0
         for i in range(n):
             
             print(" ---  Case ", i, " RP--- ")
@@ -941,7 +1022,7 @@ def experiment_randomInit(justPlot = False,
                 
                 
                 #   Con referencia P
-                ret = experiment(directory=str(i*variantes),
+                ret = experiment(directory=str(idx),
                                  midMarker = midMarker,
                             h = 1 ,
                             r = 1.,
@@ -951,26 +1032,29 @@ def experiment_randomInit(justPlot = False,
                             p0 = p0,
                             t_end = t_f)
             
-            [arr_error[0,:,i], arr_epsilon[0,0,i], arr_epsilon[0,1,i]] = ret
+            [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+            idx += 1
             
             #   Sin referencia P
-            print(" ---  Case ", i, " P--- ")
-            ret = experiment(directory=str(i*variantes+1),
-                        midMarker = midMarker,
-                        h = 1 ,
-                        r = 1.,
-                        #tanhLimit = True,
-                        #depthOp = 4, Z_set=2.,
-                        depthOp = 1,
-                        p0 = p0,
-                        set_consensoRef = False,
-                        t_end = t_f)
-            [arr_error[1,:,i], arr_epsilon[1,0,i], arr_epsilon[1,1,i]] = ret
+            if noRef:
+                print(" ---  Case ", i, " P--- ")
+                ret = experiment(directory=str(idx),
+                            midMarker = midMarker,
+                            h = 1 ,
+                            r = 1.,
+                            #tanhLimit = True,
+                            #depthOp = 4, Z_set=2.,
+                            depthOp = 1,
+                            p0 = p0,
+                            set_consensoRef = False,
+                            t_end = t_f)
+                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                idx += 1
             
             if k_int != 0.:
                 #   Con referencia PI
                 print(" ---  Case ", i, " RPI--- ")
-                ret = experiment(directory=str(i*variantes+2),
+                ret = experiment(directory=str(idx),
                             midMarker = midMarker,
                             k_int =k_int,
                             h = 1 ,
@@ -980,13 +1064,65 @@ def experiment_randomInit(justPlot = False,
                             depthOp = 1,
                             p0 = p0,
                             t_end = t_f)
-                
-                [arr_error[2,:,i], arr_epsilon[2,0,i], arr_epsilon[2,1,i]] = ret
+                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                idx += 1
                 
                 #   Sin referencia PI
-                print(" ---  Case ", i, " PI--- ")
-                ret = experiment(directory=str(i*variantes+3),
+                if noRef:
+                    print(" ---  Case ", i, " PI--- ")
+                    ret = experiment(directory=str(idx),
+                                midMarker = midMarker,
+                                k_int = k_int,
+                                h = 1 ,
+                                r = 1.,
+                                #tanhLimit = True,
+                                #depthOp = 4, Z_set=2.,
+                                depthOp = 1,
+                                p0 = p0,
+                                set_consensoRef = False,
+                                t_end = 20)
+                    [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                    idx += 1
+                    
+            if set_derivative:
+                #   Con referencia PD
+                print(" ---  Case ", i, " RPD--- ")
+                ret = experiment(directory=str(idx),
                             midMarker = midMarker,
+                            set_derivative = set_derivative,
+                            h = 1 ,
+                            r = 1.,
+                            #tanhLimit = True,
+                            #depthOp = 4, Z_set=2.,
+                            depthOp = 1,
+                            p0 = p0,
+                            t_end = t_f)
+                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                idx += 1
+                
+                #   Sin referencia PD
+                if noRef:
+                    print(" ---  Case ", i, " PD--- ")
+                    ret = experiment(directory=str(idx),
+                                midMarker = midMarker,
+                                set_derivative = set_derivative,
+                                h = 1 ,
+                                r = 1.,
+                                #tanhLimit = True,
+                                #depthOp = 4, Z_set=2.,
+                                depthOp = 1,
+                                p0 = p0,
+                                set_consensoRef = False,
+                                t_end = 20)
+                    [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                    idx += 1
+                    
+            if set_derivative and k_int != 0:
+                #   Con referencia PI
+                print(" ---  Case ", i, " RPID--- ")
+                ret = experiment(directory=str(idx),
+                            midMarker = midMarker,
+                            set_derivative = set_derivative,
                             k_int = k_int,
                             h = 1 ,
                             r = 1.,
@@ -994,105 +1130,92 @@ def experiment_randomInit(justPlot = False,
                             #depthOp = 4, Z_set=2.,
                             depthOp = 1,
                             p0 = p0,
-                            set_consensoRef = False,
-                            t_end = 20)
-                [arr_error[3,:,i], arr_epsilon[3,0,i], arr_epsilon[3,1,i]] = ret
+                            t_end = t_f)
+                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                idx += 1
+                
+                #   Sin referencia PI
+                if noRef:
+                    print(" ---  Case ", i, " PID--- ")
+                    ret = experiment(directory=str(idx),
+                                midMarker = midMarker,
+                                set_derivative = set_derivative,
+                                k_int = k_int,
+                                h = 1 ,
+                                r = 1.,
+                                #tanhLimit = True,
+                                #depthOp = 4, Z_set=2.,
+                                depthOp = 1,
+                                p0 = p0,
+                                set_consensoRef = False,
+                                t_end = 20)
+                    [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
+                    idx += 1
         np.save('arr_err.npy',arr_error)
         np.save('arr_epsilon.npy',arr_epsilon)
         
         
     #   Plot data
-    colors = (randint(0,255,3*4*4)/255.0).reshape((4*4,3))
+    colors = randint(0,255,3*arr_error.shape[1]*variantes)/255.0
+    colors = colors.reshape((arr_error.shape[1]*variantes,3))
     
     #   Consenso con referencia 
-    fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso con referencia")
-    #plt.ylim([-2.,2.])
+    if k_int != 0. and not set_derivative:
+        idx_sel = [0,1]
+        labels = ["P","PI"]
+    elif k_int == 0. and set_derivative:
+        idx_sel = [0,1]
+        labels = ["P","PD"]
+    elif k_int != 0. and set_derivative:
+        idx_sel = [0,1,2,3]
+        labels = ["P","PI","PD","PID"]
+    else:
+        idx_sel = [0]
+        labels = ["P"]
     
-    for i in range(4):
-        ax.scatter(ref_arr,arr_error[0,i,:], marker = "x", alpha = 0.5, color=colors[0])
-        if k_int != 0.:
-            ax.scatter(ref_arr,arr_error[2,i,:], marker = "x", alpha = 0.5, color=colors[2])
+    if noRef:
+        for i in range(len(idx_sel)):
+            idx_sel[i] *= 2
     
-    if k_int != 0.:
-        symbols = [mpatches.Patch(color=colors[0]),mpatches.Patch(color=colors[2])]
-        fig.legend(symbols,["P","PI"], loc=1)
+    plot_err_consenso(ref_arr,
+                      arr_error[idx_sel,:,:],
+                      colors[idx_sel],
+                      labels,
+                      title = "Error de consenso con referencia",
+                      filename = "ConsensusError_WRef.pdf")
+    plot_err_formacion(ref_arr,
+                      arr_epsilon[idx_sel,:,:],
+                      colors[idx_sel],
+                      labels,
+                      title = "Error de formación con referencia",
+                      filename = "FormationError_WRef.pdf")
+    plot_err_formacion(ref_arr,
+                      arr_epsilon[idx_sel,:,:],
+                      colors[idx_sel],
+                      labels,
+                      limits = [0,0.1],
+                      title = "Error de formación con referencia",
+                      filename = "FormationError_WRef_zoom.pdf")
+    print(arr_error)
+    #   Sin referencia
+    if noRef:
+        #   Consenso sin referencia
+        for i in range(len(idx_sel)):
+            idx_sel[i] += 1
+        plot_err_consenso(ref_arr,
+                      arr_error[idx_sel,:,:],
+                      colors[idx_sel],
+                      labels,
+                      title = "Error de consenso sin referencia",
+                      filename = "ConsensusError_WoRef.pdf")
+        plot_err_formacion(ref_arr,
+                      arr_epsilon[idx_sel,:,:],
+                      colors[idx_sel],
+                      labels,
+                      title = "Error de formación sin referencia",
+                      filename = "FormationError_WoRef.pdf")
     
-    plt.yscale('logit')
-    plt.tight_layout()
-    plt.savefig('Consensus error_WRef.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
     
-    #   Consenso sin referencia
-    fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso sin referencia")
-    #plt.ylim([-2.,2.])
-    
-    for i in range(4):
-        ax.scatter(ref_arr,arr_error[1,i,:], marker = "x", alpha = 0.5, color=colors[1])
-        if k_int != 0.:
-            ax.scatter(ref_arr,arr_error[3,i,:], marker = "x", alpha = 0.5, color=colors[3])
-    
-    if k_int != 0.:
-        symbols = [mpatches.Patch(color=colors[1]), mpatches.Patch(color=colors[3])]
-        fig.legend(symbols,["P","PI"], loc=1)
-    
-    plt.yscale('logit')
-    plt.tight_layout()
-    plt.savefig('Consensus error_WoRef.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
-    
-    fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado con referencia")
-    
-    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[0])
-    if k_int != 0.:
-        ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[2])
-        ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[2])
-    
-    plt.ylim([0,0.1])
-    fig.legend( loc=1)
-    plt.tight_layout()
-    plt.savefig('Formation error_WRef_zoom.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
-    
-    #   Formación con referencia
-    fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado con referencia")
-    
-    ax.scatter(ref_arr,arr_epsilon[0,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[0])
-    ax.scatter(ref_arr,arr_epsilon[0,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[0])
-    if k_int != 0.:
-        ax.scatter(ref_arr,arr_epsilon[2,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[2])
-        ax.scatter(ref_arr,arr_epsilon[2,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[2])
-    
-    #plt.ylim([0,0.05])
-    fig.legend( loc=1)
-    plt.tight_layout()
-    plt.savefig('Formation error_WRef.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
-    
-    #   Formación sin referencia
-    fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado sin referencia")
-    
-    ax.scatter(ref_arr,arr_epsilon[1,0,:], marker='.', label  = "P Tras", alpha = 0.5, color = colors[1])
-    ax.scatter(ref_arr,arr_epsilon[1,1,:], marker='*', label  = "P Rot", alpha = 0.5, color = colors[1])
-    if k_int != 0.:
-        ax.scatter(ref_arr,arr_epsilon[3,0,:], marker='.', label  = "PI Tras", alpha = 0.5, color = colors[3])
-        ax.scatter(ref_arr,arr_epsilon[3,1,:], marker='*', label  = "PI Rot", alpha = 0.5, color = colors[3])
-    
-    #plt.ylim([0,0.01])
-    fig.legend( loc=1)
-    plt.tight_layout()
-    plt.savefig('Formation error_WoRef.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
     
 def main():
     
@@ -1101,7 +1224,12 @@ def main():
     #view3D('6')
     #view3D('7')
     #return 
-    experiment_randomInit(n = 10, midMarker = True, k_int = 0.)
+    experiment_randomInit(n = 2,
+                          midMarker = True, 
+                          k_int = 0.,
+                          noRef = True,
+                          set_derivative = True)
+                          #justPlot = True)
     #experiment_randomInit(n = 10, midMarker = True)
     #experiment_randomInit(n = 2)
     #experiment_randomInit(n = 10, k_int = 1)

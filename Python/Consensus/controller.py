@@ -168,6 +168,7 @@ class agent:
                  points,
                  k = 1,
                  k_int = 0,
+                 set_derivative = True,
                  set_consensoRef = True ):
         
         self.n_points = points.shape[1]
@@ -179,6 +180,7 @@ class agent:
         self.camera = camera
         
         self.set_consensoRef = set_consensoRef 
+        self.set_derivative = set_derivative
         
         self.camera.pose(p_obj)
         self.s_ref = self.camera.project(points)
@@ -270,8 +272,9 @@ class agent:
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         
-        self.dot_s_current_n = (self.s_current_n - tmp)/dt
-        self.dot_s_current_n = self.dot_s_current_n.T.reshape(2*self.n_points)
+        if self.set_derivative:
+            self.dot_s_current_n = (self.s_current_n - tmp)/dt
+            self.dot_s_current_n = self.dot_s_current_n.T.reshape(2*self.n_points)
         self.error_int += self.error_p*dt
         
         if self.set_consensoRef:

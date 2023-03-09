@@ -290,41 +290,65 @@ def error_state(reference,  agents, name):
     new_state[1] -= centroide_state[1]
     new_state[2] -= centroide_state[2]
     
-    #   Aplicar rotación promedio
-    theta = np.arctan2(new_reference[1,:],new_reference[0,:])
-    theta -= np.arctan2(new_state[1,:],new_state[0,:])
-    sel = (abs(theta) > np.pi)
-    theta[sel] = np.sign(theta[sel])*(abs(theta[sel])-2*np.pi)
-    theta = theta.mean()
+    D = new_state[:3,:].T
+    Di = np.linalg.pinv(D)
+    P_r = new_reference[:3,:].T
     
-    ca = cos(theta)
-    sa = sin(theta)
-    R = np.array([[ ca, -sa],
-                  [ sa,  ca]])
-    new_state[:2,:] = R@new_state[:2,:]
+    T1 =  Di @ P_r[:,0]
+    T2 =  Di @ P_r[:,1]
+    T3 =  Di @ P_r[:,2]
     
-    #       Updtate normalized and oriented agents
-    for i in range(len(agents)):
-        #new_p = np.r_[new_state[:,i] ,agents[i].camera.roll,agents[i].camera.pitch,agents[i].camera.yaw + theta]
-        #agents[i].camera.pose(new_p)
-        new_state[5,i] += theta
+    #   Aplicando caso homogeneo en caso de existir
+    u, s, vh = np.linalg.svd(D.T@D)
+    if (np.linalg.norm(T1) == 0.):
+        T1 = vh[2]
+    if (np.linalg.norm(T2) == 0.):
+        T2 = vh[2]
+    if (np.linalg.norm(T3) == 0.):
+        T3 = vh[2]
+        
+    #   Obteniendo matriz de transformación 
+    T = np.r_[T1.reshape((1,3)),T2.reshape((1,3)),T3.reshape((1,3))]
+    #   TODO: Tal vez normalizar por columna o fila
+    #print(T)
+    r = max(np.linalg.norm(T,axis=1).max(),
+            np.linalg.norm(T,axis=0).max())
+    R = T/r
+    
+    #   Actualizando traslaciones
+    new_state[:3,:] = R @ new_state[:3,:]
+    new_state[:3,:] = r*new_state[:3,:]
+    
+    #   Actualizando rotaciones
+    rot_err = np.zeros(n)
+    for i in range(n):
+        
+        #   update new_state
+        _R = R @ agents[i].camera.R
+        [new_state[3,i], new_state[4,i], new_state[5,i]] = ctr.get_angles(_R)
         agents[i].camera.pose(new_state[:,i])
         
-    #   normalizar referencia
-    new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis=0).mean()
+        #   Get error
+        _R =  cm.rot(new_reference[3,i],'x') @ agents[i].camera.R.T
+        _R = cm.rot(new_reference[4,i],'y') @ _R
+        _R = cm.rot(new_reference[5,i],'z') @ _R
+        rot_err[i] = np.arccos((_R.trace()-1.)/2.)
+    #   RMS
+    rot_err = rot_err**2
+    rot_err = rot_err.sum()/n
     
-    #   Aplicar minimización de radio (como lidiar con mínimos múltiples)
-    f = lambda r : (np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
-    r_state = minimize_scalar(f, method='brent')
-    t_err = f(r_state.x)
     
-    #   Plot
+    
+    #   Obteniendo error de traslación
+    t_err = new_reference[:3,:] - new_state[:3,:]
+    t_err = (np.linalg.norm(t_err,axis = 0)**2).sum()/n
+    
+     ##   Plot
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    new_state[:3,:] *= r_state.x
+    
     for i in range(n):
-        agents[i].camera.pose(new_state[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='red')
         agents[i].camera.pose(new_reference[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
@@ -332,17 +356,88 @@ def error_state(reference,  agents, name):
     #plt.show()
     plt.close()
     
-    #   TODO: Obtencion de error de rotación
-    rot_err = np.zeros(n)
-    for i in range(n):
-        _R =  cm.rot(new_state[3,i],'x') @ agents[i].camera.R.T
-        _R = cm.rot(new_state[4,i],'y') @ _R
-        _R = cm.rot(new_state[5,i],'z') @ _R
-        rot_err = np.arccos((_R.trace()-1.)/2.)
-    rot_err = rot_err**2
-    rot_err = rot_err.sum()/n
     
     return [t_err, rot_err]
+
+#def error_state(reference,  agents, name):
+    
+    #n = reference.shape[1]
+    #state = np.zeros((6,n))
+    #for i in range(len(agents)):
+        #state[:3,i] = agents[i].camera.p
+        #state[3,i] = agents[i].camera.roll
+        #state[4,i] = agents[i].camera.pitch
+        #state[5,i] = agents[i].camera.yaw
+    
+    ##   Obten centroide
+    #centroide_ref = reference[:3,:].sum(axis=1)/n
+    #centroide_state = state.sum(axis=1)/n
+    
+    ##   Centrar elementos
+    #new_reference = reference.copy()
+    ##new_reference[:3,:] = new_reference[:3,:] - centroide_ref
+    #new_reference[0] -= centroide_ref[0]
+    #new_reference[1] -= centroide_ref[1]
+    #new_reference[2] -= centroide_ref[2]
+    #new_state = state.copy()
+    ##new_state[:3,:] = new_state[:3,:] - centroide_state
+    #new_state[0] -= centroide_state[0]
+    #new_state[1] -= centroide_state[1]
+    #new_state[2] -= centroide_state[2]
+    
+    ##   Aplicar rotación promedio
+    #theta = np.arctan2(new_reference[1,:],new_reference[0,:])
+    #theta -= np.arctan2(new_state[1,:],new_state[0,:])
+    #sel = (abs(theta) > np.pi)
+    #theta[sel] = np.sign(theta[sel])*(abs(theta[sel])-2*np.pi)
+    #theta = theta.mean()
+    
+    #ca = cos(theta)
+    #sa = sin(theta)
+    #R = np.array([[ ca, -sa],
+                  #[ sa,  ca]])
+    #new_state[:2,:] = R@new_state[:2,:]
+    
+    ##       Updtate normalized and oriented agents
+    #for i in range(len(agents)):
+        ##new_p = np.r_[new_state[:,i] ,agents[i].camera.roll,agents[i].camera.pitch,agents[i].camera.yaw + theta]
+        ##agents[i].camera.pose(new_p)
+        #new_state[5,i] += theta
+        #agents[i].camera.pose(new_state[:,i])
+        
+    ##   normalizar referencia
+    #new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis=0).mean()
+    
+    ##   Aplicar minimización de radio (como lidiar con mínimos múltiples)
+    #f = lambda r : (np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
+    #r_state = minimize_scalar(f, method='brent')
+    #t_err = f(r_state.x)
+    
+    ##   Plot
+    
+    #fig = plt.figure()
+    #ax = plt.axes(projection='3d')
+    #new_state[:3,:] *= r_state.x
+    #for i in range(n):
+        #agents[i].camera.pose(new_state[:,i])
+        #agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+        #agents[i].camera.pose(new_reference[:,i])
+        #agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+    #plt.savefig(name+'.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
+    
+    ##   TODO: Obtencion de error de rotación
+    #rot_err = np.zeros(n)
+    #for i in range(n):
+        #_R =  cm.rot(new_state[3,i],'x') @ agents[i].camera.R.T
+        #_R = cm.rot(new_state[4,i],'y') @ _R
+        #_R = cm.rot(new_state[5,i],'z') @ _R
+        #rot_err = np.arccos((_R.trace()-1.)/2.)
+    #rot_err = rot_err**2
+    #rot_err = rot_err.sum()/n
+    
+    #return [t_err, rot_err]
 
 #   Difference between agents
 #   It assumes that the states in the array are ordered and are the same
@@ -1243,20 +1338,40 @@ def main():
     
     #view3D('4')
     #view3D('5')
-    #view3D('4')
-    #view3D('5')
+    #view3D('20')
+    #view3D('21')
     #return 
     
-    experiment(directory='0',
+    p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
+        [ 1.5040017,   0.26301641, -0.2127149,  -0.35572372],
+        [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
+        [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
+        [ 0.      ,    0.   ,      -0.   ,       0.        ],
+        [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+    p0 = np.array(p0)
+    experiment(directory='20',
+               k_int = 0.1,
                 h = 1 ,
                 r = 1.,
+                p0 = p0,
+                #tanhLimit = True,
                 depthOp = 1,
-                t_end = 100,
-                repeat = True)
+                t_end = 200)
+                #repeat = True)
     
-    #return
+    experiment(directory='21',
+               k_int = 0.1,
+                h = 1 ,
+                r = 1.,
+                p0 = p0,
+                tanhLimit = True,
+                depthOp = 1,
+                t_end = 200)
+                #repeat = True)
+    
+    return
     #experiment_initalConds(n = 10,
-                        #k_int = 0.,
+                        #k_int = 0.1,
                         #noRef = False,
                         #set_derivative = False,
                         #midMarker = True)

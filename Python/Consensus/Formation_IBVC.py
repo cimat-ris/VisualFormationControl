@@ -229,8 +229,9 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
         #   TODO creo que esto está mal calculado
         M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
         Z = M @ P
-        #print(Z)
         Z = Z[2,:]
+        #print("Agent Z ",j)
+        #print(Z)
         #if any(Z < 0.):
             #print(Z)
             #print(agent.camera.p )
@@ -551,7 +552,12 @@ def experiment(directory = "0",
                 return 
         else:
             pd = np.zeros(p0.shape)
-        
+        #p0 = pd.copy()
+        #p0[:,0] = pd[:,2].copy()
+        #p0[:,2] = pd[:,0].copy()
+        #p0[0,1] = 0.5
+        #p0[1,1] = 0.5
+        #p0[5,1] = 0.2
         #   Parameters
         
         case_n = 1  #   Case selector if needed
@@ -601,7 +607,7 @@ def experiment(directory = "0",
     
     t=0
     steps = int((t_end-t)/dt + 1.0)
-    
+    #steps = 20
     #   case selections
     if case_interactionM > 1:
         for i in range(n_agents):
@@ -622,6 +628,7 @@ def experiment(directory = "0",
     
     #   Storage variables
     t_array = np.arange(t,t_end+dt,dt)
+    #t_array = np.arange(t,dt*steps,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
@@ -800,7 +807,9 @@ def experiment(directory = "0",
         print("WARNING : Cammera plane hit scene points: ", depthFlags)
     print("-------------------END------------------")
     print()
-    
+    #print(err_array)
+    #print(U_array)
+    #print(pos_arr)
     # Colors setup
     n_colors = max(n_agents,2*n_points)
     colors = randint(0,255,3*n_colors)/255.0
@@ -1339,7 +1348,7 @@ def main():
     #view3D('4')
     #view3D('5')
     #view3D('20')
-    #view3D('21')
+    #view3D('24')
     #return 
     
     p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
@@ -1347,9 +1356,21 @@ def main():
         [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
+        #[ 0.      ,    0.   ,      -0.   ,       0.        ]]
         [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
     p0 = np.array(p0)
-    experiment(directory='20',
+    experiment(directory='24',
+               k_int = 0.1,
+                h = 1 ,
+                r = 1.,
+                p0 = p0,
+                #tanhLimit = True,
+                depthOp = 1,
+                #set_consensoRef = False,
+                t_end = 100)
+                #repeat = True)
+    return
+    experiment(directory='21',
                k_int = 0.1,
                 h = 1 ,
                 r = 1.,
@@ -1359,14 +1380,24 @@ def main():
                 t_end = 200)
                 #repeat = True)
     
-    experiment(directory='21',
-               k_int = 0.1,
-                h = 1 ,
+    experiment(directory='22',
+               #k_int = 0.1,
+                h = 1.5 ,
                 r = 1.,
                 p0 = p0,
-                tanhLimit = True,
+                #tanhLimit = True,
                 depthOp = 1,
                 t_end = 200)
+                #repeat = True)
+    
+    experiment(directory='23',
+               k_int = 0.1,
+                h = 1.5 ,
+                r = 1.,
+                p0 = p0,
+                #tanhLimit = True,
+                depthOp = 1,
+                t_end = 2.5)
                 #repeat = True)
     
     return

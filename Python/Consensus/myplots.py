@@ -30,8 +30,8 @@ def plot_time(t_array,
         symbols.append(mpatches.Patch(color=colors[i]))
     if not(labels is None):
         fig.legend(symbols,labels, loc=2)
-    if (label == "Velocidades" or label == "Features Error"):
-        plt.ylim((-1,1))
+    #if ( label == "Features Error"):
+        #plt.ylim((-1,1))
     elif not(limits is None):
         plt.ylim((limits[1][0],limits[1][1]))
     

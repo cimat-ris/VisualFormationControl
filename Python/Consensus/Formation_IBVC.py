@@ -263,6 +263,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
 #   Error if state calculation
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
+
 def error_state(reference,  agents, name):
     
     n = reference.shape[1]
@@ -292,8 +293,9 @@ def error_state(reference,  agents, name):
     #   Aplicar rotación promedio
     theta = np.arctan2(new_reference[1,:],new_reference[0,:])
     theta -= np.arctan2(new_state[1,:],new_state[0,:])
+    sel = (abs(theta) > np.pi)
+    theta[sel] = np.sign(theta[sel])*(abs(theta[sel])-2*np.pi)
     theta = theta.mean()
-    #theta  = 0.
     
     ca = cos(theta)
     sa = sin(theta)
@@ -458,7 +460,6 @@ def experiment(directory = "0",
         #   Parameters
         
         case_n = 1  #   Case selector if needed
-        directed = False
         
         #   Graphs
         if adjMat is None:
@@ -476,7 +477,7 @@ def experiment(directory = "0",
                 adjMat = adjMat)
         
     #   Conectivity graph
-    G = gr.graph(adjMat, directed)
+    G = gr.graph(adjMat, False)
     #G.plot()
     L = G.laplacian()
     G.plot()
@@ -541,15 +542,14 @@ def experiment(directory = "0",
     
     #   Print simulation data:
     print("------------------BEGIN-----------------")
-    print("Is directed = "+str(directed))
     print("Laplacian matrix: ")
     print(L)
     print(A_ds)
     if set_consensoRef:
-        print("No reference states")
-    else:
         print("Reference states")
         print(pd)
+    else:
+        print("No reference states")
     print("Initial states")
     print(p0)
     print("Scene points")
@@ -1247,14 +1247,19 @@ def main():
     #view3D('5')
     #return 
     
-    experiment_initalConds(n = 1,
-                          k_int = 0.,
-                          noRef = False,
-                          midMarker = True)
-                          #justPlot = True)
+    experiment(directory='0',
+                h = 1 ,
+                r = 1.,
+                depthOp = 1,
+                t_end = 100,
+                repeat = True)
     
-    
-    return
+    #return
+    #experiment_initalConds(n = 10,
+                        #k_int = 0.,
+                        #noRef = False,
+                        #set_derivative = False,
+                        #midMarker = True)
     
     #experiment(directory='14',
                     #h = 1.1,
@@ -1263,11 +1268,11 @@ def main():
                    #zOffset = 0.0 ,
                    #t_end = 100,
                    #tanhLimit = True)
-    #return
+    return
     
     ##   Experimentos de variación de altura
-    experiment_height()
-    return
+    #experiment_height()
+    #return
     
     
     ##  Experimentos de variación de parámetros de contol

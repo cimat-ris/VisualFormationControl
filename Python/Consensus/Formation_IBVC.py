@@ -285,40 +285,34 @@ def error_state(reference,  agents, name):
     new_reference[0] -= centroide_ref[0]
     new_reference[1] -= centroide_ref[1]
     new_reference[2] -= centroide_ref[2]
+    new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis = 1).mean()
+    
     new_state = state.copy()
     #new_state[:3,:] = new_state[:3,:] - centroide_state
     new_state[0] -= centroide_state[0]
     new_state[1] -= centroide_state[1]
     new_state[2] -= centroide_state[2]
+    new_state[:3,:] /= np.linalg.norm(new_state[:3,:],axis = 1).mean()
     
-    D = new_state[:3,:].T
-    Di = np.linalg.pinv(D)
-    P_r = new_reference[:3,:].T
+    M = new_state[:3,:].T.reshape((n,3,1))
+    D = new_reference[:3,:].T.reshape((n,1,3))
+    H = M @ D
+    H = H.sum(axis = 0)
     
-    T1 =  Di @ P_r[:,0]
-    T2 =  Di @ P_r[:,1]
-    T3 =  Di @ P_r[:,2]
+    U, S, VH = np.linalg.svd(H)
     
-    #   Aplicando caso homogeneo en caso de existir
-    u, s, vh = np.linalg.svd(D.T@D)
-    if (np.linalg.norm(T1) == 0.):
-        T1 = vh[2]
-    if (np.linalg.norm(T2) == 0.):
-        T2 = vh[2]
-    if (np.linalg.norm(T3) == 0.):
-        T3 = vh[2]
+    R = VH.T @ U.T
+    if np.linalg.det(R)==-1.:
+        VH[2,:] *= -1
+        R = VH.T @ U.T
         
-    #   Obteniendo matriz de transformación 
-    T = np.r_[T1.reshape((1,3)),T2.reshape((1,3)),T3.reshape((1,3))]
-    #   TODO: Tal vez normalizar por columna o fila
-    #print(T)
-    r = max(np.linalg.norm(T,axis=1).max(),
-            np.linalg.norm(T,axis=0).max())
-    R = T/r
+    if np.linalg.det(R) != 1.:
+        print("Invalid rotation")
+        return [0,0]
+    
     
     #   Actualizando traslaciones
     new_state[:3,:] = R @ new_state[:3,:]
-    new_state[:3,:] = r*new_state[:3,:]
     
     #   Actualizando rotaciones
     rot_err = np.zeros(n)
@@ -337,8 +331,6 @@ def error_state(reference,  agents, name):
     #   RMS
     rot_err = rot_err**2
     rot_err = rot_err.sum()/n
-    
-    
     
     #   Obteniendo error de traslación
     t_err = new_reference[:3,:] - new_state[:3,:]

@@ -9,9 +9,8 @@ class graph:
     
     
     
-    def __init__(self,_mat,_directed = False):
+    def __init__(self,_mat):
         self.adjacency_mat = np.array(_mat)
-        self.directed = _directed
         self.n = self.adjacency_mat.shape[1]
         
         #   Grados
@@ -54,3 +53,12 @@ class graph:
         #plt.show()
         plt.close()
         
+    def getEdge(self,k):
+        idx = 0
+        for i in range(self.n):
+            if self.list_adjacency[i][0].shape[0] > 0:
+                for j in self.list_adjacency[i][0]:
+                    if idx == k:
+                        return [i,int(j)]
+                    idx += 1
+        return None

@@ -236,8 +236,12 @@ class agent:
         
         #   TODO: reconfigurar con momtijano
         #   BEGIN local
-        p = np.r_[self.camera.p.T , self.camera.roll, self.camera.pitch, self.camera.yaw]
-        p += dt*np.array([1.,-1.,-1.,1.,-1.,-1.])*U
+        p = np.r_[self.camera.p.T ,
+                  self.camera.roll,
+                  self.camera.pitch,
+                  self.camera.yaw]
+        kw = 1.
+        p += dt*np.array([1.,-1.,-1.,kw,-kw,-kw])*U
         #print(U)
         
         #   END GLOBAL
@@ -279,7 +283,7 @@ class agent:
         #print(self.error)
         self.error_p = self.error_p.T.reshape(2*self.n_points)
         #print(self.error)
-        self.error = self.k * self.error_p - 0.5* self.dot_s_current_n + self.k_int * self.error_int  
+        self.error = self.k * self.error_p -  self.dot_s_current_n + self.k_int * self.error_int  
         
     def count_points_in_FOV(self,Z):
         xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)

@@ -10,7 +10,7 @@
 
 #   Math
 import numpy as np
-from numpy.linalg import inv, svd
+from numpy.linalg import inv, svd, norm
 from numpy import sin, cos, pi
 from scipy.optimize import minimize_scalar
 
@@ -76,6 +76,9 @@ def circle(n_agents,r,h):
     Objective[1,:] = r*sin(ang_arange)
     Objective[2,:] = h
     Objective[3,:] = pi
+    
+    #Objective = Objective[:,[1,2,3,0]]
+    
     return Objective
 
 
@@ -281,50 +284,40 @@ def error_state(reference,  agents, name):
     
     #   Centrar elementos
     new_reference = reference.copy()
-    #new_reference[:3,:] = new_reference[:3,:] - centroide_ref
     new_reference[0] -= centroide_ref[0]
     new_reference[1] -= centroide_ref[1]
     new_reference[2] -= centroide_ref[2]
-    new_reference_n = new_reference[:3,:] / np.linalg.norm(new_reference[:3,:],axis = 1).mean()
-    new_reference[:3,:] /= np.linalg.norm(new_reference[:3,:],axis = 0).mean()
-    #new_reference_n = new_reference[:3,:] / np.linalg.norm(new_reference[:3,:],axis = 0)
-    #new_reference_n = new_reference[:3,:]
+    new_reference[:3,:] /= norm(new_reference[:3,:],axis = 0).mean()
     
     new_state = state.copy()
     #new_state[:3,:] = new_state[:3,:] - centroide_state
     new_state[0] -= centroide_state[0]
     new_state[1] -= centroide_state[1]
     new_state[2] -= centroide_state[2]
-    new_state_n = new_state[:3,:] / np.linalg.norm(new_state[:3,:],axis = 1).mean()
-    new_state[:3,:] /= np.linalg.norm(new_state[:3,:],axis = 0).mean()
-    #new_state_n = new_state[:3,:] / np.linalg.norm(new_state[:3,:],axis = 0)
-    #new_state_n = new_state[:3,:]
-    #print(new_state_n)
     
-    M = new_state_n.T.reshape((n,3,1))
-    D = new_reference_n.T.reshape((n,1,3))
+    M = new_state[:3,:].T.reshape((n,3,1))
+    D = new_reference[:3,:].T.reshape((n,1,3))
     H = M @ D
     H = H.sum(axis = 0)
     
-    U, S, VH = np.linalg.svd(H)
-    
+    U, S, VH = svd(H)
     R = VH.T @ U.T
-    #print(np.linalg.det(R))
+    
+    #   Caso de Reflexión
     if np.linalg.det(R) < 0.:
-        VH[2,:] *= -1
+        VH[2,:] = -VH[2,:]
         R = VH.T @ U.T
     
-    det = np.linalg.det(R)
-    if det != 1. :
-        print("Invalid rotation",det)
-        R /= det
-    if any((np.linalg.norm(R,axis = 0) - 1.) > 1e-10):
-        print("Invalid rotation",np.linalg.norm(R,axis = 0))
-    if any((np.linalg.norm(R,axis = 1) - 1.) > 1e-10):
-        print("Invalid rotation",np.linalg.norm(R,axis = 1))
-    
-    #   Actualizando traslaciones
+    #   Actualizando Orientación de traslaciones
     new_state[:3,:] = R @ new_state[:3,:]
+    
+    #   Actualizando escala y Obteniendo error de traslaciones
+    #   TODO Podemos asumir que es una función convexa?
+    f = lambda r : (np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
+    r_state = minimize_scalar(f, method='brent')
+    t_err = f(r_state.x)
+    new_state[:3,:] = r_state.x * new_state[:3,:]
+    
     
     #   Actualizando rotaciones
     rot_err = np.zeros(n)
@@ -344,10 +337,6 @@ def error_state(reference,  agents, name):
     rot_err = rot_err**2
     rot_err = rot_err.sum()/n
     
-    #   Obteniendo error de traslación
-    t_err = new_reference[:3,:] - new_state[:3,:]
-    t_err = (np.linalg.norm(t_err,axis = 0)**2).sum()/n
-    
      ##   Plot
     
     fig = plt.figure()
@@ -357,6 +346,7 @@ def error_state(reference,  agents, name):
         agents[i].camera.draw_camera(ax, scale=0.2, color='red')
         agents[i].camera.pose(new_reference[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+        agents[i].camera.pose(state[:,i])
     plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
@@ -364,9 +354,77 @@ def error_state(reference,  agents, name):
     
     return [t_err, rot_err]
 
-def error_state_patricia(reference,  agents, name):
+def error_state_patricia(reference,  agents,G, name):
     
-    return [0,0]
+    n = len(agents)
+    state = np.zeros((6,n))
+    for i in range(len(agents)):
+        state[:3,i] = agents[i].camera.p
+        state[3,i] = agents[i].camera.roll
+        state[4,i] = agents[i].camera.pitch
+        state[5,i] = agents[i].camera.yaw
+    
+    
+    p1 = np.zeros((n,n,3))
+    pr1 = np.zeros((n,n,3))
+    rot_err = np.zeros((n,n))
+    R = agents[0].camera.R.T
+    Rr =  cm.rot(reference[3,0],'x')
+    Rr = cm.rot(reference[4,0],'y') @ Rr
+    Rr = cm.rot(reference[5,0],'z') @ Rr
+    Rr = R.T
+    
+    for i in range(n):
+        for j in range(n):
+            p1[i,j,:] = R @ ( agents[j].camera.p - agents[i].camera.p )
+            pr1[i,j,:] = Rr @ ( reference[:3,j] - reference[:3,i] )
+            
+            _R =  cm.rot(reference[3,i],'x')
+            _R = cm.rot(reference[4,i],'y') @ _R
+            _R = cm.rot(reference[5,i],'z') @ _R
+            _R = _R @ agents[i].camera.R.T
+            rot_err[i,j] = np.arccos((_R.trace()-1.)/2.)
+    
+    rot_err = G.adjacency_mat * rot_err
+    rot_err = rot_err.sum(axis=1)
+    rot_err = rot_err / G.deg
+    rot_err = rot_err.sum()/n
+    
+    
+    e1 = G.getEdge(0)
+    s = norm(pr1[e1[0],e1[1],:])/norm(p1[e1[0],e1[1],:])
+    p1 = s*p1
+    t_err = p1- pr1
+    t_err = norm(t_err,axis= 2)
+    t_err = G.adjacency_mat * t_err
+    t_err = t_err.sum(axis=1)
+    t_err = t_err / G.deg
+    t_err = t_err.sum()/n
+    
+    ####   Plot
+    
+    #fig = plt.figure()
+    #ax = plt.axes(projection='3d')
+    
+    #for i in range(n):
+        #_p = state[:,i].copy()
+        #_p[:3,:] = R @ (_p[:3,:] -state[:,0])
+        #_R = R @ agents[i].camera.R
+        #[_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
+        #agents[i].camera.pose(_p)
+        #agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+        #_p = reference[:,i].copy()
+        #_p[:3,:] = Rr @ (_p[:3,:] - reference[:,0])
+        #_R = Rr @ agents[i].camera.R
+        #[_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
+        #agents[i].camera.pose(new_reference[:,i])
+        #agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+        #agents[i].camera.pose(state[:,i])
+    #plt.savefig(name+'.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
+    
+    return [t_err,rot_err]
 
 #   Difference between agents
 #   It assumes that the states in the array are ordered and are the same
@@ -383,8 +441,8 @@ def error_state_equal(  agents, name):
     
     reference = np.average(state,axis =1)
     
-    t_err =  (np.linalg.norm(reference[:3].reshape((3,1)) - state[:3,:],axis = 0)**2).sum()/n
-    rot_err =  (np.linalg.norm(reference[3:].reshape((3,1)) - state[3:,:],axis = 0)**2).sum()/n
+    t_err =  (norm(reference[:3].reshape((3,1)) - state[:3,:],axis = 0)**2).sum()/n
+    rot_err =  (norm(reference[3:].reshape((3,1)) - state[3:,:],axis = 0)**2).sum()/n
     
     #   Plot
     
@@ -481,11 +539,18 @@ def experiment(directory = "0",
         else:
             pd = np.zeros(p0.shape)
         #p0 = pd.copy()
+        #p0 = circle(n_agents,r,h)
         #p0[:,0] = pd[:,2].copy()
         #p0[:,2] = pd[:,0].copy()
         #p0[0,1] = 0.5
         #p0[1,1] = 0.5
         #p0[5,1] = 0.2
+        #p0[5,0] = 1.
+        #p0[4,1] = -1.
+        #p0[5,2] = -1.
+        #p0[[0,1],1] *= -1
+        #p0[[0,1],3] *= -1
+        
         #   Parameters
         
         case_n = 1  #   Case selector if needed
@@ -506,7 +571,7 @@ def experiment(directory = "0",
                 adjMat = adjMat)
         
     #   Conectivity graph
-    G = gr.graph(adjMat, False)
+    G = gr.graph(adjMat)
     #G.plot()
     L = G.laplacian()
     G.plot()
@@ -619,7 +684,7 @@ def experiment(directory = "0",
         error = L @ error
         if set_derivative:
             for j in range(n_agents):
-                error[j,:] = error[j,:]+0.2*G.deg[j]*agents[j].dot_s_current_n
+                error[j,:] = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
         error_p = L @ error_p
         
         #   save data
@@ -674,8 +739,8 @@ def experiment(directory = "0",
                 U =  np.array([0.,0.,0.,0.,0.,0.])
             
             #   Save error proyection in SVD:
-            svdProy[j,:,i] = vh@error[j,:]/np.linalg.norm(error[j,:])
-            svdProy_p[j,:,i] = vh@error_p[j,:]/np.linalg.norm(error_p[j,:])
+            svdProy[j,:,i] = vh@error[j,:]/norm(error[j,:])
+            svdProy_p[j,:,i] = vh@error_p[j,:]/norm(error_p[j,:])
             
             if U is None:
                 print("Invalid U control")
@@ -697,7 +762,7 @@ def experiment(directory = "0",
     print("----------------------")
     print("Simulation final data")
     
-    ret_err = np.linalg.norm(error_p,axis=1)
+    ret_err = norm(error_p,axis=1)
     for j in range(n_agents):
         print(error[j,:])
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
@@ -726,6 +791,8 @@ def experiment(directory = "0",
                                   agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
+        patricia_err = error_state_patricia(pd,new_agents,G,directory+"/3D_errorP")
+        print("Patricia error = ",patricia_err)
         state_err = error_state(pd,new_agents,directory+"/3D_error")
     else:
         state_err = error_state_equal(new_agents,directory+"/3D_error")
@@ -1284,19 +1351,23 @@ def main():
         [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        #[ 0.      ,    0.   ,      -0.   ,       0.        ]]
+        #[ 0.      ,    0.   ,      -0.   ,       1.5        ]]
         [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
     p0 = np.array(p0)
-    experiment(directory='24',
-               k_int = 0.1,
-                h = 1 ,
+    ret = experiment(directory='24',
+               #k_int = 0.1,
+                h = 2 ,
                 r = 1.,
                 p0 = p0,
+                #set_derivative = True,
                 #tanhLimit = True,
                 depthOp = 1,
                 #set_consensoRef = False,
-                t_end = 100)
+                t_end = 10)
                 #repeat = True)
+                
+    #print(ret)
+    #view3D('24')
     return
     experiment(directory='21',
                k_int = 0.1,

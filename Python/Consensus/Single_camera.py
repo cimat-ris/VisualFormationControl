@@ -58,7 +58,52 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
-
+def view3D(directory):
+    
+    #   load
+    fileName = directory + "/data3DPlot.npz"
+    npzfile = np.load(fileName)
+    P = npzfile['P']
+    pos_arr = npzfile['pos_arr']
+    p0 = npzfile['p0']
+    pd = npzfile['pd']
+    end_position = npzfile['end_position']
+    
+    
+    #   Plot
+    
+    colors = (randint(0,255,3)/255.0)
+    
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    name = directory+"/3Dplot"
+    #fig.suptitle(label)
+    ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    
+    cam = cm.camera()
+    cam.pose(end_position)
+    plot_3Dcam(ax, cam,
+            pos_arr[0,:,:],
+            p0,
+            pd,
+            color = colors,
+            camera_scale    = 0.02)
+    
+    #f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
+    #lfact = 1.1
+    #x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
+    #x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
+    #y_min = lfact*min(p0[1,:].min(),pd[1,:].min())
+    #y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
+    #z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
+    
+    #ax.set_xlim(x_min,x_max)
+    #ax.set_ylim(y_min,y_max)
+    #ax.set_zlim(0,z_max)
+    
+    fig.legend( loc=1)
+    plt.show()
+    plt.close()
 
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
@@ -67,7 +112,6 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
         #   TODO creo que esto está mal calculado
         M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
         Z = M @ P
-        #print(Z)
         Z = Z[2,:]
         #if any(Z < 0.):
             #print(Z)
@@ -114,6 +158,7 @@ def experiment(directory = "0",
                p0 = np.array([0.,0.,1.,np.pi,0.,0.]),
                pd = np.array([0.,0.,1.,np.pi,0.,0.]),
                nameTag = "",
+               set_derivative = False,
                tanhLimit = False):
     
     #   Data
@@ -155,7 +200,7 @@ def experiment(directory = "0",
     
     #   Agents array
     cam = cm.camera()
-    agent = ctr.agent(cam,pd,p0,P)
+    agent = ctr.agent(cam,pd,p0,P,set_derivative= set_derivative)
         
     #   INIT LOOP
     
@@ -310,6 +355,10 @@ def experiment(directory = "0",
     print("Angles = "+str(agent.camera.roll)+
             ", "+str(agent.camera.pitch)+", "+str(agent.camera.yaw))
     
+    end_position = np.r_[agent.camera.p,agent.camera.roll, agent.camera.pitch, agent.camera.yaw]
+    np.savez(directory + "/data3DPlot.npz",
+             P = P, pos_arr=pos_arr, p0 = p0,
+             pd = pd, end_position = end_position )
     
     ####   Plot
     # Colors setup
@@ -615,14 +664,17 @@ def experiment_mesh(x,y,z,pd):
     
 def main():
     
-    x = np.linspace(-1,1,3)
-    y = np.linspace(-1,1,3)
-    pd = np.array([0.,0.,1,np.pi,0.,0.])
-    experiment_mesh(x,y,z=2, pd = pd)
-    return
+    #view3D("0")
+    #return
+    #x = np.linspace(-1,1,3)
+    #y = np.linspace(-1,1,3)
+    #pd = np.array([0.,0.,1,np.pi,0.,0.])
+    #experiment_mesh(x,y,z=2, pd = pd)
+    #return
     
     p0=np.array([1.,1.,2.,np.pi,0.,0.])
     p0=np.array([1.,1.,2.,np.pi+0.5,0.5,1.])
+    p0=np.array([0.,0.,1.,np.pi,0.,np.deg2rad(120)])
     experiment(directory='0',
                 lamb = 1.,
                 gdl = 1,
@@ -633,7 +685,9 @@ def main():
                 #depthOp = 4, Z_set=1.,
                 #depthOp = 6,
                 t_end = 10.)
+    view3D("0")
     return
+    
     
     #   Caso minimo local e != 0 
     #   P_z = [0.0,  -0.2, 0.5]

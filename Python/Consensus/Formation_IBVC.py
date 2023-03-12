@@ -313,7 +313,8 @@ def error_state(reference,  agents, name):
     
     #   Actualizando escala y Obteniendo error de traslaciones
     #   TODO Podemos asumir que es una función convexa?
-    f = lambda r : (np.linalg.norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
+    #new_state[:3,:] /= norm(new_state[:3,:],axis = 0).mean()
+    f = lambda r : (norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
     r_state = minimize_scalar(f, method='brent')
     t_err = f(r_state.x)
     new_state[:3,:] = r_state.x * new_state[:3,:]
@@ -354,7 +355,7 @@ def error_state(reference,  agents, name):
     
     return [t_err, rot_err]
 
-def error_state_patricia(reference,  agents,G, name):
+def error_state_patricia(reference,  agents,G, name,idx):
     
     n = len(agents)
     state = np.zeros((6,n))
@@ -368,20 +369,20 @@ def error_state_patricia(reference,  agents,G, name):
     p1 = np.zeros((n,n,3))
     pr1 = np.zeros((n,n,3))
     rot_err = np.zeros((n,n))
-    R = agents[0].camera.R.T
-    Rr =  cm.rot(reference[3,0],'x')
-    Rr = cm.rot(reference[4,0],'y') @ Rr
-    Rr = cm.rot(reference[5,0],'z') @ Rr
-    Rr = R.T
+    R = agents[idx].camera.R.T
+    Rr =  cm.rot(reference[3,idx],'x')
+    Rr = cm.rot(reference[4,idx],'y') @ Rr
+    Rr = cm.rot(reference[5,idx],'z') @ Rr
+    #Rr = R.T
     
     for i in range(n):
         for j in range(n):
             p1[i,j,:] = R @ ( agents[j].camera.p - agents[i].camera.p )
             pr1[i,j,:] = Rr @ ( reference[:3,j] - reference[:3,i] )
             
-            _R =  cm.rot(reference[3,i],'x')
+            _R =  cm.rot(reference[5,i],'z')
             _R = cm.rot(reference[4,i],'y') @ _R
-            _R = cm.rot(reference[5,i],'z') @ _R
+            _R = cm.rot(reference[3,i],'x') @ _R
             _R = _R @ agents[i].camera.R.T
             rot_err[i,j] = np.arccos((_R.trace()-1.)/2.)
     
@@ -403,26 +404,33 @@ def error_state_patricia(reference,  agents,G, name):
     
     ####   Plot
     
-    #fig = plt.figure()
-    #ax = plt.axes(projection='3d')
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
     
-    #for i in range(n):
-        #_p = state[:,i].copy()
-        #_p[:3,:] = R @ (_p[:3,:] -state[:,0])
-        #_R = R @ agents[i].camera.R
-        #[_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
-        #agents[i].camera.pose(_p)
-        #agents[i].camera.draw_camera(ax, scale=0.2, color='red')
-        #_p = reference[:,i].copy()
-        #_p[:3,:] = Rr @ (_p[:3,:] - reference[:,0])
-        #_R = Rr @ agents[i].camera.R
-        #[_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
-        #agents[i].camera.pose(new_reference[:,i])
-        #agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
-        #agents[i].camera.pose(state[:,i])
-    #plt.savefig(name+'.pdf',bbox_inches='tight')
-    ##plt.show()
-    #plt.close()
+    for i in range(n):
+        _p = state[:,i].copy()
+        _p[:3] = R @ (_p[:3] -state[:3,idx])
+        if i != idx:
+            _p[:3] *= s
+        _R = R @ agents[i].camera.R
+        [_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
+        agents[i].camera.pose(_p)
+        agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+        
+        _p = reference[:,i].copy()
+        _p[:3] = Rr @ (_p[:3] - reference[:3,idx])
+        
+        _R =  cm.rot(reference[5,i],'z')
+        _R = cm.rot(reference[4,i],'y') @ _R
+        _R = cm.rot(reference[3,i],'x') @ _R
+        _R = Rr @ _R
+        [_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
+        agents[i].camera.pose(_p)
+        agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+        agents[i].camera.pose(state[:,i])
+    plt.savefig(name+'.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
     
     return [t_err,rot_err]
 
@@ -791,7 +799,9 @@ def experiment(directory = "0",
                                   agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
-        patricia_err = error_state_patricia(pd,new_agents,G,directory+"/3D_errorP")
+        patricia_err = error_state_patricia(pd,new_agents,G,directory+"/3D_errorP0",0)
+        print("Patricia error = ",patricia_err)
+        patricia_err = error_state_patricia(pd,new_agents,G,directory+"/3D_errorP1",1)
         print("Patricia error = ",patricia_err)
         state_err = error_state(pd,new_agents,directory+"/3D_error")
     else:
@@ -1351,9 +1361,10 @@ def main():
         [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        #[ 0.      ,    0.   ,      -0.   ,       1.5        ]]
-        [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+        [ 0.5      ,    0.5   ,      -0.5   ,       0.5        ]]
+        #[-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
     p0 = np.array(p0)
+    #p0[:,[2,0]] = p0[:,[0,2]]
     ret = experiment(directory='24',
                #k_int = 0.1,
                 h = 2 ,

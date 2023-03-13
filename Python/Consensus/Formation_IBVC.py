@@ -66,7 +66,7 @@ SceneP=[[-0.5, -0.5, 0.5,  0.5],
 #[-0.5, 0.5, 0.5, -0.5],
 #[0, 0.2, 0.3, -0.1]]
 
-
+testAng = 0.
 
 def circle(n_agents,r,h):
     Objective = np.zeros((6,n_agents))
@@ -513,6 +513,7 @@ def experiment(directory = "0",
                              2:"4 Degrees of freedom",
                              3:"3 Degrees of freedom"}
     
+    
     if repeat:
         npzfile = np.load(directory+'/data.npz')
         P = npzfile["P"]
@@ -524,6 +525,7 @@ def experiment(directory = "0",
     else:
         #   Data
         P = np.array(SceneP)      #   Scene points
+        P = cm.rot(testAng,'x')  @ P 
         n_points = P.shape[1] #Number of image points
         P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
         
@@ -558,7 +560,8 @@ def experiment(directory = "0",
         #p0[5,2] = -1.
         #p0[[0,1],1] *= -1
         #p0[[0,1],3] *= -1
-        
+        pd[:3,:] = cm.rot(testAng,'x') @ pd[:3,:]
+        pd[3,:] += testAng
         #   Parameters
         
         case_n = 1  #   Case selector if needed
@@ -1361,13 +1364,16 @@ def main():
         [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        [ 0.5      ,    0.5   ,      -0.5   ,       0.5        ]]
+        [ 0.      ,    0.   ,      -0.   ,       0.        ]]
+        #[ 0.5      ,    0.5   ,      -0.5   ,       0.5        ]]
         #[-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
     p0 = np.array(p0)
-    #p0[:,[2,0]] = p0[:,[0,2]]
+    p0[3,:] += testAng
+    p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
+    p0[:,[2,0]] = p0[:,[0,2]]
     ret = experiment(directory='24',
                #k_int = 0.1,
-                h = 2 ,
+                h = 1 ,
                 r = 1.,
                 p0 = p0,
                 #set_derivative = True,
@@ -1377,8 +1383,8 @@ def main():
                 t_end = 10)
                 #repeat = True)
                 
-    #print(ret)
-    #view3D('24')
+    print(ret)
+    view3D('24')
     return
     experiment(directory='21',
                k_int = 0.1,

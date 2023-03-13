@@ -240,20 +240,22 @@ class agent:
                   self.camera.roll,
                   self.camera.pitch,
                   self.camera.yaw]
-        kw = 1.
-        p += dt*np.array([1.,-1.,-1.,kw,-kw,-kw])*U
+        #kw = 1.
+        #p += dt*np.array([1.,-1.,-1.,kw,-kw,-kw])*U
         #print(U)
         
         #   END GLOBAL
         #   BEGIN With global
-        #_U = U.copy()
+        _U = U.copy()
         #p = np.zeros(6)
         
-        ###   Traslation
-        ###   ## TODO transpuesta?
-        #_U[:3] =  self.camera.R @ U[:3]
-        ##_U[:3] =  -np.diag([-1.,1.,1.]) @ U[:3]
-        #p[:3] = self.camera.p + dt* _U[:3]
+        ##   Traslation
+        ##   ## TODO transpuesta?
+        _U[:3] =  self.camera.R @ U[:3]
+        _U[3:] =  self.camera.R @ U[3:]
+        #_U[:3] =  -np.diag([-1.,1.,1.]) @ U[:3]
+        p[:3] += dt* _U[:3]
+        p[:3] += dt* _U[:3]
         
         ##print(_U)
         ##print(self.camera.R)

@@ -66,7 +66,7 @@ SceneP=[[-0.5, -0.5, 0.5,  0.5],
 #[-0.5, 0.5, 0.5, -0.5],
 #[0, 0.2, 0.3, -0.1]]
 
-testAng = 0.
+testAng = 0.0
 
 def circle(n_agents,r,h):
     Objective = np.zeros((6,n_agents))
@@ -92,11 +92,11 @@ def plot_3Dcam(ax, camera,
                camera_scale    = 0.02):
     
     #ax.plot(positionArray[0,:],
-    ax.scatter(positionArray[0,:],
-            positionArray[1,:],
-            positionArray[2,:],
-            label = str(i),
-            color = color) # Plot camera trajectory
+    #ax.scatter(positionArray[0,:],
+            #positionArray[1,:],
+            #positionArray[2,:],
+            #label = str(i),
+            #color = color) # Plot camera trajectory
     
     camera.draw_camera(ax, scale=camera_scale, color='red')
     camera.pose(desired_configuration)
@@ -525,7 +525,7 @@ def experiment(directory = "0",
     else:
         #   Data
         P = np.array(SceneP)      #   Scene points
-        P = cm.rot(testAng,'x')  @ P 
+        #P = cm.rot(testAng,'x')  @ P 
         n_points = P.shape[1] #Number of image points
         P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
         
@@ -631,7 +631,8 @@ def experiment(directory = "0",
     depthFlags =  [0. for i in range(n_agents)]
     
     #   Storage variables
-    t_array = np.arange(t,t_end+dt,dt)
+    #t_array = np.arange(t,t_end+dt,dt)
+    t_array = np.linspace(t,t_end,steps)
     #t_array = np.arange(t,dt*steps,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
     U_array = np.zeros((n_agents,6,steps))
@@ -1356,7 +1357,7 @@ def main():
     #view3D('4')
     #view3D('5')
     #view3D('20')
-    #view3D('24')
+    #view3D('26')
     #return 
     
     p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
@@ -1364,27 +1365,41 @@ def main():
         [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        [ 0.      ,    0.   ,      -0.   ,       0.        ]]
+        #[ 0.      ,    0.   ,      -0.   ,       0.        ]]
         #[ 0.5      ,    0.5   ,      -0.5   ,       0.5        ]]
-        #[-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+        [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+    dwx = 0.6
     p0 = np.array(p0)
-    p0[3,:] += testAng
+    #p0[3,:] += testAng
+    #p0[3,:] += dwx
+    dw = np.array([dwx,0.,0.])
+    dw += np.array([testAng,0.,0.])
+    for i in range(4):
+        _R = cm.rot(p0[3,i],'x') 
+        _R = _R @ cm.rot(p0[4,i],'y')
+        _R = _R @ cm.rot(p0[5,i],'z')
+       
+        p0[3:,i] += _R @ dw
+    
+    p0[2,:] += 1
     p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
-    p0[:,[2,0]] = p0[:,[0,2]]
-    ret = experiment(directory='24',
+    p0[:3,:] = cm.rot(dwx,'x') @ p0[:3,:]
+    #p0[:,[2,0]] = p0[:,[0,2]]
+    ret = experiment(directory='28',
                #k_int = 0.1,
-                h = 1 ,
+                h = 3. ,
                 r = 1.,
                 p0 = p0,
                 #set_derivative = True,
                 #tanhLimit = True,
                 depthOp = 1,
                 #set_consensoRef = False,
-                t_end = 10)
+                #t_end = 10)
+                t_end = 30)
                 #repeat = True)
                 
-    print(ret)
-    view3D('24')
+    #print(ret)
+    view3D('28')
     return
     experiment(directory='21',
                k_int = 0.1,

@@ -235,11 +235,12 @@ class agent:
     def update(self,U,dt, points,Z):
         
         #   TODO: reconfigurar con momtijano
-        #   BEGIN local
         p = np.r_[self.camera.p.T ,
                   self.camera.roll,
                   self.camera.pitch,
                   self.camera.yaw]
+        
+        #   BEGIN local
         #kw = 1.
         #p += dt*np.array([1.,-1.,-1.,kw,-kw,-kw])*U
         #print(U)
@@ -247,23 +248,11 @@ class agent:
         #   END GLOBAL
         #   BEGIN With global
         _U = U.copy()
-        #p = np.zeros(6)
-        
-        ##   Traslation
-        ##   ## TODO transpuesta?
         _U[:3] =  self.camera.R @ U[:3]
         _U[3:] =  self.camera.R @ U[3:]
-        #_U[:3] =  -np.diag([-1.,1.,1.]) @ U[:3]
         p[:3] += dt* _U[:3]
-        p[:3] += dt* _U[:3]
+        p[3:] += dt* _U[3:]
         
-        ##print(_U)
-        ##print(self.camera.R)
-        
-        ###   Rotation
-        #kw = 1
-        #new_R = self.camera.R @ cm.rot(kw*dt*U[5],'z') @ cm.rot(kw*dt*U[4],'y') @ cm.rot(kw*dt*U[3],'x') #@ self.camera.R
-        #[p[3] , p[4], p[5] ] = get_angles(new_R)
         #   END GLOBAL
         
         tmp = self.s_current_n.copy()

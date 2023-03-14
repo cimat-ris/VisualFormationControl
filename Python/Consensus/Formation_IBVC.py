@@ -66,8 +66,6 @@ SceneP=[[-0.5, -0.5, 0.5,  0.5],
 #[-0.5, 0.5, 0.5, -0.5],
 #[0, 0.2, 0.3, -0.1]]
 
-testAng = 0.0
-
 def circle(n_agents,r,h):
     Objective = np.zeros((6,n_agents))
     step = 2*pi/n_agents
@@ -92,11 +90,11 @@ def plot_3Dcam(ax, camera,
                camera_scale    = 0.02):
     
     #ax.plot(positionArray[0,:],
-    #ax.scatter(positionArray[0,:],
-            #positionArray[1,:],
-            #positionArray[2,:],
-            #label = str(i),
-            #color = color) # Plot camera trajectory
+    ax.scatter(positionArray[0,:],
+            positionArray[1,:],
+            positionArray[2,:],
+            label = str(i),
+            color = color) # Plot camera trajectory
     
     camera.draw_camera(ax, scale=camera_scale, color='red')
     camera.pose(desired_configuration)
@@ -228,22 +226,10 @@ def plot_err_formacion(ref_arr,
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
-        #print(P)
         #   TODO creo que esto está mal calculado
         M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
         Z = M @ P
         Z = Z[2,:]
-        #print("Agent Z ",j)
-        #print(Z)
-        #if any(Z < 0.):
-            #print(Z)
-            #print(agent.camera.p )
-            #print()
-        #print(agent.camera.p )
-        #print(agent.camera.roll )
-        #print(agent.camera.pitch )
-        #print(agent.camera.yaw )
-        #print()
     elif depthOp == 6:
         Z = agent.camera.p[2]*np.ones(P.shape[1])
         Z = Z-P[2,:]
@@ -485,6 +471,8 @@ def experiment(directory = "0",
                atTarget = False,
                tanhLimit = False,
                midMarker = False,
+               PRot = None,
+               refRot = None,
                repeat = None):
     
     #   Referencia de selecciones
@@ -525,7 +513,8 @@ def experiment(directory = "0",
     else:
         #   Data
         P = np.array(SceneP)      #   Scene points
-        #P = cm.rot(testAng,'x')  @ P 
+        if not PRot is None:
+            P = PRot  @ P 
         n_points = P.shape[1] #Number of image points
         P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
         
@@ -560,8 +549,19 @@ def experiment(directory = "0",
         #p0[5,2] = -1.
         #p0[[0,1],1] *= -1
         #p0[[0,1],3] *= -1
-        pd[:3,:] = cm.rot(testAng,'x') @ pd[:3,:]
-        pd[3,:] += testAng
+        if not refRot is None:
+            for i in range(n_agents):
+                _R = cm.rot(pd[3,i],'x') 
+                _R = _R @ cm.rot(pd[4,i],'y')
+                _R = _R @ cm.rot(pd[5,i],'z')
+            
+                pd[3:,i] += _R @ refRot
+            _R = cm.rot(refRot[0],'x') 
+            _R = _R @ cm.rot(refRot[1],'y')
+            _R = _R @ cm.rot(refRot[2],'z')
+            pd[:3,:] = _R @ pd[:3,:]
+        #pd[:3,:] = cm.rot(testAng,'x') @ pd[:3,:]
+        #pd[3,:] += testAng
         #   Parameters
         
         case_n = 1  #   Case selector if needed
@@ -679,7 +679,7 @@ def experiment(directory = "0",
     print("Interaction matrix = "+case_interactionM_dict[case_interactionM])
     print("Control selection = "+control_type_dict[control_type])
     print("Controllable case = "+case_controlable_dict[gdl])
-    
+    print("Directory = ", directory)
     
     #   LOOP
     for i in range(steps):
@@ -1368,20 +1368,21 @@ def main():
         #[ 0.      ,    0.   ,      -0.   ,       0.        ]]
         #[ 0.5      ,    0.5   ,      -0.5   ,       0.5        ]]
         [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
-    dwx = 0.6
+    dwx = 0.
+    testAng = 0.4
     p0 = np.array(p0)
     #p0[3,:] += testAng
     #p0[3,:] += dwx
-    dw = np.array([dwx,0.,0.])
-    dw += np.array([testAng,0.,0.])
+    dw1 = np.array([dwx,0.,0.])
+    dw2 = np.array([testAng,0.,0.])
     for i in range(4):
         _R = cm.rot(p0[3,i],'x') 
         _R = _R @ cm.rot(p0[4,i],'y')
         _R = _R @ cm.rot(p0[5,i],'z')
        
-        p0[3:,i] += _R @ dw
+        p0[3:,i] += _R @ (dw1 + dw2)
     
-    p0[2,:] += 1
+    p0[2,:] += 1.5
     p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
     p0[:3,:] = cm.rot(dwx,'x') @ p0[:3,:]
     #p0[:,[2,0]] = p0[:,[0,2]]
@@ -1390,12 +1391,16 @@ def main():
                 h = 3. ,
                 r = 1.,
                 p0 = p0,
+                refRot = dw2,
+                PRot = cm.rot(testAng,'x'),
                 #set_derivative = True,
                 #tanhLimit = True,
                 depthOp = 1,
+                #depthOp = 4, Z_set = 1.,
                 #set_consensoRef = False,
                 #t_end = 10)
-                t_end = 30)
+                t_end = 40)
+                #t_end = 100)
                 #repeat = True)
                 
     #print(ret)

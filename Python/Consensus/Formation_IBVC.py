@@ -550,16 +550,19 @@ def experiment(directory = "0",
         #p0[[0,1],1] *= -1
         #p0[[0,1],3] *= -1
         if not refRot is None:
+            R = cm.rot(refRot[2],'z') 
+            R = R @ cm.rot(refRot[1],'y')
+            R = R @ cm.rot(refRot[0],'x')
             for i in range(n_agents):
-                _R = cm.rot(pd[3,i],'x') 
+                _R = cm.rot(pd[5,i],'z') 
                 _R = _R @ cm.rot(pd[4,i],'y')
-                _R = _R @ cm.rot(pd[5,i],'z')
+                _R = _R @ cm.rot(pd[3,i],'x')
+                
+                _R = R @ _R
+                [pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+                #pd[3:,i] += _R @ refRot
             
-                pd[3:,i] += _R @ refRot
-            _R = cm.rot(refRot[0],'x') 
-            _R = _R @ cm.rot(refRot[1],'y')
-            _R = _R @ cm.rot(refRot[2],'z')
-            pd[:3,:] = _R @ pd[:3,:]
+            pd[:3,:] = R @ pd[:3,:]
         #pd[:3,:] = cm.rot(testAng,'x') @ pd[:3,:]
         #pd[3,:] += testAng
         #   Parameters
@@ -1366,21 +1369,23 @@ def main():
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
         #[ 0.      ,    0.   ,      -0.   ,       0.        ]]
-        #[ 0.5      ,    0.5   ,      -0.5   ,       0.5        ]]
+        #[ 0.5      ,    0.5   ,      0.5   ,       0.5        ]]
         [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
     dwx = 0.
-    testAng = 0.4
+    testAng = np.pi /2
     p0 = np.array(p0)
     #p0[3,:] += testAng
     #p0[3,:] += dwx
     dw1 = np.array([dwx,0.,0.])
     dw2 = np.array([testAng,0.,0.])
     for i in range(4):
-        _R = cm.rot(p0[3,i],'x') 
+        _R = cm.rot(p0[5,i],'z') 
         _R = _R @ cm.rot(p0[4,i],'y')
-        _R = _R @ cm.rot(p0[5,i],'z')
-       
-        p0[3:,i] += _R @ (dw1 + dw2)
+        _R = _R @ cm.rot(p0[3,i],'x')
+        
+        _R = cm.rot(testAng,'x') @ _R
+        [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+        #p0[3:,i] += _R.T @ (dw1 + dw2)
     
     p0[2,:] += 1.5
     p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
@@ -1392,14 +1397,15 @@ def main():
                 r = 1.,
                 p0 = p0,
                 refRot = dw2,
-                PRot = cm.rot(testAng,'x'),
+                #PRot = cm.rot(testAng,'x'),
+                PRot = cm.rot(np.pi/2,'x'),
                 #set_derivative = True,
                 #tanhLimit = True,
                 depthOp = 1,
                 #depthOp = 4, Z_set = 1.,
                 #set_consensoRef = False,
                 #t_end = 10)
-                t_end = 40)
+                t_end = 4.2)
                 #t_end = 100)
                 #repeat = True)
                 

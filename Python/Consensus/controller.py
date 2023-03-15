@@ -250,7 +250,8 @@ class agent:
         _U = U.copy()
         _U[:3] =  self.camera.R @ U[:3]
         _U[3:] =  self.camera.R @ U[3:]
-        p[:3] += dt* _U[:3]
+        p[:3] += dt* (_U[:3]- np.cross(p[:3],_U[3:]))
+        #p[:3] += dt* _U[:3]
         p[3:] += dt* _U[3:]
         
         #   END GLOBAL

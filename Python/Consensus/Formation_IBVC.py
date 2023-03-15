@@ -303,6 +303,9 @@ def error_state(reference,  agents, name):
     f = lambda r : (norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
     r_state = minimize_scalar(f, method='brent')
     t_err = f(r_state.x)
+    t_err = np.sqrt(t_err)
+    print("scale diff = ",norm(new_state[:3,:],axis = 0).mean(),'*',  r_state.x)
+    print("scale diff = ",norm(new_state[:3,:],axis = 0).mean()*  r_state.x)
     new_state[:3,:] = r_state.x * new_state[:3,:]
     
     
@@ -323,6 +326,7 @@ def error_state(reference,  agents, name):
     #   RMS
     rot_err = rot_err**2
     rot_err = rot_err.sum()/n
+    rot_err = np.sqrt(rot_err)
     
      ##   Plot
     
@@ -333,7 +337,7 @@ def error_state(reference,  agents, name):
         agents[i].camera.draw_camera(ax, scale=0.2, color='red')
         agents[i].camera.pose(new_reference[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
-        agents[i].camera.pose(state[:,i])
+        agents[i].camera.pose(new_state[:,i])
     plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
@@ -1398,14 +1402,14 @@ def main():
                 p0 = p0,
                 refRot = dw2,
                 #PRot = cm.rot(testAng,'x'),
-                PRot = cm.rot(np.pi/2,'x'),
+                PRot = cm.rot(np.pi/5,'x'),
                 #set_derivative = True,
                 #tanhLimit = True,
                 depthOp = 1,
                 #depthOp = 4, Z_set = 1.,
                 #set_consensoRef = False,
-                #t_end = 10)
-                t_end = 4.2)
+                t_end = 10)
+                #t_end = 4.2)
                 #t_end = 100)
                 #repeat = True)
                 

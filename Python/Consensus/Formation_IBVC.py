@@ -254,7 +254,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
 
-def error_state(reference,  agents, name):
+def error_state(reference,  agents, name= None):
     
     n = reference.shape[1]
     state = np.zeros((6,n))
@@ -281,9 +281,9 @@ def error_state(reference,  agents, name):
     new_state[1] -= centroide_state[1]
     new_state[2] -= centroide_state[2]
     
-    M = new_state[:3,:].T.reshape((n,3,1))
-    D = new_reference[:3,:].T.reshape((n,1,3))
-    H = M @ D
+    M = new_state[:3,:].T.reshape((n,1,3))
+    D = new_reference[:3,:].T.reshape((n,3,1))
+    H = D @ M
     H = H.sum(axis = 0)
     
     U, S, VH = svd(H)
@@ -295,17 +295,18 @@ def error_state(reference,  agents, name):
         R = VH.T @ U.T
     
     #   Actualizando Orientación de traslaciones
-    new_state[:3,:] = R @ new_state[:3,:]
+    #   Para la visualización se optó por usar
+    #   \bar p_i = R.T p_i en vez de \bar p^r_i = R p*_i
+    new_state[:3,:] = R.T @ new_state[:3,:]
     
     #   Actualizando escala y Obteniendo error de traslaciones
-    #   TODO Podemos asumir que es una función convexa?
     #new_state[:3,:] /= norm(new_state[:3,:],axis = 0).mean()
     f = lambda r : (norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
     r_state = minimize_scalar(f, method='brent')
     t_err = f(r_state.x)
     t_err = np.sqrt(t_err)
-    print("scale diff = ",norm(new_state[:3,:],axis = 0).mean(),'*',  r_state.x)
-    print("scale diff = ",norm(new_state[:3,:],axis = 0).mean()*  r_state.x)
+    #print("scale diff = ",norm(new_state[:3,:],axis = 0).mean(),'*',  r_state.x)
+    #print("scale diff = ",norm(new_state[:3,:],axis = 0).mean()*  r_state.x)
     new_state[:3,:] = r_state.x * new_state[:3,:]
     
     
@@ -314,7 +315,7 @@ def error_state(reference,  agents, name):
     for i in range(n):
         
         #   update new_state
-        _R = R @ agents[i].camera.R
+        _R = R.T @ agents[i].camera.R
         [new_state[3,i], new_state[4,i], new_state[5,i]] = ctr.get_angles(_R)
         agents[i].camera.pose(new_state[:,i])
         
@@ -328,6 +329,14 @@ def error_state(reference,  agents, name):
     rot_err = rot_err.sum()/n
     rot_err = np.sqrt(rot_err)
     
+    
+    if name is None:
+        #   recovering positions
+        for i in range(n):
+            agents[i].camera.pose(state[:,i])
+        
+        return [t_err, rot_err]
+    
      ##   Plot
     
     fig = plt.figure()
@@ -337,11 +346,10 @@ def error_state(reference,  agents, name):
         agents[i].camera.draw_camera(ax, scale=0.2, color='red')
         agents[i].camera.pose(new_reference[:,i])
         agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
-        agents[i].camera.pose(new_state[:,i])
+        agents[i].camera.pose(state[:,i])
     plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
-    
     
     return [t_err, rot_err]
 
@@ -642,6 +650,7 @@ def experiment(directory = "0",
     t_array = np.linspace(t,t_end,steps)
     #t_array = np.arange(t,dt*steps,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
+    serr_array = np.zeros((2,steps))
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,6,steps))
@@ -709,7 +718,7 @@ def experiment(directory = "0",
         #   save data
         #print(error)
         err_array[:,:,i] = error_p
-        
+        [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
         
         ####   Image based formation
         if control_type ==2:
@@ -860,15 +869,47 @@ def experiment(directory = "0",
                     marker = '+',s = 200, color = 'black')
     
     lfact = 1.1
-    x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
-    x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
-    y_min = lfact*min(p0[1,:].min(),pd[1,:].min())
-    y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
-    z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
+    x_min = min(p0[0,:].min(),
+                pd[0,:].min(),
+                pos_arr[:,0,-1].min(),
+                P[0,:].min())
+    x_max = max(p0[0,:].max(),
+                pd[0,:].max(),
+                pos_arr[:,0,-1].max(),
+                P[0,:].max())
+    y_min = min(p0[1,:].min(),
+                pd[1,:].min(),
+                pos_arr[:,1,-1].min(),
+                P[1,:].min())
+    y_max = max(p0[1,:].max(),
+                pd[1,:].max(),
+                pos_arr[:,1,-1].max(),
+                P[1,:].max())
+    z_max = max(p0[2,:].max(),
+                pd[2,:].max(),
+                pos_arr[:,2,-1].max(),
+                P[2,:].max())
+    z_min = min(p0[2,:].min(),
+                pd[2,:].min(),
+                pos_arr[:,2,-1].min(),
+                P[2,:].min())
     
+    width = x_max - x_min
+    height = y_max - y_min
+    depth = z_max - z_min
+    sqrfact = max(width,
+                        height,
+                        depth)
+    
+    x_min -= (sqrfact - width )/2
+    x_max += (sqrfact - width )/2
+    y_min -= (sqrfact - height )/2
+    y_max += (sqrfact - height )/2
+    z_min -= (sqrfact - depth )/2
+    z_max += (sqrfact - depth )/2
     ax.set_xlim(x_min,x_max)
     ax.set_ylim(y_min,y_max)
-    ax.set_zlim(0,z_max)
+    ax.set_zlim(z_min,z_max)
     
     fig.legend( loc=1)
     plt.savefig(name+'.pdf',bbox_inches='tight')
@@ -888,11 +929,21 @@ def experiment(directory = "0",
                             name = directory+"/Image_Features_"+str(i),
                             label = "Image Features")
     
+    #   Error de formación
+    mp.plot_time(t_array,
+                serr_array[:,:],
+                colors,
+                ylimits = [-0.1,1.1],
+                name = directory+"/State_Error_"+str(i),
+                label = "Formation Error",
+                labels = ["traslation","rotation"])
+    
     #   Errores x agentes
     for i in range(n_agents):
         mp.plot_time(t_array,
                     err_array[i,:,:],
                     colors,
+                    ylimits = [-1,1],
                     name = directory+"/Features_Error_"+str(i),
                     label = "Features Error")
     
@@ -901,6 +952,7 @@ def experiment(directory = "0",
         mp.plot_time(t_array,
                     U_array[i,:,:],
                     colors,
+                    ylimits = [-1,1],
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocidades",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
@@ -1402,13 +1454,13 @@ def main():
                 p0 = p0,
                 refRot = dw2,
                 #PRot = cm.rot(testAng,'x'),
-                PRot = cm.rot(np.pi/5,'x'),
+                PRot = cm.rot(np.pi/2,'x'),
                 #set_derivative = True,
                 #tanhLimit = True,
                 depthOp = 1,
                 #depthOp = 4, Z_set = 1.,
                 #set_consensoRef = False,
-                t_end = 10)
+                t_end = 30)
                 #t_end = 4.2)
                 #t_end = 100)
                 #repeat = True)

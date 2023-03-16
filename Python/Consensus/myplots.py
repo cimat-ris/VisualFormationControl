@@ -17,7 +17,8 @@ def plot_time(t_array,
               name="time_plot", 
               label="Variable",
               labels = None,
-              limits = None):
+              xlimits = None,
+              ylimits = None):
     
     n = var_array.shape[0]
     
@@ -30,10 +31,10 @@ def plot_time(t_array,
         symbols.append(mpatches.Patch(color=colors[i]))
     if not(labels is None):
         fig.legend(symbols,labels, loc=2)
-    #if ( label == "Features Error"):
-        #plt.ylim((-1,1))
-    elif not(limits is None):
-        plt.ylim((limits[1][0],limits[1][1]))
+    if not(xlimits is None):
+        plt.xlim((xlimits[0],xlimits[1]))
+    if not(ylimits is None):
+        plt.ylim((ylimits[0],ylimits[1]))
     
     plt.tight_layout()
     plt.savefig(name+'.pdf',bbox_inches='tight')

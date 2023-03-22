@@ -160,7 +160,8 @@ def experiment(directory = "0",
                P = np.array(ip.P),      #   Scene points
                nameTag = "",
                set_derivative = False,
-               tanhLimit = False):
+               tanhLimit = False,
+               verbose = False):
     
     #   Data
     n_points = P.shape[1] #Number of image points
@@ -259,7 +260,8 @@ def experiment(directory = "0",
     for i in range(steps):
     #for i in range(2):
         
-        print("loop",i)# end="\r")
+        if verbose:
+            print("loop",i, end="\r")
         
         #   Error:
         error = agent.error.copy().reshape(2*n_points)
@@ -333,17 +335,6 @@ def experiment(directory = "0",
         #   Test image in straigt line
         #U = 0.2*(pd-np.r_[agent.camera.p.T,np.pi,np.zeros(2)])
         
-        print("U = ",U)
-        print("roll, pitch, yaw = ",agent.camera.roll, 
-              agent.camera.pitch,
-              agent.camera.yaw)
-        print("", )
-        print("p = ",agent.camera.p)
-        print("(u,v) pix = ",agent.s_current)
-        print("(u,v) nrom = ",agent.s_current_n)
-        L=ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
-        print("L = ",L)
-        print("L = ",np.linalg.pinv(L))
         
         U_array[0,:,i] = U
         agent.update(U,dt,P, Z)
@@ -625,8 +616,8 @@ def experiment_mesh(x,y,z,pd,P, alpha):
                      _y.reshape(n),
                      z*np.ones(n),
                      np.pi*np.ones(n),
-                     0.*np.ones(n),
-                     .5*np.ones(n)])
+                     0.0*np.ones(n),
+                     .0*np.ones(n)])
     p0[:3,:] = cm.rot(alpha,"y") @ p0[:3,:]
     
     for i in  range(p0.shape[1]):
@@ -653,7 +644,7 @@ def experiment_mesh(x,y,z,pd,P, alpha):
                                 #tanhLimit = True,
                                 #depthOp = 4, Z_set=10.,
                                 #depthOp = 6,
-                                t_end =15.)
+                                t_end =5.)
         pos_arr.append(_pos_arr)
         cam_arr.append(_cam)
     
@@ -686,46 +677,46 @@ def experiment_mesh(x,y,z,pd,P, alpha):
     
 def main():
     
-    alpha =  np.pi/2
+    #alpha =  np.pi/4
     
-    pd = np.array([0.,0.,1,np.pi,alpha,0.])
-    pd[:3] = cm.rot(alpha,"y") @ pd[:3]
-    P = np.array(ip.P)      #   Scene points
-    p0 = np.array([0.,
-                     0.,
-                     1.,
-                     np.pi,
-                     0.,
-                     .0])
-    p0[:3] = cm.rot(alpha,"y") @ p0[:3]
+    #pd = np.array([0.,0.,1,np.pi,alpha,0.])
+    #pd[:3] = cm.rot(alpha,"y") @ pd[:3]
+    #P = np.array(ip.P)      #   Scene points
+    #p0 = np.array([1.,
+                     #1.,
+                     #2.,
+                     #np.pi,
+                     #0.,
+                     #.5])
+    #p0[:3] = cm.rot(alpha,"y") @ p0[:3]
     
-    _R = cm.rot(p0[5],'z') 
-    _R = _R @ cm.rot(p0[4],'y')
-    _R = _R @ cm.rot(p0[3],'x')
+    #_R = cm.rot(p0[5],'z') 
+    #_R = _R @ cm.rot(p0[4],'y')
+    #_R = _R @ cm.rot(p0[3],'x')
     
-    _R = cm.rot(alpha,'y') @ _R
-    [p0[3], p0[4], p0[5]] = ctr.get_angles(_R)
-    P = cm.rot(alpha,"y") @ P 
-    experiment(directory='0',
-                lamb = 1.,
-                gdl = 1,
-                #zOffset = 0.6,
-                h = 1. ,
-                p0 = p0,
-                P = P,
-                pd = pd,
-                #tanhLimit = True,
-                #depthOp = 4, Z_set=1.,
-                #depthOp = 6,
-                t_end = 5.)
-    view3D("0")
-    return
+    #_R = cm.rot(alpha,'y') @ _R
+    #[p0[3], p0[4], p0[5]] = ctr.get_angles(_R)
+    #P = cm.rot(alpha,"y") @ P 
+    #experiment(directory='0',
+                #lamb = 1.,
+                #gdl = 1,
+                ##zOffset = 0.6,
+                #h = 1. ,
+                #p0 = p0,
+                #P = P,
+                #pd = pd,
+                ##tanhLimit = True,
+                ##depthOp = 4, Z_set=1.,
+                ##depthOp = 6,
+                #t_end = 5.)
+    #view3D("0")
+    #return
     
     #view3D("0")
     #return
     alpha = np.pi/2
-    x = np.linspace(-2,2,3)
-    y = np.linspace(-2,2,3)
+    x = np.linspace(-2,2,5)
+    y = np.linspace(-2,2,5)
     pd = np.array([0.,0.,1,np.pi,alpha,0.])
     P = np.array(ip.P)      #   Scene points
     

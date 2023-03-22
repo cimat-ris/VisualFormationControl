@@ -157,12 +157,12 @@ def experiment(directory = "0",
                case_interactionM = 1,
                p0 = np.array([0.,0.,1.,np.pi,0.,0.]),
                pd = np.array([0.,0.,1.,np.pi,0.,0.]),
+               P = np.array(ip.P),      #   Scene points
                nameTag = "",
                set_derivative = False,
                tanhLimit = False):
     
     #   Data
-    P = np.array(ip.P)      #   Scene points
     n_points = P.shape[1] #Number of image points
     P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
     
@@ -257,8 +257,9 @@ def experiment(directory = "0",
     
     #   LOOP
     for i in range(steps):
+    #for i in range(2):
         
-        print("loop",i, end="\r")
+        print("loop",i)# end="\r")
         
         #   Error:
         error = agent.error.copy().reshape(2*n_points)
@@ -331,6 +332,18 @@ def experiment(directory = "0",
         
         #   Test image in straigt line
         #U = 0.2*(pd-np.r_[agent.camera.p.T,np.pi,np.zeros(2)])
+        
+        print("U = ",U)
+        print("roll, pitch, yaw = ",agent.camera.roll, 
+              agent.camera.pitch,
+              agent.camera.yaw)
+        print("", )
+        print("p = ",agent.camera.p)
+        print("(u,v) pix = ",agent.s_current)
+        print("(u,v) nrom = ",agent.s_current_n)
+        L=ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
+        print("L = ",L)
+        print("L = ",np.linalg.pinv(L))
         
         U_array[0,:,i] = U
         agent.update(U,dt,P, Z)
@@ -603,7 +616,7 @@ def experiment_localmin():
                    zOffset = -.2 ,
                    t_end = t)
 
-def experiment_mesh(x,y,z,pd):
+def experiment_mesh(x,y,z,pd,P, alpha):
     _x, _y = np.meshgrid(x,y)
     n = _x.size
     
@@ -614,6 +627,16 @@ def experiment_mesh(x,y,z,pd):
                      np.pi*np.ones(n),
                      0.*np.ones(n),
                      .5*np.ones(n)])
+    p0[:3,:] = cm.rot(alpha,"y") @ p0[:3,:]
+    
+    for i in  range(p0.shape[1]):
+        _R = cm.rot(p0[5,i],'z') 
+        _R = _R @ cm.rot(p0[4,i],'y')
+        _R = _R @ cm.rot(p0[3,i],'x')
+        
+        _R = cm.rot(alpha,'y') @ _R
+        [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    
     #n = mesh.shape[1]
     print("testing ",n," repeats")
     #i = 0
@@ -624,20 +647,19 @@ def experiment_mesh(x,y,z,pd):
         err, _pos_arr, _cam = experiment(directory=str(i),
                                 lamb = 1,
                                 gdl = 1,
+                                P=P,
                                 pd = pd,
                                 p0 = p0[:,i],
                                 #tanhLimit = True,
                                 #depthOp = 4, Z_set=10.,
                                 #depthOp = 6,
-                                t_end =20.)
+                                t_end =15.)
         pos_arr.append(_pos_arr)
         cam_arr.append(_cam)
     
     ##  Prepare data for plot
     colors = (randint(0,255,3*n)/255.0).reshape((n,3))
-    P = np.array(ip.P)      #   Scene points
     n_points = P.shape[1] #Number of image points
-    P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
     
     #   plot
     fig = plt.figure()
@@ -654,9 +676,9 @@ def experiment_mesh(x,y,z,pd):
                 color = colors[i],
                 label = str(i),
                 camera_scale    = 0.02)
-    ax.set_xlim(-1,1)
-    ax.set_ylim(-1,1)
-    ax.set_zlim(0,3)
+    ax.set_xlim(-2.5,2.5)
+    ax.set_ylim(-2.5,2.5)
+    ax.set_zlim(-1,3)
     fig.legend( loc=2)
     plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.show()
@@ -664,13 +686,54 @@ def experiment_mesh(x,y,z,pd):
     
 def main():
     
+    alpha =  np.pi/2
+    
+    pd = np.array([0.,0.,1,np.pi,alpha,0.])
+    pd[:3] = cm.rot(alpha,"y") @ pd[:3]
+    P = np.array(ip.P)      #   Scene points
+    p0 = np.array([0.,
+                     0.,
+                     1.,
+                     np.pi,
+                     0.,
+                     .0])
+    p0[:3] = cm.rot(alpha,"y") @ p0[:3]
+    
+    _R = cm.rot(p0[5],'z') 
+    _R = _R @ cm.rot(p0[4],'y')
+    _R = _R @ cm.rot(p0[3],'x')
+    
+    _R = cm.rot(alpha,'y') @ _R
+    [p0[3], p0[4], p0[5]] = ctr.get_angles(_R)
+    P = cm.rot(alpha,"y") @ P 
+    experiment(directory='0',
+                lamb = 1.,
+                gdl = 1,
+                #zOffset = 0.6,
+                h = 1. ,
+                p0 = p0,
+                P = P,
+                pd = pd,
+                #tanhLimit = True,
+                #depthOp = 4, Z_set=1.,
+                #depthOp = 6,
+                t_end = 5.)
+    view3D("0")
+    return
+    
     #view3D("0")
     #return
-    #x = np.linspace(-1,1,3)
-    #y = np.linspace(-1,1,3)
-    #pd = np.array([0.,0.,1,np.pi,0.,0.])
-    #experiment_mesh(x,y,z=2, pd = pd)
-    #return
+    alpha = np.pi/2
+    x = np.linspace(-2,2,3)
+    y = np.linspace(-2,2,3)
+    pd = np.array([0.,0.,1,np.pi,alpha,0.])
+    P = np.array(ip.P)      #   Scene points
+    
+    P = cm.rot(alpha,"y") @ P 
+    pd[:3,] = cm.rot(alpha,"y") @ pd[:3,]
+    
+    experiment_mesh(x,y,z=2, P=P, pd = pd, alpha = alpha)
+    return
     
     p0=np.array([1.,1.,2.,np.pi,0.,0.])
     p0=np.array([1.,1.,2.,np.pi+0.5,0.5,1.])

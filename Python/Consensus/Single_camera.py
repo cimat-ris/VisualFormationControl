@@ -303,7 +303,7 @@ def experiment(directory = "0",
         
         #s = None
         Z_test =  Z_select(1, agent, P,Z_set,p0,pd,0)
-        if (any(Z_test) < 0.):
+        if (any(Z_test < 0.)):
             print("Image plane Colision")
             U = np.zeros(6)
         else:
@@ -311,9 +311,9 @@ def experiment(directory = "0",
             
             s_store[0,:,i] = s
             if tanhLimit:
-                U = 0.3*np.tanh(U)
-                #U[:3] = 0.5*np.tanh(U[:3])
-                #U[3:] = 0.3*np.tanh(U[3:])
+                #U = 0.5*np.tanh(U)
+                U[:3] = 0.5*np.tanh(U[:3])
+                U[3:] = 0.3*np.tanh(U[3:])
             #print(s)
             #U[abs(U) > 0.2] = np.sign(U)[abs(U) > 0.2]*0.2
             #U_sel = abs(U[3:]) > 0.2
@@ -617,7 +617,7 @@ def experiment_mesh(x,y,z,pd,P, alpha):
                      z*np.ones(n),
                      np.pi*np.ones(n),
                      0.0*np.ones(n),
-                     .0*np.ones(n)])
+                     1.*np.ones(n)])
     p0[:3,:] = cm.rot(alpha,"y") @ p0[:3,:]
     
     for i in  range(p0.shape[1]):
@@ -636,15 +636,15 @@ def experiment_mesh(x,y,z,pd,P, alpha):
     cam_arr = []
     for i in range( n):
         err, _pos_arr, _cam = experiment(directory=str(i),
-                                lamb = 1,
+                                lamb = 1.,
                                 gdl = 1,
                                 P=P,
                                 pd = pd,
                                 p0 = p0[:,i],
                                 #tanhLimit = True,
-                                #depthOp = 4, Z_set=10.,
+                                #depthOp = 4, Z_set=2.,
                                 #depthOp = 6,
-                                t_end =5.)
+                                t_end =20.)
         pos_arr.append(_pos_arr)
         cam_arr.append(_cam)
     
@@ -714,15 +714,18 @@ def main():
     
     #view3D("0")
     #return
-    alpha = np.pi/2
-    x = np.linspace(-2,2,5)
-    y = np.linspace(-2,2,5)
-    pd = np.array([0.,0.,1,np.pi,alpha,0.])
+    alpha = np.pi/200
+    x = np.linspace(-2,2,3)
+    y = np.linspace(-2,2,3)
+    pd = np.array([0.,0.,1,np.pi,0,0.])
+    #pd = np.array([0.,0.,1,np.pi,alpha,0.])
+    #pd[:3,] = cm.rot(alpha,"y") @ pd[:3,]
+    
     P = np.array(ip.P)      #   Scene points
-    
     P = cm.rot(alpha,"y") @ P 
-    pd[:3,] = cm.rot(alpha,"y") @ pd[:3,]
     
+    
+    #experiment_mesh(x,y,z=2, P=P, pd = pd, alpha = 0)
     experiment_mesh(x,y,z=2, P=P, pd = pd, alpha = alpha)
     return
     

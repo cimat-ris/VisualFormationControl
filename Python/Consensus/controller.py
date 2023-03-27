@@ -84,8 +84,8 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
         #print(Ls)
         #Ls = Inv_Moore_Penrose(Ls) 
-        #Ls = np.linalg.pinv(Ls) 
-        Ls = np.linalg.inv(Ls) 
+        Ls = np.linalg.pinv(Ls) 
+        #Ls = np.linalg.inv(Ls) 
     elif control_sel ==2:
         Ls = inv_Ls_set
     elif control_sel ==3:
@@ -271,7 +271,8 @@ class agent:
         #print("wg = ",_U[3:])
         
         #p[:3] += dt* (_U[:3]- np.cross(p[:3],_U[3:]))
-        p[:3] += dt* _U[:3]
+        p[:3] += dt* (_U[:3]+ np.cross(p[:3],_U[3:]))
+        #p[:3] += dt* _U[:3]
         
         _R = cm.rot(dt*U[5],'z') 
         _R = _R @ cm.rot(dt*U[4],'y')

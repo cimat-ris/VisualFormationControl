@@ -32,6 +32,46 @@ import controller as ctr
 import myplots as mp
 
 
+#case 1
+#SceneP=[[-0.5],
+#[-0.5],
+#[0  ]] 
+##case 2
+#SceneP=[[-0.5, -0.5],
+#[-0.5,  0.5],
+#[0,   0.2]] 
+##case 3
+#SceneP=[[0,   -1.,  1.],
+#[-1.,  1., 0],
+#[0.,0.,0.]]
+#SceneP=[[0,   -0.5,  0.5],
+#[-0.5,  0.5, 0],
+##[0.,  0., 0.]]
+#[0.0,  -0.2, 0.5]]
+#[0.0,  0.2, 0.3]]
+#[0.0,  -0.0, 0.0]]
+#case 4
+#SceneP=[[-0.5, -0.5, 0.5,  0.5],
+#[-0.5,  0.5, 0.5, -0.5],
+#[0,    0.2, 0.3,  -0.1]]           
+#[0,    0.0, 0.0,  0.0]] 
+#case 5
+SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1],
+[-0.5, 0.5, 0.5, -0.5, -0.3],
+[0, 0.0, 0.0,  -0.0, 0.0]]
+#[0, 0.2, 0.3, -0.1, 0.1]]
+##case 6
+#SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1, -0.1],
+#[-0.5, 0.5, 0.5, -0.5, -0.3, 0.2],
+#[0, 0.0, 0.0, -0.0, 0.0, 0.0]]
+##[0, 0.2, 0.3, -0.1, 0.1, 0.15]]
+##otherwise
+#SceneP=[[-0.5, -0.5, 0.5, 0.5],
+#[-0.5, 0.5, 0.5, -0.5],
+#[0, 0.2, 0.3, -0.1]]
+
+
+
 
 def plot_3Dcam(ax, camera,
                positionArray,
@@ -155,9 +195,10 @@ def experiment(directory = "0",
                t_end = 10.0,
                zOffset = 0.0,
                case_interactionM = 1,
+               control_type = 1,
                p0 = np.array([0.,0.,1.,np.pi,0.,0.]),
                pd = np.array([0.,0.,1.,np.pi,0.,0.]),
-               P = np.array(ip.P),      #   Scene points
+               P = np.array(SceneP),      #   Scene points
                nameTag = "",
                set_derivative = False,
                tanhLimit = False,
@@ -190,9 +231,9 @@ def experiment(directory = "0",
     
     #   Controladores
     #   1  - IBVC   2 - Montijano
-    control_type = 1
     control_type_dict = {1:"Image based visual control",
-                         2:"Montijano"}
+                         2:"Montijano",
+                         3:"Position based visual servo"}
     case_controlable_dict = {1:"6 Degrees of freedom",
                              2:"4 Degrees of freedom",
                              3:"3 Degrees of freedom"}
@@ -216,6 +257,11 @@ def experiment(directory = "0",
             return
         agent.set_interactionMat(Z,gdl)
     
+    if control_type ==3:
+        refR = cm.rot(pd[5],'z') 
+        refR = refR @ cm.rot(pd[4],'y')
+        refR = refR @ cm.rot(pd[3],'x')
+        
     #if control_type == 2:
         #delta_pref = np.zeros((n_agents,n_agents,6,1))
         #for i in range(n_agents):
@@ -292,6 +338,12 @@ def experiment(directory = "0",
                     "control_sel":case_interactionM,
                     "error": error,
                     "gdl":gdl}
+        if control_type == 3:
+            args = {"p1": agent.s_current_n.T,
+                    "p2": agent.s_ref_n.T,
+                    "K": agent.camera.K,
+                    "realR": refR.T @ agent.camera.R,
+                    "realT": pd[:3]-agent.camera.p}
         #elif control_type == 2:
             #args = {"H" : H[j,:,:,:],
                     #"delta_pref" : delta_pref[j,:,:,:],
@@ -309,7 +361,7 @@ def experiment(directory = "0",
         else:
             U,u,s,vh  = agent.get_control(control_type,lamb,Z,args)
             
-            s_store[0,:,i] = s
+            #s_store[0,:,i] = s
             if tanhLimit:
                 #U = 0.5*np.tanh(U)
                 U[:3] = 0.5*np.tanh(U[:3])
@@ -677,40 +729,42 @@ def experiment_mesh(x,y,z,pd,P, alpha):
     
 def main():
     
-    #alpha =  np.pi/4
+    alpha =  np.pi/4
     
-    #pd = np.array([0.,0.,1,np.pi,alpha,0.])
-    #pd[:3] = cm.rot(alpha,"y") @ pd[:3]
-    #P = np.array(ip.P)      #   Scene points
-    #p0 = np.array([1.,
-                     #1.,
-                     #2.,
-                     #np.pi,
-                     #0.,
-                     #.5])
-    #p0[:3] = cm.rot(alpha,"y") @ p0[:3]
+    pd = np.array([0.,0.,1,np.pi,alpha,0.])
+    pd[:3] = cm.rot(alpha,"y") @ pd[:3]
+    P = np.array(SceneP)      #   Scene points
+    p0 = np.array([1.,
+                     1.,
+                     2.,
+                     np.pi,
+                     0.,
+                     .5])
+    p0[:3] = cm.rot(alpha,"y") @ p0[:3]
     
-    #_R = cm.rot(p0[5],'z') 
-    #_R = _R @ cm.rot(p0[4],'y')
-    #_R = _R @ cm.rot(p0[3],'x')
+    _R = cm.rot(p0[5],'z') 
+    _R = _R @ cm.rot(p0[4],'y')
+    _R = _R @ cm.rot(p0[3],'x')
     
-    #_R = cm.rot(alpha,'y') @ _R
-    #[p0[3], p0[4], p0[5]] = ctr.get_angles(_R)
-    #P = cm.rot(alpha,"y") @ P 
-    #experiment(directory='0',
-                #lamb = 1.,
-                #gdl = 1,
-                ##zOffset = 0.6,
-                #h = 1. ,
-                #p0 = p0,
-                #P = P,
-                #pd = pd,
-                ##tanhLimit = True,
-                ##depthOp = 4, Z_set=1.,
-                ##depthOp = 6,
-                #t_end = 5.)
-    #view3D("0")
-    #return
+    _R = cm.rot(alpha,'y') @ _R
+    [p0[3], p0[4], p0[5]] = ctr.get_angles(_R)
+    P = cm.rot(alpha,"y") @ P 
+    experiment(directory='0',
+               control_type = 3,
+                lamb = 1.,
+                gdl = 1,
+                #zOffset = 0.6,
+                h = 1. ,
+                p0 = p0,
+                P = P,
+                pd = pd,
+                #tanhLimit = True,
+                #depthOp = 4, Z_set=1.,
+                #depthOp = 6,
+                #verbose = True,
+                t_end = 5.)
+    view3D("0")
+    return
     
     #view3D("0")
     #return

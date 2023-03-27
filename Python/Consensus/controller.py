@@ -69,20 +69,9 @@ def Inv_Moore_Penrose(L):
     return inv(A) @ L.T
 
 def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
-    #return np.array([0.,0.,0.,0.,0.,np.pi/10,]), np.array([0.,0.,0.,0.,0.,0.])
-    #if any (Z < 0.):
-        #print("Negative depths")
-        ##print("")
-        #Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        ##print(Ls)
-        ##Ls = Inv_Moore_Penrose(Ls) 
-        #Ls = np.linalg.pinv(Ls) 
-        #u, s, vh  = np.linalg.svd(Ls)
-        #return np.array([0.,0.,0.,0.,0.,0.]), u,s,vh
     
     if control_sel ==1:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        #print(Ls)
         #Ls = Inv_Moore_Penrose(Ls) 
         Ls = np.linalg.pinv(Ls) 
         #Ls = np.linalg.inv(Ls) 
@@ -90,26 +79,13 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         Ls = inv_Ls_set
     elif control_sel ==3:
         Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        #print(Ls)
         #Ls = Inv_Moore_Penrose(Ls) 
         Ls = np.linalg.pinv(Ls) 
         Ls = 0.5*( Ls +inv_Ls_set)
     if Ls is None:
             print("Invalid Ls matrix")
             return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
-    #   BEGIN L range test
     u, s, vh  = np.linalg.svd(Ls)
-    #if (s[0] < 1000):
-        #print(Interaction_Matrix(s_current_n,Z,gdl))
-    #if(s[0] > 400):
-        ##print("PVAL > 1000")
-        #print(Z)
-        #print(Interaction_Matrix(s_current_n,Z,gdl))
-        #print(s)
-        #print(s_current_n)
-        #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
-    #print(s)
-    #   END L range test
     if gdl == 2:
         Ls = np.insert(Ls, 3, 0., axis = 0)
         Ls = np.insert(Ls, 4, 0., axis = 0)
@@ -117,13 +93,53 @@ def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
         #Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
     if gdl == 3:
         np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
-        #_comp = np.zeros((3,Ls.shape[1]))
-        #Ls = np.r_[Ls[:3],_comp]
-    #print(Ls)
-    #print(error)
     U = (Ls @ error) / deg
     
     return  U.reshape(6), u, s, vh
+
+#   Calcula el control basado en posición
+#   Supone:
+#       camara 1 = actual, 2 = referencia
+#       Los puntos están normalizados
+#       los vectores de puntos tienen dimención (n,2)
+def PBVC(p1,p2,K, realR = np.eye(3), realT = np.ones(3) ):
+    
+    #   Calcular matriz de homografía a partir de p1 y p2
+    #   src, dst
+    #   dst = H src
+    #   H tiene R,t en el sistema dst
+    [H, mask] = cv2.findHomography(p2 ,p1)
+    [ret, Rots, Tras, Nn] = cv2.decomposeHomographyMat(H,K)
+    
+    #   Revisa que las solución satisfaga
+    print([ret, Rots, Tras, Nn])
+    print(H)
+    print(p1)
+    print(p2)
+    print(H@np.r_[p1.T,np.ones((1,5))])
+    print(H@np.r_[p2.T,np.ones((1,5))])
+    a = []
+    for i in range(ret):
+        m = np.ones((p1.shape[0],1))
+        m = np.c_[p1,m]
+        p = m @ Rots[i] @ Nn[i] 
+        #print(p)
+        if all(p>0.):
+            a.append([Rots[i],Tras[i])])
+    
+    #   Comprobar con las reales
+    b = []
+    
+    
+    #   U = et, ew
+    theta = np.arccos(0.5*(R.trace()-1.))
+    rot = 0.5*np.array([[R[2,1]-R[1,2]],
+                        [-R[2,0]+R[0,2]],
+                        [R[1,0]-R[0,1]]])/np.sinc(theta)
+    
+    U = np.r_[T,rot]
+    
+    return  U.reshape(6)
 
 def get_Homographies(agents):
     n = len(agents)
@@ -206,6 +222,7 @@ class agent:
         
     def get_control(self, sel,lamb, Z,args  ):
         
+        #TODO: adapt Montijano
         #if self.count_points_in_FOV(Z) < 4:
             #return np.zeros(6)
         
@@ -226,7 +243,14 @@ class agent:
                                      args["delta_pref"],
                                      args["Adj_list"],
                                      args["gamma"])
-        
+        if sel == 3:
+            U = PBVC(args["p1"],
+                    args["p2"],
+                    args["K"],
+                    args["realR"],
+                    args["realT"])
+            #print(s)
+            return -lamb * U,None, None, None
     
     def set_interactionMat(self,Z,gdl):
         self.Ls_set = Interaction_Matrix(self.s_ref_n,Z,gdl)

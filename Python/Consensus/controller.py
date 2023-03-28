@@ -112,14 +112,12 @@ def PBVC(p1,p2,K, realR = np.eye(3), realT = np.ones(3) ):
     [ret, Rots, Tras, Nn] = cv2.decomposeHomographyMat(H,K)
     
     #   Revisa que las solución satisfaga
-    #print([ret, Rots, Tras, Nn])
-    #print(H)
-    #print(p1)
-    #print(p2)
-    #print(H@np.r_[p1.T,np.ones((1,5))])
-    #print(H@np.r_[p2.T,np.ones((1,5))])
     a = []
     b = []
+    
+    if(ret ==1):
+        return np.zeros(6)
+    
     for i in range(ret):
         m = np.ones((p1.shape[0],1))
         m = np.c_[p1,m]
@@ -130,19 +128,16 @@ def PBVC(p1,p2,K, realR = np.eye(3), realT = np.ones(3) ):
             errang = np.arccos((_R.trace()-1.)/2.)
             a.append(errang)
             b.append([Rots[i],Tras[i]])
+    if len(a) == 0:
+        print("a empty")
+    if len(b) == 0:
+        print("b empty")
     idx = a.index(min(a))
-    #print(idx)
-    #print(a)
-    print(b)
-    R = b[idx][0]
+    R = b[idx][0].T
     T = b[idx][1]
-    print(realR)
-    print(R)
-    print(realT)
-    print(T)
-    
-    R = realR
-    T = realT.reshape((3,1))
+    #R = realR
+    #T = realT.reshape((3,1))
+
     #   U = et, ew
     theta = np.arccos(0.5*(R.trace()-1.))
     rot = 0.5*np.array([[R[2,1]-R[1,2]],

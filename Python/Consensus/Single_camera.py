@@ -341,8 +341,8 @@ def experiment(directory = "0",
         if control_type == 3:
             realT = pd[:3]-agent.camera.p
             reatT = agent.camera.R.T @ realT
-            args = {"p1": agent.s_current_n.T,
-                    "p2": agent.s_ref_n.T,
+            args = {"p1": agent.s_current.T,
+                    "p2": agent.s_ref.T,
                     "K": agent.camera.K,
                     "realR": refR.T @ agent.camera.R,
                     "realT": reatT}
@@ -740,8 +740,8 @@ def main():
                      1.,
                      2.,
                      np.pi,
-                     0.,
-                     .5])
+                     0.5,
+                     .0])
     p0[:3] = cm.rot(alpha,"y") @ p0[:3]
     
     _R = cm.rot(p0[5],'z') 
@@ -764,7 +764,7 @@ def main():
                 #depthOp = 4, Z_set=1.,
                 #depthOp = 6,
                 #verbose = True,
-                t_end = 5.)
+                t_end = 8.)
     view3D("0")
     return
     

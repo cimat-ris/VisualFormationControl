@@ -112,32 +112,44 @@ def PBVC(p1,p2,K, realR = np.eye(3), realT = np.ones(3) ):
     [ret, Rots, Tras, Nn] = cv2.decomposeHomographyMat(H,K)
     
     #   Revisa que las solución satisfaga
-    print([ret, Rots, Tras, Nn])
-    print(H)
-    print(p1)
-    print(p2)
-    print(H@np.r_[p1.T,np.ones((1,5))])
-    print(H@np.r_[p2.T,np.ones((1,5))])
+    #print([ret, Rots, Tras, Nn])
+    #print(H)
+    #print(p1)
+    #print(p2)
+    #print(H@np.r_[p1.T,np.ones((1,5))])
+    #print(H@np.r_[p2.T,np.ones((1,5))])
     a = []
+    b = []
     for i in range(ret):
         m = np.ones((p1.shape[0],1))
         m = np.c_[p1,m]
         p = m @ Rots[i] @ Nn[i] 
         #print(p)
         if all(p>0.):
-            a.append([Rots[i],Tras[i])])
+            _R =  Rots[i].T @ realR.T
+            errang = np.arccos((_R.trace()-1.)/2.)
+            a.append(errang)
+            b.append([Rots[i],Tras[i]])
+    idx = a.index(min(a))
+    #print(idx)
+    #print(a)
+    print(b)
+    R = b[idx][0]
+    T = b[idx][1]
+    print(realR)
+    print(R)
+    print(realT)
+    print(T)
     
-    #   Comprobar con las reales
-    b = []
-    
-    
+    R = realR
+    T = realT.reshape((3,1))
     #   U = et, ew
     theta = np.arccos(0.5*(R.trace()-1.))
     rot = 0.5*np.array([[R[2,1]-R[1,2]],
                         [-R[2,0]+R[0,2]],
                         [R[1,0]-R[0,1]]])/np.sinc(theta)
     
-    U = np.r_[T,rot]
+    U = np.r_[-T,rot]
     
     return  U.reshape(6)
 
@@ -295,8 +307,8 @@ class agent:
         #print("wg = ",_U[3:])
         
         #p[:3] += dt* (_U[:3]- np.cross(p[:3],_U[3:]))
-        p[:3] += dt* (_U[:3]+ np.cross(p[:3],_U[3:]))
-        #p[:3] += dt* _U[:3]
+        #p[:3] += dt* (_U[:3]+ np.cross(p[:3],_U[3:]))
+        p[:3] += dt* _U[:3]
         
         _R = cm.rot(dt*U[5],'z') 
         _R = _R @ cm.rot(dt*U[4],'y')

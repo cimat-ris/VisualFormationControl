@@ -339,11 +339,13 @@ def experiment(directory = "0",
                     "error": error,
                     "gdl":gdl}
         if control_type == 3:
+            realT = pd[:3]-agent.camera.p
+            reatT = agent.camera.R.T @ realT
             args = {"p1": agent.s_current_n.T,
                     "p2": agent.s_ref_n.T,
                     "K": agent.camera.K,
                     "realR": refR.T @ agent.camera.R,
-                    "realT": pd[:3]-agent.camera.p}
+                    "realT": reatT}
         #elif control_type == 2:
             #args = {"H" : H[j,:,:,:],
                     #"delta_pref" : delta_pref[j,:,:,:],

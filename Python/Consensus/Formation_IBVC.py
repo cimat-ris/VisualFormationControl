@@ -49,8 +49,8 @@ import myplots as mp
 #case 4
 SceneP=[[-0.5, -0.5, 0.5,  0.5],
 [-0.5,  0.5, 0.5, -0.5],
-#[0,    0.2, 0.3,  -0.1]]           
-[0,    0.0, 0.0,  0.0]] 
+[0,    0.2, 0.3,  -0.1]]           
+#[0,    0.0, 0.0,  0.0]] 
 #case 5
 #SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1],
 #[-0.5, 0.5, 0.5, -0.5, -0.3],
@@ -1419,20 +1419,20 @@ def main():
     #view3D('26')
     #return 
     
+    #   Pruebas con rotación del mundo CASO BASE
     p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
         [ 1.5040017,   0.26301641, -0.2127149,  -0.35572372],
         [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        #[ 0.      ,    0.   ,      -0.   ,       0.        ]]
-        #[ 0.5      ,    0.5   ,      0.5   ,       0.5        ]]
         [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
-    dwx = 0.
-    testAng = np.pi /2
+    #dwx = 0.
+    testAng =  0 #np.pi /2
     p0 = np.array(p0)
+    p0[5,:] *= 0.8
     #p0[3,:] += testAng
     #p0[3,:] += dwx
-    dw1 = np.array([dwx,0.,0.])
+    #dw1 = np.array([dwx,0.,0.])
     dw2 = np.array([testAng,0.,0.])
     for i in range(4):
         _R = cm.rot(p0[5,i],'z') 
@@ -1443,31 +1443,54 @@ def main():
         [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
         #p0[3:,i] += _R.T @ (dw1 + dw2)
     
-    p0[2,:] += 1.5
+    #p0[2,:] += 1.5
     p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
-    p0[:3,:] = cm.rot(dwx,'x') @ p0[:3,:]
+    #p0[:3,:] = cm.rot(dwx,'x') @ p0[:3,:]
     #p0[:,[2,0]] = p0[:,[0,2]]
-    ret = experiment(directory='28',
+    ret = experiment(directory='0',
                #k_int = 0.1,
-                h = 3. ,
+                h = 1. ,
                 r = 1.,
                 p0 = p0,
                 refRot = dw2,
-                #PRot = cm.rot(testAng,'x'),
-                PRot = cm.rot(np.pi/2,'x'),
+                PRot = cm.rot(testAng,'x'),
+                #PRot = cm.rot(np.pi/2,'x'),
                 #set_derivative = True,
                 #tanhLimit = True,
-                depthOp = 1,
                 #depthOp = 4, Z_set = 1.,
                 #set_consensoRef = False,
-                t_end = 30)
+                t_end = 10)
                 #t_end = 4.2)
                 #t_end = 100)
                 #repeat = True)
                 
-    #print(ret)
-    view3D('28')
+    print(ret)
+    view3D('0')
     return
+    
+    #   Caso Base
+    p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
+        [ 1.5040017,   0.26301641, -0.2127149,  -0.35572372],
+        [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
+        [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
+        [ 0.      ,    0.   ,      -0.   ,       0.        ],
+        [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+    p0 = np.array(p0)
+    #p0[:,[0,2]] = p0[:,[2,0]] 
+    #p0[2,:] = 1.
+    p0[5,:] = 0.
+    ret = experiment(directory='0',
+                #k_int = 0.1,
+                h = 1. ,
+                lamb = 1.,
+                p0 = p0,
+                #set_derivative = True,
+                #tanhLimit = True,
+                #depthOp = 4, Z_set = 1.,
+                t_end = 30)
+    view3D("0")
+    return
+
     experiment(directory='21',
                k_int = 0.1,
                 h = 1 ,

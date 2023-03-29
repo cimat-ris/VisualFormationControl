@@ -135,6 +135,8 @@ def PBVC(p1,p2,K, realR = np.eye(3), realT = np.ones(3) ):
     idx = a.index(min(a))
     R = b[idx][0].T
     T = b[idx][1]
+    
+    #   Ground Truth
     #R = realR
     #T = realT.reshape((3,1))
 

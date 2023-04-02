@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.npy
 
 # C extensions
 *.so
@@ -127,3 +128,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Results
+*.pdf
+Python/Consensus/[0-9]/
+Python/Consensus/[0-9][0-9]/

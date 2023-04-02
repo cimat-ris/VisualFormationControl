@@ -49,8 +49,8 @@ import myplots as mp
 #case 4
 SceneP=[[-0.5, -0.5, 0.5,  0.5],
 [-0.5,  0.5, 0.5, -0.5],
-[0,    0.2, 0.3,  -0.1]]           
-#[0,    0.0, 0.0,  0.0]] 
+#[0,    0.2, 0.3,  -0.1]]           
+[0,    0.0, 0.0,  0.0]] 
 #case 5
 #SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1],
 #[-0.5, 0.5, 0.5, -0.5, -0.3],
@@ -74,13 +74,45 @@ def circle(n_agents,r,h):
     Objective[1,:] = r*sin(ang_arange)
     Objective[2,:] = h
     Objective[3,:] = pi
+    #Objective[5,:] = ang_arange
     
     #Objective = Objective[:,[1,2,3,0]]
     
     return Objective
 
+def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
+    Z = np.ones((1,P.shape[1]))
+    if depthOp ==1:
+        #   TODO creo que esto está mal calculado
+        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
+        Z = M @ P
+        Z = Z[2,:]
+    elif depthOp == 6:
+        Z = agent.camera.p[2]*np.ones(P.shape[1])
+        Z = Z-P[2,:]
+    elif depthOp ==2: # 
+        Z = p0[2,j]*Z
+        Z = Z-P[2,:]
+    elif depthOp == 3: # distancia al valor inicial
+        Z = pd[2,j]*Z
+        Z = Z-P[2,:]
+    elif depthOp == 4: # fijo al valor de Z_set
+        Z = Z_set * np.ones(P.shape[1])
+    elif depthOp == 5: # equitativo, = promedio
+        tmp = agent.camera.p[2]-np.mean(P[2,:])
+        Z = Z*tmp
+    else:
+        print("Invalid depthOp")
+        return None
+    return Z
 
-
+################################################################################
+################################################################################
+#
+#   Plots Aux
+#
+################################################################################
+################################################################################
 
 def plot_3Dcam(ax, camera,
                positionArray,
@@ -222,33 +254,14 @@ def plot_err_formacion(ref_arr,
     if enableShow:
         plt.show()
     plt.close()
-    
-def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
-    Z = np.ones((1,P.shape[1]))
-    if depthOp ==1:
-        #   TODO creo que esto está mal calculado
-        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
-        Z = M @ P
-        Z = Z[2,:]
-    elif depthOp == 6:
-        Z = agent.camera.p[2]*np.ones(P.shape[1])
-        Z = Z-P[2,:]
-    elif depthOp ==2: # 
-        Z = p0[2,j]*Z
-        Z = Z-P[2,:]
-    elif depthOp == 3: # distancia al valor inicial
-        Z = pd[2,j]*Z
-        Z = Z-P[2,:]
-    elif depthOp == 4: # fijo al valor de Z_set
-        Z = Z_set * np.ones(P.shape[1])
-    elif depthOp == 5: # equitativo, = promedio
-        tmp = agent.camera.p[2]-np.mean(P[2,:])
-        Z = Z*tmp
-    else:
-        print("Invalid depthOp")
-        return None
-    return Z
 
+################################################################################
+################################################################################
+#
+#   Error measure
+#
+################################################################################
+################################################################################
 
 #   Error if state calculation
 #   It assumes that the states in the array are ordered and are the same
@@ -435,7 +448,7 @@ def error_state_patricia(reference,  agents,G, name,idx):
 #   Difference between agents
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
-def error_state_equal(  agents, name):
+def error_state_equal(  agents, name = None):
     
     n = len(agents)
     state = np.zeros((6,n))
@@ -447,8 +460,13 @@ def error_state_equal(  agents, name):
     
     reference = np.average(state,axis =1)
     
-    t_err =  (norm(reference[:3].reshape((3,1)) - state[:3,:],axis = 0)**2).sum()/n
-    rot_err =  (norm(reference[3:].reshape((3,1)) - state[3:,:],axis = 0)**2).sum()/n
+    t_err = reference[:3].reshape((3,1)) - state[:3,:]
+    t_err =  (norm(t_err,axis = 0)**2).sum()/n
+    rot_err = reference[3:].reshape((3,1)) - state[3:,:]
+    rot_err =  (norm(rot_err,axis = 0)**2).sum()/n
+    
+    if name is None:
+        return [t_err, rot_err]
     
     #   Plot
     
@@ -462,7 +480,14 @@ def error_state_equal(  agents, name):
     
     return [t_err, rot_err]
     
-    
+################################################################################
+################################################################################
+#
+#   Experiment Base
+#
+################################################################################
+################################################################################
+
 def experiment(directory = "0",
                h  = 2.0,
                r = 1.0,
@@ -718,7 +743,10 @@ def experiment(directory = "0",
         #   save data
         #print(error)
         err_array[:,:,i] = error_p
-        [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
+        if set_consensoRef:
+            [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
+        else:
+            [serr_array[0,i], serr_array[1,i]] = error_state_equal(agents)
         
         ####   Image based formation
         if control_type ==2:
@@ -819,9 +847,11 @@ def experiment(directory = "0",
                                   agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
-        patricia_err = error_state_patricia(pd,new_agents,G,directory+"/3D_errorP0",0)
+        patricia_err = error_state_patricia(pd, new_agents, G,
+                                            directory+"/3D_errorP0", 0)
         print("Patricia error = ",patricia_err)
-        patricia_err = error_state_patricia(pd,new_agents,G,directory+"/3D_errorP1",1)
+        patricia_err = error_state_patricia(pd,new_agents,G,
+                                            directory+"/3D_errorP1",1)
         print("Patricia error = ",patricia_err)
         state_err = error_state(pd,new_agents,directory+"/3D_error")
     else:
@@ -1006,11 +1036,20 @@ def experiment(directory = "0",
 
 
 
+################################################################################
+################################################################################
+#
+#   Experiment Series
+#
+################################################################################
+################################################################################
+
 ###########################################################################
 #
-#   Experiment Height vatuation
+#   Experiment height variation
 #
 ###########################################################################
+
 
 
 
@@ -1409,7 +1448,15 @@ def experiment_initalConds(justPlot = False,
                       title = "Error de formación sin referencia",
                       filename = "FormationError_WoRef.pdf")
     
-    
+
+################################################################################
+################################################################################
+#
+#   M   A   I   N
+#
+################################################################################
+################################################################################
+
     
 def main():
     
@@ -1426,13 +1473,9 @@ def main():
         [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
         [ 0.      ,    0.   ,      -0.   ,       0.        ],
         [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
-    #dwx = 0.
-    testAng =  0 #np.pi /2
+    
+    testAng =  0 # np.pi /4
     p0 = np.array(p0)
-    p0[5,:] *= 0.8
-    #p0[3,:] += testAng
-    #p0[3,:] += dwx
-    #dw1 = np.array([dwx,0.,0.])
     dw2 = np.array([testAng,0.,0.])
     for i in range(4):
         _R = cm.rot(p0[5,i],'z') 
@@ -1441,25 +1484,29 @@ def main():
         
         _R = cm.rot(testAng,'x') @ _R
         [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
-        #p0[3:,i] += _R.T @ (dw1 + dw2)
-    
-    #p0[2,:] += 1.5
     p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
-    #p0[:3,:] = cm.rot(dwx,'x') @ p0[:3,:]
+    
+    p0[5,:] *= 0.
+    #p0[2,:] += 1.5
     #p0[:,[2,0]] = p0[:,[0,2]]
+    #pd = circle(4,1.,1.)
+    #pd[2,:] = np.array([1.,1.1,1.2,1.3])
+    
     ret = experiment(directory='0',
-               #k_int = 0.1,
+               k_int = 0.1,
                 h = 1. ,
                 r = 1.,
+                #r = 0.5,
+                #pd = pd,
                 p0 = p0,
                 refRot = dw2,
                 PRot = cm.rot(testAng,'x'),
                 #PRot = cm.rot(np.pi/2,'x'),
                 #set_derivative = True,
                 #tanhLimit = True,
-                #depthOp = 4, Z_set = 1.,
+                #depthOp = 4, Z_set = 2.,
                 #set_consensoRef = False,
-                t_end = 10)
+                t_end = 60)
                 #t_end = 4.2)
                 #t_end = 100)
                 #repeat = True)

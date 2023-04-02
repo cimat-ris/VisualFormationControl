@@ -39,9 +39,9 @@ import myplots as mp
 #[-0.5,  0.5],
 #[0,   0.2]] 
 ##case 3
-SceneP=[[0,   -1.,  1.],
-[-1.,  1., 0],
-[0.,0.,0.]]
+#SceneP=[[0,   -1.,  1.],
+#[-1.,  1., 0],
+#[0.,0.,0.]]
 #SceneP=[[0,   -0.5,  0.5],
 #[-0.5,  0.5, 0],
 ##[0.,  0., 0.]]
@@ -49,10 +49,10 @@ SceneP=[[0,   -1.,  1.],
 #[0.0,  0.2, 0.3]]
 #[0.0,  -0.0, 0.0]]
 #case 4
-#SceneP=[[-0.5, -0.5, 0.5,  0.5],
-#[-0.5,  0.5, 0.5, -0.5],
-##[0,    0.2, 0.3,  -0.1]]           
-#[0,    0.0, 0.0,  0.0]] 
+SceneP=[[-0.5, -0.5, 0.5,  0.5],
+[-0.5,  0.5, 0.5, -0.5],
+#[0,    0.2, 0.3,  -0.1]]           
+[0,    0.0, 0.0,  0.0]] 
 #case 5
 #SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1],
 #[-0.5, 0.5, 0.5, -0.5, -0.3],
@@ -368,18 +368,18 @@ def experiment(directory = "0",
             #U_sel = abs(U[3:]) > 0.2
             #U[3:][U_sel] = np.sign(U[3:])[U_sel]*0.2
             
-            #if any(abs(U) > 5.):
-            print("U = ",U)
-            print("p = ",agent.camera.p)
-            print("theta = ",
-                  agent.camera.roll,
-                  agent.camera.pitch,
-                  agent.camera.yaw)
-            print("(u,v) pix = ",agent.s_current)
-            print("(u,v) nrom = ",agent.s_current_n)
-            L=ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
-            print("L = ",L)
-            print("L = ",np.linalg.pinv(L))
+            if any(abs(U) > 5.):
+                print("U = ",U)
+                print("p = ",agent.camera.p)
+                print("theta = ",
+                    agent.camera.roll,
+                    agent.camera.pitch,
+                    agent.camera.yaw)
+                print("(u,v) pix = ",agent.s_current)
+                print("(u,v) nrom = ",agent.s_current_n)
+                L=ctr.Interaction_Matrix(agent.s_current_n,Z,gdl)
+                print("L = ",L)
+                print("L = ",np.linalg.pinv(L))
         
         if U is None:
             print("Invalid U control")
@@ -662,7 +662,7 @@ def main():
     P = np.array(SceneP)      #   Scene points
     
     #p0 = np.array([1., 1., 2., np.pi, 0., 4.])
-    p0 = np.array([ 1., 0., 2., np.pi, -0., 1.])
+    p0 = np.array([ 1., 0., 2., np.pi, -0., 3.])
     #p0 = np.array([ 0.98835021,
                    #-0.06295688, 
                    #1.96015421,
@@ -684,8 +684,8 @@ def main():
                 P = P,
                 pd = pd,
                 #depthOp = 4, Z_set=2.,
-                t_end = 0.2)
-    
+                t_end = 10)
+    view3D("0")
 
 
 if __name__ ==  "__main__":

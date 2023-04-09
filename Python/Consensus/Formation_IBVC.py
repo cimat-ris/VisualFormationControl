@@ -85,7 +85,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
         #   TODO creo que esto está mal calculado
-        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p ]
+        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p[:3] ]
         Z = M @ P
         Z = Z[2,:]
     elif depthOp == 6:
@@ -273,10 +273,11 @@ def error_state(reference,  agents, name= None):
     n = reference.shape[1]
     state = np.zeros((6,n))
     for i in range(len(agents)):
-        state[:3,i] = agents[i].camera.p
-        state[3,i] = agents[i].camera.roll
-        state[4,i] = agents[i].camera.pitch
-        state[5,i] = agents[i].camera.yaw
+        state[:,i] = agents[i].camera.p
+        #state[:3,i] = agents[i].camera.p
+        #state[3,i] = agents[i].camera.roll
+        #state[4,i] = agents[i].camera.pitch
+        #state[5,i] = agents[i].camera.yaw
     
     #   Obten centroide
     centroide_ref = reference[:3,:].sum(axis=1)/n
@@ -372,10 +373,11 @@ def error_state_patricia(reference,  agents,G, name,idx):
     n = len(agents)
     state = np.zeros((6,n))
     for i in range(len(agents)):
-        state[:3,i] = agents[i].camera.p
-        state[3,i] = agents[i].camera.roll
-        state[4,i] = agents[i].camera.pitch
-        state[5,i] = agents[i].camera.yaw
+        state[:,i] = agents[i].camera.p
+        #state[:3,i] = agents[i].camera.p
+        #state[3,i] = agents[i].camera.roll
+        #state[4,i] = agents[i].camera.pitch
+        #state[5,i] = agents[i].camera.yaw
     
     
     p1 = np.zeros((n,n,3))
@@ -389,7 +391,7 @@ def error_state_patricia(reference,  agents,G, name,idx):
     
     for i in range(n):
         for j in range(n):
-            p1[i,j,:] = R @ ( agents[j].camera.p - agents[i].camera.p )
+            p1[i,j,:] = R @ ( agents[j].camera.p[:3] - agents[i].camera.p[:3] )
             pr1[i,j,:] = Rr @ ( reference[:3,j] - reference[:3,i] )
             
             _R =  cm.rot(reference[5,i],'z')
@@ -454,10 +456,11 @@ def error_state_equal(  agents, name = None):
     n = len(agents)
     state = np.zeros((6,n))
     for i in range(n):
-        state[:3,i] = agents[i].camera.p
-        state[3,i] = agents[i].camera.roll
-        state[4,i] = agents[i].camera.pitch
-        state[5,i] = agents[i].camera.yaw
+        state[:,i] = agents[i].camera.p
+        #state[:3,i] = agents[i].camera.p
+        #state[3,i] = agents[i].camera.roll
+        #state[4,i] = agents[i].camera.pitch
+        #state[5,i] = agents[i].camera.yaw
     
     reference = np.average(state,axis =1)
     
@@ -716,10 +719,11 @@ def experiment(directory = "0",
             
             #   save data 
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
-            pos_arr[j,:,i] = np.r_[agents[j].camera.p.T ,
-                                   agents[j].camera.roll,
-                                   agents[j].camera.pitch,
-                                   agents[j].camera.yaw]
+            pos_arr[j,:,i] = agents[j].camera.p.T.copy()
+            #pos_arr[j,:,i] = np.r_[agents[j].camera.p.T ,
+                                   #agents[j].camera.roll,
+                                   #agents[j].camera.pitch,
+                                   #agents[j].camera.yaw]
             
             #   Depth calculation
             Z = Z_select(depthOp, agents[j], P,Z_set,p0,pd,j)
@@ -786,9 +790,9 @@ def experiment(directory = "0",
         print("X_"+str(j)+" = "+str(agents[j].camera.p))
     for j in range(n_agents):
         print("V_"+str(j)+" = "+str(U_array[j,:,-1]))
-    for j in range(n_agents):
-        print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
-              ", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
+    #for j in range(n_agents):
+        #print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
+              #", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
     
     print("Mean inital heights = ",np.mean(p0[2,:]))
     print("Mean camera heights = ",np.mean(np.r_[p0[2,:],pd[2,:]]))
@@ -801,10 +805,11 @@ def experiment(directory = "0",
     end_position = np.zeros((n_agents,6))
     for i in range(n_agents):
         cam = cm.camera()
-        end_position[i,:] = np.r_[agents[i].camera.p,
-                                  agents[i].camera.roll,
-                                  agents[i].camera.pitch,
-                                  agents[i].camera.yaw]
+        end_position[i,:] = agents[i].camera.p.copy()
+        #end_position[i,:] = np.r_[agents[i].camera.p,
+                                  #agents[i].camera.roll,
+                                  #agents[i].camera.pitch,
+                                  #agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
         patricia_err = error_state_patricia(pd, new_agents, G,
@@ -1488,7 +1493,7 @@ def main():
     ##P = R @ P
     
     ##   Experimant
-    #ret = experiment(directory='0',
+    #ret = experiment(directory='2',
                ##k_int = 0.1,
                 #pd = pd,
                 #p0 = p0,
@@ -1502,7 +1507,7 @@ def main():
                 ##repeat = True)
                 
     #print(ret)
-    #view3D('0')
+    #view3D('2')
     #return
     
     #   complete aleatory setup
@@ -1524,7 +1529,7 @@ def main():
     # Range
     xRange = [-2,2]
     yRange = [-2,2]
-    zRange = [-2,2]
+    zRange = [-1,3]
     
     nC = 4
     p0 = np.zeros((6,nC))

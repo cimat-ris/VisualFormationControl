@@ -41,10 +41,10 @@ class camera:
         self.angsmin=-30
         self.angsmax=30
         self.Ldown=180*pi/180
-        self.p = np.zeros((3,1))
-        self.roll = 0.0
-        self.pitch = 0.0
-        self.yaw = 0.0
+        self.p = np.zeros((6,1))
+        #self.roll = 0.0
+        #self.pitch = 0.0
+        #self.yaw = 0.0
         self.T = np.eye(4)
         self.K = np.array( [[self.foco/self.rho[0],       0.0, self.pPrinc[0]],
                             [      0.0, self.foco/self.rho[1], self.pPrinc[1]],
@@ -53,18 +53,22 @@ class camera:
     def pose(self,p):
        #print("--- begin pose")
        #print(p)
-       self.p = p[0:3]
-       self.roll = p[3]
-       self.pitch = p[4]
-       self.yaw = p[5]
-       self.R = rot(self.yaw,'z') 
-       self.R = self.R @ rot(self.pitch,'y')
-       self.R = self.R @ rot(self.roll,'x')
+       self.p = p
+       #self.p = p[0:3]
+       #self.roll = p[3]
+       #self.pitch = p[4]
+       #self.yaw = p[5]
+       #self.R = rot(self.yaw,'z') 
+       #self.R = self.R @ rot(self.pitch,'y')
+       #self.R = self.R @ rot(self.roll,'x')
+       self.R = rot(self.p[5],'z') 
+       self.R = self.R @ rot(self.p[4],'y')
+       self.R = self.R @ rot(self.p[3],'x')
        #print(self.R)
-       tmp = np.c_[ self.R, self.p ]
+       tmp = np.c_[ self.R, self.p[:3] ]
        #print(tmp)
        self.T = np.r_[ tmp, [[0.0,0.0,0.0,1.0]] ]
-       self.P = np.c_[ self.R.T, -self.R.T @ self.p ]
+       self.P = np.c_[ self.R.T, -self.R.T @ self.p[:3] ]
        self.P = self.K @ self.P
        #print(self.P)
        

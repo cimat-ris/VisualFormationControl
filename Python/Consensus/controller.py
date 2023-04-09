@@ -271,10 +271,11 @@ class agent:
     def update(self,U,dt, points,Z):
         
         #   TODO: reconfigurar con momtijano
-        p = np.r_[self.camera.p.T ,
-                  self.camera.roll,
-                  self.camera.pitch,
-                  self.camera.yaw]
+        #p = np.r_[self.camera.p.T ,
+                  #self.camera.roll,
+                  #self.camera.pitch,
+                  #self.camera.yaw]
+        p = self.camera.p.T.copy()
         
         #   BEGIN local
         #kw = 1.

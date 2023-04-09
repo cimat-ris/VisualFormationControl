@@ -204,6 +204,8 @@ class agent:
         self.k_int = k_int
         
         self.camera = camera
+        self.FOVxlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)
+        self.FOVylim = self.camera.rho[1]*self.camera.iMsize[1]/(2*self.camera.foco)
         
         self.set_consensoRef = set_consensoRef 
         self.set_derivative = set_derivative
@@ -337,13 +339,13 @@ class agent:
         self.error = self.k * self.error_p -  self.dot_s_current_n + self.k_int * self.error_int  
         
     def count_points_in_FOV(self,Z):
-        xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)
-        ylim = self.camera.rho[1]*self.camera.iMsize[1]/(2*self.camera.foco)
+        #xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)
+        #ylim = self.camera.rho[1]*self.camera.iMsize[1]/(2*self.camera.foco)
         
-        a = abs(self.s_current_n[0,:]) < xlim 
-        b = abs(self.s_current_n[1,:]) < ylim
+        a = abs(self.s_current_n[0,:]) < self.FOVxlim 
+        b = abs(self.s_current_n[1,:]) < self.FOVylim
         
         test = []
         for i in range(self.s_current.shape[1]):
-            test.append(a[i] and b[i] and Z[0,i] > 0.0)
+            test.append(a[i] and b[i] and Z[i] > 0.0)
         return test.count(True)

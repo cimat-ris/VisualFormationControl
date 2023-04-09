@@ -9,6 +9,7 @@
 """
 
 #   Math
+import random
 import numpy as np
 from numpy.linalg import inv, svd, norm
 from numpy import sin, cos, pi
@@ -43,14 +44,14 @@ import myplots as mp
 #SceneP=[[0,   -0.5,  0.5],
 #[-0.5,  0.5, 0],
 ##[0.,  0., 0.]]
-#[0.0,  -0.2, 0.5]]
-#[0.0,  0.2, 0.3]]
+##[0.0,  -0.2, 0.5]]
+##[0.0,  0.2, 0.3]]
 #[0.0,  -0.0, 0.0]]
 #case 4
 SceneP=[[-0.5, -0.5, 0.5,  0.5],
 [-0.5,  0.5, 0.5, -0.5],
-#[0,    0.2, 0.3,  -0.1]]           
-[0,    0.0, 0.0,  0.0]] 
+[0,    0.2, 0.3,  -0.1]]           
+#[0,    0.0, 0.0,  0.0]] 
 #case 5
 #SceneP=[[-0.5, -0.5, 0.5, 0.5, 0.1],
 #[-0.5, 0.5, 0.5, -0.5, -0.3],
@@ -489,8 +490,6 @@ def error_state_equal(  agents, name = None):
 ################################################################################
 
 def experiment(directory = "0",
-               h  = 2.0,
-               r = 1.0,
                lamb = 1.0,
                k_int = 0,
                depthOp=1,
@@ -503,13 +502,11 @@ def experiment(directory = "0",
                adjMat = None,
                p0 = None,
                pd = None,
-               set_consensoRef = True,
+               P = np.array(SceneP), 
                set_derivative = False,
                atTarget = False,
                tanhLimit = False,
                midMarker = False,
-               PRot = None,
-               refRot = None,
                repeat = None):
     
     #   Referencia de selecciones
@@ -548,60 +545,22 @@ def experiment(directory = "0",
         pd = npzfile["pd"]
         adjMat = npzfile["adjMat"]
     else:
-        #   Data
-        P = np.array(SceneP)      #   Scene points
-        if not PRot is None:
-            P = PRot  @ P 
+        #   3D scenc points
         n_points = P.shape[1] #Number of image points
         P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
         
-        #   Posiciones de inicio
-        if p0 is None:
-            print("Invalid inital positions")
+        set_consensoRef = True
+        if p0 is None and pd is None:
+            print("Reference and initioal porsitions not provided")
             return
-        p0[2,:] = p0[2,:]+zOffset
-        n_agents = p0.shape[1] #Number of agents
+        elif p0 is None:
+            set_consensoRef = True
+            p0 = pd.copy()
+        elif pd is None:
+            set_consensoRef = False
+        n_agents = p0.shape[1] 
         
-        if set_consensoRef:
-            if pd is None:
-                pd = circle(n_agents,r,h)  #   Desired pose in a circle
-            
-            if atTarget:
-                p0[:3,:] = pd[:3,:]
-            
-            if pd.shape != p0.shape:
-                print("Error: Init and reference position missmatch")
-                return 
-        else:
-            pd = np.zeros(p0.shape)
-        #p0 = pd.copy()
-        #p0 = circle(n_agents,r,h)
-        #p0[:,0] = pd[:,2].copy()
-        #p0[:,2] = pd[:,0].copy()
-        #p0[0,1] = 0.5
-        #p0[1,1] = 0.5
-        #p0[5,1] = 0.2
-        #p0[5,0] = 1.
-        #p0[4,1] = -1.
-        #p0[5,2] = -1.
-        #p0[[0,1],1] *= -1
-        #p0[[0,1],3] *= -1
-        if not refRot is None:
-            R = cm.rot(refRot[2],'z') 
-            R = R @ cm.rot(refRot[1],'y')
-            R = R @ cm.rot(refRot[0],'x')
-            for i in range(n_agents):
-                _R = cm.rot(pd[5,i],'z') 
-                _R = _R @ cm.rot(pd[4,i],'y')
-                _R = _R @ cm.rot(pd[3,i],'x')
-                
-                _R = R @ _R
-                [pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
-                #pd[3:,i] += _R @ refRot
-            
-            pd[:3,:] = R @ pd[:3,:]
-        #pd[:3,:] = cm.rot(testAng,'x') @ pd[:3,:]
-        #pd[3,:] += testAng
+        
         #   Parameters
         
         case_n = 1  #   Case selector if needed
@@ -645,6 +604,7 @@ def experiment(directory = "0",
     #   Check initial params 
     for i in range(n_agents):
         if any(Z_select(1, agents[i], P, Z_set, p0, pd, i) < 0.):
+            print("invalid configuration")
             return None
     
     #   INIT LOOP
@@ -1460,128 +1420,179 @@ def experiment_initalConds(justPlot = False,
     
 def main():
     
+    #   VIEWER
     #view3D('4')
     #view3D('5')
     #view3D('20')
     #view3D('26')
     #return 
     
-    #   Pruebas con rotación del mundo CASO BASE
-    p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
-        [ 1.5040017,   0.26301641, -0.2127149,  -0.35572372],
-        [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
-        [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
-        [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+    #   Pruebas con rotación del mundo CASO DE FALLA
     
-    testAng =  0 # np.pi /4
-    p0 = np.array(p0)
-    dw2 = np.array([testAng,0.,0.])
-    for i in range(4):
-        _R = cm.rot(p0[5,i],'z') 
-        _R = _R @ cm.rot(p0[4,i],'y')
-        _R = _R @ cm.rot(p0[3,i],'x')
+    #   Rotaciones de Prueba
+    #testAng =  0 #np.pi /2
+    #refRot = np.array([testAng,0.,0.])
+    #R = cm.rot(refRot[2],'z') 
+    #R = R @ cm.rot(refRot[1],'y')
+    #R = R @ cm.rot(refRot[0],'x')
+    
+    ##   Posiciones iniciales
+    #p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
+        #[ 1.5040017,   0.26301641, -0.2127149,  -0.35572372],
+        #[ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
+        #[ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
+        #[ 0.      ,    0.   ,      -0.   ,       0.        ],
+        #[-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
+    #p0 = np.array(p0)
+    ##p0[2,:] = 1.
+    #n_agents = p0.shape[1]
+    
+    #for i in range(4):
+        #_R = cm.rot(p0[5,i],'z') 
+        #_R = _R @ cm.rot(p0[4,i],'y')
+        #_R = _R @ cm.rot(p0[3,i],'x')
         
-        _R = cm.rot(testAng,'x') @ _R
-        [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
-    p0[:3,:] = cm.rot(testAng,'x') @ p0[:3,:]
+        #_R = R @ _R
+        #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    #p0[:3,:] = R @ p0[:3,:]
     
-    p0[5,:] *= 0.
-    #p0[2,:] += 1.5
-    #p0[:,[2,0]] = p0[:,[0,2]]
-    #pd = circle(4,1.,1.)
+    #p0[5,:] *= 0.
+    ##p0[2,:] += 1.5
+    ##p0[:,[2,0]] = p0[:,[0,2]]
+    
+    ##   Reference
+    #pd = circle(n_agents,r= 1.,h = 1.)
+    ##pd[2,:] += 1.
     #pd[2,:] = np.array([1.,1.1,1.2,1.3])
+    #pd[5,0] += 0.2
+    #pd[5,2] -= 0.2
+    #pd[3,0] += 0.2
+    #pd[4,2] -= 0.2
     
-    ret = experiment(directory='0',
-               k_int = 0.1,
-                h = 1. ,
-                r = 1.,
-                #r = 0.5,
+    ##for i in range(n_agents):
+        ##_R = cm.rot(pd[5,i],'z') 
+        ##_R = _R @ cm.rot(pd[4,i],'y')
+        ##_R = _R @ cm.rot(pd[3,i],'x')
+        
+        ##_R = R @ _R
+        ##[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+        
+    ##pd[:3,:] = R @ pd[:3,:]
+    
+    ## atTarget:
+    ##pd = p0.copy()
+    ##p0 = pd.copy()
+    
+    ##   Puntos 3D de escena
+    #P = np.array(SceneP)
+    ##P = R @ P
+    
+    ##   Experimant
+    #ret = experiment(directory='0',
+               ##k_int = 0.1,
                 #pd = pd,
+                #p0 = p0,
+                #P = P,
+                ##set_derivative = True,
+                ##tanhLimit = True,
+                ##depthOp = 4, Z_set = 1.,
+                #t_end = 100)
+                ##t_end = 4.2)
+                ##t_end = 100)
+                ##repeat = True)
+                
+    #print(ret)
+    #view3D('0')
+    #return
+    
+    #   complete aleatory setup
+    
+    #   Points
+    # Range
+    xRange = [-1,1]
+    yRange = [-1,1]
+    zRange = [-1,1]
+    
+    nP = random.randint(4,11)
+    P = np.random.rand(3,nP)
+    P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+    P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+    P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+    Ph = np.r_[P,np.ones((1,nP))]
+    
+    #   Cameras
+    # Range
+    xRange = [-2,2]
+    yRange = [-2,2]
+    zRange = [-2,2]
+    
+    nC = 4
+    p0 = np.zeros((6,nC))
+    pd = np.zeros((6,nC))
+    
+    offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+    dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+    dRange -= offset
+    for i in range(nC):
+        
+        tmp = np.random.rand(6)
+        tmp = offset + tmp*dRange
+        cam = cm.camera()
+        agent = ctr.agent(cam, np.zeros(6), tmp,P)
+        Z = Z_select(1, agent, Ph,None,None, None,None)
+        while agent.count_points_in_FOV(Z) != nP :
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            cam = cm.camera()
+            agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            Z = Z_select(1, agent, Ph,None,None, None,None)
+        
+        p0[:,i] = tmp.copy()
+        
+        tmp = np.random.rand(6)
+        tmp = offset + tmp*dRange
+        cam = cm.camera()
+        agent = ctr.agent(cam, np.zeros(6), tmp,P)
+        Z = Z_select(1, agent, Ph,None,None, None,None)
+        while agent.count_points_in_FOV(Z) != nP:
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            cam = cm.camera()
+            agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            Z = Z_select(1, agent, Ph,None,None, None,None)
+        
+        pd[:,i] = tmp.copy()
+        
+    ret = experiment(directory='1',
+               #k_int = 0.1,
+                pd = pd,
                 p0 = p0,
-                refRot = dw2,
-                PRot = cm.rot(testAng,'x'),
-                #PRot = cm.rot(np.pi/2,'x'),
+                P = P,
                 #set_derivative = True,
                 #tanhLimit = True,
-                #depthOp = 4, Z_set = 2.,
-                #set_consensoRef = False,
-                t_end = 60)
+                #depthOp = 4, Z_set = 1.,
+                t_end = 30)
                 #t_end = 4.2)
                 #t_end = 100)
                 #repeat = True)
                 
     print(ret)
     view3D('0')
-    return
     
-    #   Caso Base
-    p0 = [[-0.48417528,  1.07127934,  1.05383249, -0.02028547],
-        [ 1.5040017,   0.26301641, -0.2127149,  -0.35572372],
-        [ 1.07345242,  0.77250055,  1.15142682,  1.4490757 ],
-        [ 3.14159265,  3.14159265,  3.14159265,  3.14159265],
-        [ 0.      ,    0.   ,      -0.   ,       0.        ],
-        [-0.30442168, -1.3313259,  -1.5302976,   1.4995989 ]]
-    p0 = np.array(p0)
-    #p0[:,[0,2]] = p0[:,[2,0]] 
-    #p0[2,:] = 1.
-    p0[5,:] = 0.
+    return
+
     ret = experiment(directory='0',
-                #k_int = 0.1,
-                h = 1. ,
-                lamb = 1.,
+               #k_int = 0.1,
+                pd = pd,
                 p0 = p0,
+                P = P,
                 #set_derivative = True,
                 #tanhLimit = True,
                 #depthOp = 4, Z_set = 1.,
-                t_end = 30)
-    view3D("0")
-    return
-
-    experiment(directory='21',
-               k_int = 0.1,
-                h = 1 ,
-                r = 1.,
-                p0 = p0,
-                #tanhLimit = True,
-                depthOp = 1,
-                t_end = 200)
-                #repeat = True)
+                t_end = 100)
     
-    experiment(directory='22',
-               #k_int = 0.1,
-                h = 1.5 ,
-                r = 1.,
-                p0 = p0,
-                #tanhLimit = True,
-                depthOp = 1,
-                t_end = 200)
-                #repeat = True)
     
-    experiment(directory='23',
-               k_int = 0.1,
-                h = 1.5 ,
-                r = 1.,
-                p0 = p0,
-                #tanhLimit = True,
-                depthOp = 1,
-                t_end = 2.5)
-                #repeat = True)
     
-    return
-    #experiment_initalConds(n = 10,
-                        #k_int = 0.1,
-                        #noRef = False,
-                        #set_derivative = False,
-                        #midMarker = True)
-    
-    #experiment(directory='14',
-                    #h = 1.1,
-                    #lamb = 0.1,
-                    #gdl = 1,
-                   #zOffset = 0.0 ,
-                   #t_end = 100,
-                   #tanhLimit = True)
     return
     
     ##   Experimentos de variación de altura

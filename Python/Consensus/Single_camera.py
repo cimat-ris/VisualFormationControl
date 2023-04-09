@@ -660,9 +660,10 @@ def main():
     pd = np.array([0.,0.,1,np.pi,0.,0.])
     
     P = np.array(SceneP)      #   Scene points
+    #P = cm.rot(0.5,"x") @ P
     
     #p0 = np.array([1., 1., 2., np.pi, 0., 4.])
-    p0 = np.array([ 1., 0., 2., np.pi, -0., 3.])
+    p0 = np.array([ 0., 0., 2., np.pi, -0., -2.8])
     #p0 = np.array([ 0.98835021,
                    #-0.06295688, 
                    #1.96015421,
@@ -683,6 +684,7 @@ def main():
                 p0 = p0,
                 P = P,
                 pd = pd,
+                #tanhLimit = True,
                 #depthOp = 4, Z_set=2.,
                 t_end = 10)
     view3D("0")

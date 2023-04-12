@@ -339,9 +339,12 @@ class agent:
         #print(self.error)
         self.error = self.k * self.error_p -  self.dot_s_current_n + self.k_int * self.error_int  
         
-    def count_points_in_FOV(self,Z):
+    def count_points_in_FOV(self,P):
         #xlim = self.camera.rho[0]* self.camera.iMsize[0]/(2*self.camera.foco)
         #ylim = self.camera.rho[1]*self.camera.iMsize[1]/(2*self.camera.foco)
+        
+        Z = self.camera.Preal @ P
+        Z = Z[2,:]
         
         a = abs(self.s_current_n[0,:]) < self.FOVxlim 
         b = abs(self.s_current_n[1,:]) < self.FOVylim

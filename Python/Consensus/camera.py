@@ -53,7 +53,7 @@ class camera:
     def pose(self,p):
        #print("--- begin pose")
        #print(p)
-       self.p = p
+       self.p = p.copy()
        #self.p = p[0:3]
        #self.roll = p[3]
        #self.pitch = p[4]
@@ -68,8 +68,8 @@ class camera:
        tmp = np.c_[ self.R, self.p[:3] ]
        #print(tmp)
        self.T = np.r_[ tmp, [[0.0,0.0,0.0,1.0]] ]
-       self.P = np.c_[ self.R.T, -self.R.T @ self.p[:3] ]
-       self.P = self.K @ self.P
+       self.Preal = np.c_[ self.R.T, -self.R.T @ self.p[:3] ]
+       self.P = self.K @ self.Preal
        #print(self.P)
        
        #print("--- begin pose")

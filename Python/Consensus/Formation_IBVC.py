@@ -19,6 +19,7 @@ from scipy.optimize import minimize_scalar
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from numpy.random import rand, randint
+from scipy.stats import gaussian_kde
 
 #   Image
 #import cv2
@@ -85,8 +86,9 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
         #   TODO creo que esto está mal calculado
-        M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p[:3] ]
-        Z = M @ P
+        #M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p[:3] ]
+        #Z = M @ P
+        Z = agent.camera.Preal @ P
         Z = Z[2,:]
     elif depthOp == 6:
         Z = agent.camera.p[2]*np.ones(P.shape[1])
@@ -139,7 +141,10 @@ def plot_3Dcam(ax, camera,
     ax.set_zlabel("$w_z$")
     ax.grid(True)
 
-def view3D(directory):
+def view3D(directory,
+           xLimit = None,
+           yLimit = None,
+           zLimit = None):
     
     #   load
     fileName = directory + "/data3DPlot.npz"
@@ -180,9 +185,12 @@ def view3D(directory):
     y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
     z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
     
-    #ax.set_xlim(x_min,x_max)
-    #ax.set_ylim(y_min,y_max)
-    #ax.set_zlim(0,z_max)
+    if not xLimit is None:
+        ax.set_xlim(xLimit[0],xLimit[1])
+    if not yLimit is None:
+        ax.set_ylim(yLimit[0],yLimit[1])
+    if not zLimit is None:
+        ax.set_zlim(zLimit[0],zLimit[1])
     
     fig.legend( loc=1)
     plt.show()
@@ -368,85 +376,6 @@ def error_state(reference,  agents, name= None):
     
     return [t_err, rot_err]
 
-def error_state_patricia(reference,  agents,G, name,idx):
-    
-    n = len(agents)
-    state = np.zeros((6,n))
-    for i in range(len(agents)):
-        state[:,i] = agents[i].camera.p
-        #state[:3,i] = agents[i].camera.p
-        #state[3,i] = agents[i].camera.roll
-        #state[4,i] = agents[i].camera.pitch
-        #state[5,i] = agents[i].camera.yaw
-    
-    
-    p1 = np.zeros((n,n,3))
-    pr1 = np.zeros((n,n,3))
-    rot_err = np.zeros((n,n))
-    R = agents[idx].camera.R.T
-    Rr =  cm.rot(reference[3,idx],'x')
-    Rr = cm.rot(reference[4,idx],'y') @ Rr
-    Rr = cm.rot(reference[5,idx],'z') @ Rr
-    #Rr = R.T
-    
-    for i in range(n):
-        for j in range(n):
-            p1[i,j,:] = R @ ( agents[j].camera.p[:3] - agents[i].camera.p[:3] )
-            pr1[i,j,:] = Rr @ ( reference[:3,j] - reference[:3,i] )
-            
-            _R =  cm.rot(reference[5,i],'z')
-            _R = cm.rot(reference[4,i],'y') @ _R
-            _R = cm.rot(reference[3,i],'x') @ _R
-            _R = _R @ agents[i].camera.R.T
-            rot_err[i,j] = np.arccos((_R.trace()-1.)/2.)
-    
-    rot_err = G.adjacency_mat * rot_err
-    rot_err = rot_err.sum(axis=1)
-    rot_err = rot_err / G.deg
-    rot_err = rot_err.sum()/n
-    
-    
-    e1 = G.getEdge(0)
-    s = norm(pr1[e1[0],e1[1],:])/norm(p1[e1[0],e1[1],:])
-    p1 = s*p1
-    t_err = p1- pr1
-    t_err = norm(t_err,axis= 2)
-    t_err = G.adjacency_mat * t_err
-    t_err = t_err.sum(axis=1)
-    t_err = t_err / G.deg
-    t_err = t_err.sum()/n
-    
-    ####   Plot
-    
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    
-    for i in range(n):
-        _p = state[:,i].copy()
-        _p[:3] = R @ (_p[:3] -state[:3,idx])
-        if i != idx:
-            _p[:3] *= s
-        _R = R @ agents[i].camera.R
-        [_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
-        agents[i].camera.pose(_p)
-        agents[i].camera.draw_camera(ax, scale=0.2, color='red')
-        
-        _p = reference[:,i].copy()
-        _p[:3] = Rr @ (_p[:3] - reference[:3,idx])
-        
-        _R =  cm.rot(reference[5,i],'z')
-        _R = cm.rot(reference[4,i],'y') @ _R
-        _R = cm.rot(reference[3,i],'x') @ _R
-        _R = Rr @ _R
-        [_p[3] , _p[4], _p[5] ] = ctr.get_angles(_R)
-        agents[i].camera.pose(_p)
-        agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
-        agents[i].camera.pose(state[:,i])
-    plt.savefig(name+'.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
-    
-    return [t_err,rot_err]
 
 #   Difference between agents
 #   It assumes that the states in the array are ordered and are the same
@@ -538,12 +467,14 @@ def experiment(directory = "0",
                              2:"4 Degrees of freedom",
                              3:"3 Degrees of freedom"}
     
-    
+    set_consensoRef = True
     if repeat:
         npzfile = np.load(directory+'/data.npz')
         P = npzfile["P"]
         n_points = P.shape[1] #Number of image points
         p0 = npzfile["p0"]
+        if (p0 == .0).all():
+            set_consensoRef = False
         n_agents = p0.shape[1] #Number of agents
         pd = npzfile["pd"]
         adjMat = npzfile["adjMat"]
@@ -552,15 +483,16 @@ def experiment(directory = "0",
         n_points = P.shape[1] #Number of image points
         P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
         
-        set_consensoRef = True
+        
         if p0 is None and pd is None:
-            print("Reference and initioal porsitions not provided")
+            print("Reference and initial porsitions not provided")
             return
         elif p0 is None:
             set_consensoRef = True
             p0 = pd.copy()
         elif pd is None:
             set_consensoRef = False
+            pd = np.zeros(p0.shape)
         n_agents = p0.shape[1] 
         
         
@@ -621,7 +553,8 @@ def experiment(directory = "0",
             #   Depth calculation
             Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,i)
             if Z is None:
-                return
+                print("Invalid depth selection")
+                return None
             agents[i].set_interactionMat(Z,gdl)
     
     if control_type == 2:
@@ -631,7 +564,7 @@ def experiment(directory = "0",
                 delta_pref[i,j,:,0] = pd[:,j]-pd[:,i]
         gamma =  p0[2,:]
     
-    depthFlags =  [0. for i in range(n_agents)]
+    depthFlags =  [0 for i in range(n_agents)]
     
     #   Storage variables
     #t_array = np.arange(t,t_end+dt,dt)
@@ -650,6 +583,7 @@ def experiment(directory = "0",
         s_store = np.zeros((n_agents,4,steps))
     elif gdl == 3:
         s_store = np.zeros((n_agents,3,steps))
+    FOVflag = False
     
     #   Print simulation data:
     print("------------------BEGIN-----------------")
@@ -728,7 +662,7 @@ def experiment(directory = "0",
             #   Depth calculation
             Z = Z_select(depthOp, agents[j], P,Z_set,p0,pd,j)
             if Z is None:
-                return
+                return None
             
             #   Control
             if control_type == 1:
@@ -743,7 +677,7 @@ def experiment(directory = "0",
                         "gamma": gamma[j]}
             else:
                 print("invalid control selection")
-                return
+                return None
             
             #s = None
             U,u, s, vh  = agents[j].get_control(control_type,lamb,Z,args)
@@ -752,11 +686,14 @@ def experiment(directory = "0",
                 U = 0.3*np.tanh(U)
             
             #   Detección de choque del plano de cámara y los puntos de escena
-            Z_test = Z_select(1, agents[j], P,Z_set,p0,pd,j)
-            if any(Z_test < 0.):
+            #Z_test = Z_select(1, agents[j], P,Z_set,p0,pd,j)
+            #if any(Z_test < 0.):
+            if agents[j].count_points_in_FOV(P) != n_points:
                 if depthFlags[j] == 0. :
-                    depthFlags[j] = t
+                    depthFlags[j] = i
                 U =  np.array([0.,0.,0.,0.,0.,0.])
+                FOVflag = True
+                break
             
             #   Save error proyection in SVD:
             svdProy[j,:,i] = vh@error[j,:]/norm(error[j,:])
@@ -775,6 +712,9 @@ def experiment(directory = "0",
         t += dt
         if control_type ==2:
             gamma = A_ds @ gamma #/ 10.0
+        
+        if FOVflag:
+            break
         
     
     ##  Final data
@@ -797,6 +737,19 @@ def experiment(directory = "0",
     print("Mean inital heights = ",np.mean(p0[2,:]))
     print("Mean camera heights = ",np.mean(np.r_[p0[2,:],pd[2,:]]))
     
+    ##  Trim data if needed
+    if FOVflag:
+        trim = max(depthFlags)
+        t_array = t_array[:trim] 
+        err_array = err_array[:,:,:trim]
+        serr_array = serr_array[:,:trim]
+        U_array = U_array[:,:,:trim] 
+        desc_arr = desc_arr[:,:,:trim]
+        pos_arr = pos_arr[:,:,:trim]
+        svdProy_p = svdProy_p[:,:,:trim]
+        svdProy = svdProy[:,:,:trim]
+        s_store = s_store[:,:,:trim]
+    
     ####   Plot
     
     
@@ -812,18 +765,12 @@ def experiment(directory = "0",
                                   #agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
-        patricia_err = error_state_patricia(pd, new_agents, G,
-                                            directory+"/3D_errorP0", 0)
-        print("Patricia error = ",patricia_err)
-        patricia_err = error_state_patricia(pd,new_agents,G,
-                                            directory+"/3D_errorP1",1)
-        print("Patricia error = ",patricia_err)
         state_err = error_state(pd,new_agents,directory+"/3D_error")
     else:
         state_err = error_state_equal(new_agents,directory+"/3D_error")
         
     print("State error = "+str(state_err))
-    if depthFlags.count(0.) < n_agents:
+    if FOVflag:
         print("WARNING : Cammera plane hit scene points: ", depthFlags)
     print("-------------------END------------------")
     print()
@@ -997,7 +944,7 @@ def experiment(directory = "0",
                     labels = ["0","1","2","3","4","5","6","7"])
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
-    return [ret_err, state_err[0],state_err[1]]
+    return [ret_err, state_err[0],state_err[1], FOVflag]
 
 
 
@@ -1011,89 +958,91 @@ def experiment(directory = "0",
 
 ###########################################################################
 #
-#   Experiment height variation
+#   Experiment random references and initial conditions
 #
 ###########################################################################
 
 
 
 
-def experiment_height():
+def experiment_all_random(nReps = 100, repeat = False):
     
     n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    mask = np.zeros(nReps)
     
-    #   Revisión con cambio uniforme de zOffset y h
-    #   Casos 1
-    #ref_arr = np.arange( 1., 2.55 ,0.1)
-    #ref_arr = np.arange( 1., 2.25 ,0.2)
-    #   Casos 2
-    #ref_arr = np.arange( 0.5, 2.05 ,0.1)
-    #   Caso 3
-    #ref_arr = np.arange( 0.6, 2.15 ,0.1)
-    
-    
-    #var_arr = np.zeros((n_agents,len(ref_arr)))
-    #var_arr_2 = np.zeros(len(ref_arr))
-    #var_arr_3 = np.zeros(len(ref_arr))
-    
-    #for i in range(len(ref_arr)):
-        #ret_err = experiment(directory=str(i),
-                             #gdl = 1,
-                             #h = ref_arr[i],
-                             #zOffset = ref_arr[i] -0.8 ,
-                             #t_end = 60,
-                             #tanhLimit = True)
-        #[var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
-    
-   
-    
-    #   Revisión con zOffset constante
-    #   Offset = 0
-    #offset = 0.
-    ##       Caso 1
-    #ref_arr = np.arange( 1.0, 2.05 ,0.1)
-    #ref_arr = np.arange( 0.6, 1.55 ,0.2)
-    ##       Caso 2 = puntos coplanares
-    #ref_arr = np.arange( 0.4, 1.75 ,0.1)
-    ##       Caso 3 = 4 dof
-    #ref_arr = np.arange( 0.6, 1.75 ,0.1)
-    #ref_arr = np.arange( 1.1, 1.75 ,0.2)
-    
-    #   Offset = 1
-    #offset = 1.
-    
-    #       Caso 1
-    #ref_arr = np.arange( 1.3, 2.0 ,0.1)
-    #ref_arr = np.arange( 1.0, 1.5 ,0.1)
-    
-    #       Caso 2, 3
-    #ref_arr = np.arange( 0.7, 2.0 ,0.1)
-    
-    #   h = 1.
-    
-    #   Caso 1
-    #ref_arr = np.arange( 0.6, 2.05 ,0.1)
-    ref_arr = np.arange( 0.6, 1.75 ,0.1)
-    #ref_arr = np.arange( 0.6, 1.15 ,0.1)
-    
-    
-    var_arr = np.zeros((n_agents,len(ref_arr)))
-    var_arr_2 = np.zeros(len(ref_arr))
-    var_arr_3 = np.zeros(len(ref_arr))
-    #ref_arr = np.array(ref_arr)
-    for i in range(len(ref_arr)):
-        ret_err = experiment(directory=str(i),
-                             lamb = .2,
-                             gdl = 1,
-                             #zOffset = offset,
-                             zOffset = ref_arr[i],
-                             #h = ref_arr[i] ,
-                             h = 1. ,
-                             #tanhLimit = True,
-                             #depthOp = 4, Z_set=1.,
-                             t_end = 80)
-                             #t_end = 20)
-        [var_arr[:,i], var_arr_2[i], var_arr_3[i]] = ret_err
+    for k in range(nReps):
+        #   Points
+        # Range
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [-1,0]
+        
+        nP = random.randint(4,11)
+        P = np.random.rand(3,nP)
+        P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+        P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+        P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+        Ph = np.r_[P,np.ones((1,nP))]
+        
+        #   Cameras
+        # Range
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [0,3]
+        
+        nC = 4
+        p0 = np.zeros((6,nC))
+        pd = np.zeros((6,nC))
+        
+        offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+        dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+        dRange -= offset
+        for i in range(nC):
+            
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            cam = cm.camera()
+            agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            #Z = Z_select(1, agent, Ph,None,None, None,None)
+            while agent.count_points_in_FOV(Ph) != nP :
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                #Z = Z_select(1, agent, Ph,None,None, None,None)
+            
+            p0[:,i] = tmp.copy()
+            
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            cam = cm.camera()
+            agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            #Z = Z_select(1, agent, Ph,None,None, None,None)
+            while agent.count_points_in_FOV(Ph) != nP:
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                #Z = Z_select(1, agent, Ph,None,None, None,None)
+            
+            pd[:,i] = tmp.copy()
+        
+        ret = experiment(directory=str(k),
+                #k_int = 0.1,
+                    pd = pd,
+                    p0 = p0,
+                    P = P,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set = 1.,
+                    t_end = 100,
+                    repeat = repeat)
+        [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
+        if FOVflag:
+            mask[i] = 1
         
     
     #   Plot data
@@ -1104,10 +1053,17 @@ def experiment_height():
     
     colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
     
-    for i in range(n_agents):
-        ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
+    var_arr = norm(var_arr,axis = 0)
+    density = gaussian_kde(var_arr)
+    dh = var_arr.max() - var_arr.min()
+    xs = np.linspace(var_arr.min()-dh*0.1,var_arr.max()+dh*0.1,200)
+    density.covariance_factor = lambda : .25
+    density._compute_covariance()
+    plt.plot(xs,density(xs),color=colors[0])
+    #for i in range(n_agents):
+        #ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
     
-    plt.yscale('logit')
+    #plt.yscale('logit')
     plt.tight_layout()
     plt.savefig('Consensus error.pdf',bbox_inches='tight')
     #plt.show()
@@ -1115,15 +1071,29 @@ def experiment_height():
     
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado")
-    ax.plot(ref_arr,var_arr_2, label = "Posición")
-    ax.plot(ref_arr,var_arr_3, label = "Rotación")
-    fig.legend( loc=2)
+    #ax.plot(ref_arr,var_arr_2, label = "Posición")
+    #ax.plot(ref_arr,var_arr_3, label = "Rotación")
+    #fig.legend( loc=2)
+    density = gaussian_kde(var_arr_2)
+    dh = var_arr_2.max() - var_arr_2.min()
+    xs = np.linspace(var_arr_2.min()-dh*0.1,var_arr_2.max()+dh*0.1,200)
+    density.covariance_factor = lambda : .25
+    density._compute_covariance()
+    plt.plot(xs,density(xs),color=colors[0])
+    
+    density = gaussian_kde(var_arr_3)
+    dh = var_arr_3.max() - var_arr_3.min()
+    xs = np.linspace(var_arr_3.min()-dh*0.1,var_arr_3.max()+dh*0.1,200)
+    density.covariance_factor = lambda : .25
+    density._compute_covariance()
+    plt.plot(xs,density(xs),color=colors[1])
+    
     plt.tight_layout()
     plt.savefig('Formation error.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
-    print("Total number of simulations = "+str(len(ref_arr)))
+    print("Total number of simulations = "+str(nReps))
 
 
 
@@ -1425,12 +1395,23 @@ def experiment_initalConds(justPlot = False,
     
 def main():
     
+    #   REPEAT
+    experiment(directory="3",
+                t_end = 100,
+                repeat = True)
+    return
+
     #   VIEWER
-    #view3D('4')
+    view3D('3', xLimit = [-10,10], yLimit = [-10,10],zLimit = [0,20])
     #view3D('5')
     #view3D('20')
     #view3D('26')
-    #return 
+    return 
+    
+    #   Experimento exhaustivo de posiciones y referencias random
+    experiment_all_random(nReps = 20)
+    print("Echo")
+    return
     
     #   Pruebas con rotación del mundo CASO DE FALLA
     
@@ -1510,79 +1491,80 @@ def main():
     #view3D('2')
     #return
     
-    #   complete aleatory setup
+    ##   complete aleatory setup
     
-    #   Points
-    # Range
-    xRange = [-1,1]
-    yRange = [-1,1]
-    zRange = [-1,1]
+    ##   Points
+    ## Range
+    #xRange = [-2,2]
+    #yRange = [-2,2]
+    #zRange = [-1,0]
     
-    nP = random.randint(4,11)
-    P = np.random.rand(3,nP)
-    P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-    P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-    P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
-    Ph = np.r_[P,np.ones((1,nP))]
+    #nP = random.randint(4,11)
+    #P = np.random.rand(3,nP)
+    #P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+    #P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+    #P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+    #Ph = np.r_[P,np.ones((1,nP))]
     
-    #   Cameras
-    # Range
-    xRange = [-2,2]
-    yRange = [-2,2]
-    zRange = [-1,3]
+    ##   Cameras
+    ## Range
+    #xRange = [-2,2]
+    #yRange = [-2,2]
+    #zRange = [0,3]
     
-    nC = 4
-    p0 = np.zeros((6,nC))
-    pd = np.zeros((6,nC))
+    #nC = 4
+    #p0 = np.zeros((6,nC))
+    #pd = np.zeros((6,nC))
     
-    offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
-    dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-    dRange -= offset
-    for i in range(nC):
+    #offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+    #dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+    #dRange -= offset
+    #for i in range(nC):
         
-        tmp = np.random.rand(6)
-        tmp = offset + tmp*dRange
-        cam = cm.camera()
-        agent = ctr.agent(cam, np.zeros(6), tmp,P)
-        Z = Z_select(1, agent, Ph,None,None, None,None)
-        while agent.count_points_in_FOV(Z) != nP :
-            tmp = np.random.rand(6)
-            tmp = offset + tmp*dRange
-            cam = cm.camera()
-            agent = ctr.agent(cam, np.zeros(6), tmp,P)
-            Z = Z_select(1, agent, Ph,None,None, None,None)
+        #tmp = np.random.rand(6)
+        #tmp = offset + tmp*dRange
+        #cam = cm.camera()
+        #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+        #Z = Z_select(1, agent, Ph,None,None, None,None)
+        #while agent.count_points_in_FOV(Z) != nP :
+            #tmp = np.random.rand(6)
+            #tmp = offset + tmp*dRange
+            #cam = cm.camera()
+            #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            #Z = Z_select(1, agent, Ph,None,None, None,None)
         
-        p0[:,i] = tmp.copy()
+        #p0[:,i] = tmp.copy()
         
-        tmp = np.random.rand(6)
-        tmp = offset + tmp*dRange
-        cam = cm.camera()
-        agent = ctr.agent(cam, np.zeros(6), tmp,P)
-        Z = Z_select(1, agent, Ph,None,None, None,None)
-        while agent.count_points_in_FOV(Z) != nP:
-            tmp = np.random.rand(6)
-            tmp = offset + tmp*dRange
-            cam = cm.camera()
-            agent = ctr.agent(cam, np.zeros(6), tmp,P)
-            Z = Z_select(1, agent, Ph,None,None, None,None)
+        ##tmp = np.random.rand(6)
+        ##tmp = offset + tmp*dRange
+        ##cam = cm.camera()
+        ##agent = ctr.agent(cam, np.zeros(6), tmp,P)
+        ##Z = Z_select(1, agent, Ph,None,None, None,None)
+        ##while agent.count_points_in_FOV(Z) != nP:
+            ##tmp = np.random.rand(6)
+            ##tmp = offset + tmp*dRange
+            ##cam = cm.camera()
+            ##agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            ##Z = Z_select(1, agent, Ph,None,None, None,None)
         
-        pd[:,i] = tmp.copy()
-        
-    ret = experiment(directory='1',
-               #k_int = 0.1,
-                pd = pd,
-                p0 = p0,
-                P = P,
-                #set_derivative = True,
-                #tanhLimit = True,
-                #depthOp = 4, Z_set = 1.,
-                t_end = 30)
-                #t_end = 4.2)
+        ##pd[:,i] = tmp.copy()
+    
+    #pd = circle(4,1,1)
+    #ret = experiment(directory='1',
+               ##k_int = 0.1,
+                #pd = pd,
+                #p0 = p0,
+                #P = P,
+                ##set_derivative = True,
+                ##tanhLimit = True,
+                ##depthOp = 4, Z_set = 1.,
                 #t_end = 100)
-                #repeat = True)
+                ##t_end = 4.2)
+                ##t_end = 100)
+                ##repeat = True)
                 
-    print(ret)
-    view3D('0')
+    #print(ret)
+    #view3D('1')
     
     return
 

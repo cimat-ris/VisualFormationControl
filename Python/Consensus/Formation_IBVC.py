@@ -208,7 +208,7 @@ def plot_err_consenso(ref_arr,
     #   Variantes
     n = arr_error.shape[0]
     #   agentes
-    m = arr_error.shape[0]
+    m = arr_error.shape[1]
     
     fig, ax = plt.subplots()
     fig.suptitle(title)
@@ -439,6 +439,7 @@ def experiment(directory = "0",
                atTarget = False,
                tanhLimit = False,
                midMarker = False,
+               enablePlot = True,
                repeat = None):
     
     #   Referencia de selecciones
@@ -782,6 +783,9 @@ def experiment(directory = "0",
     colors = randint(0,255,3*n_colors)/255.0
     colors = colors.reshape((n_colors,3))
     
+    if not enablePlot:
+        return [ret_err, state_err[0],state_err[1], FOVflag]
+    
     #   Camera positions in X,Y 
     mp.plot_position(pos_arr,
                     pd,
@@ -965,12 +969,15 @@ def experiment(directory = "0",
 
 
 
-def experiment_all_random(nReps = 100, repeat = False):
+def experiment_all_random(nReps = 100, 
+                          enablePlotExp = True,
+                          repeat = False):
     
     n_agents = 4
     var_arr = np.zeros((n_agents,nReps))
     var_arr_2 = np.zeros(nReps)
     var_arr_3 = np.zeros(nReps)
+    state_init_distance = np.zeros((n_agents,2,nReps))
     mask = np.zeros(nReps)
     
     for k in range(nReps):
@@ -1030,6 +1037,17 @@ def experiment_all_random(nReps = 100, repeat = False):
             
             pd[:,i] = tmp.copy()
         
+        #   Save starting distance p0 - pd
+        state_init_distance[:,0,k] = norm(p0[:3,:]-pd[:3,:],axis = 0)
+        for i in range(nC):
+            _R =  cm.rot(p0[5,i],'z').T 
+            _R = cm.rot(p0[4,i],'y').T @ _R
+            _R = cm.rot(p0[3,i],'x').T @ _R
+            _R =  cm.rot(p0[3,i],'x') @ _R
+            _R = cm.rot(p0[4,i],'y') @ _R
+            _R = cm.rot(p0[5,i],'z') @ _R
+            state_init_distance[i,1,k] = np.arccos((_R.trace()-1.)/2.)
+        
         ret = experiment(directory=str(k),
                 #k_int = 0.1,
                     pd = pd,
@@ -1039,19 +1057,43 @@ def experiment_all_random(nReps = 100, repeat = False):
                     #tanhLimit = True,
                     #depthOp = 4, Z_set = 1.,
                     t_end = 100,
+                    enablePlot = enablePlotExp,
                     repeat = repeat)
         [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
         if FOVflag:
-            mask[i] = 1
+            mask[k] = 1
         
+    #   Adjust mask
+    
+    print("Failed simulations = ",mask.sum()," / ", nReps)
+    var_arr = var_arr[:,mask==0]
+    var_arr_2 = var_arr_2[mask==0]
+    var_arr_3 = var_arr_3[mask==0]
+    state_init_distance = state_init_distance[:,:,mask==0]
+    ref_arr = np.arange(nReps-int(mask.sum()))
     
     #   Plot data
     
+    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    
+    ##      Simulation - wise consensus error
     fig, ax = plt.subplots()
     fig.suptitle("Error de consenso")
     #plt.ylim([-2.,2.])
+    for i in range(n_agents):
+        ax.scatter(ref_arr, var_arr[i,:], 
+                marker = "x", alpha = 0.5,color=colors[i])
     
-    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    plt.yscale('logit')
+    plt.tight_layout()
+    plt.savefig('Consensus error_byExp.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##   Kernel density consensus
+    fig, ax = plt.subplots()
+    fig.suptitle("Error de consenso")
+    #plt.ylim([-2.,2.])
     
     var_arr = norm(var_arr,axis = 0)
     density = gaussian_kde(var_arr)
@@ -1060,27 +1102,53 @@ def experiment_all_random(nReps = 100, repeat = False):
     density.covariance_factor = lambda : .25
     density._compute_covariance()
     plt.plot(xs,density(xs),color=colors[0])
-    #for i in range(n_agents):
-        #ax.plot(ref_arr,var_arr[i,:] , color=colors[i])
     
-    #plt.yscale('logit')
     plt.tight_layout()
-    plt.savefig('Consensus error.pdf',bbox_inches='tight')
+    plt.savefig('Consensus error_Kernel_density.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
+    
+    ##  Histogram consensus
+    fig, ax = plt.subplots()
+    fig.suptitle("Histograma de error de consenso")
+    counts, bins = np.histogram(var_arr)
+    plt.stairs(counts, bins)
+    plt.tight_layout()
+    plt.savefig('Consensus error_Histogram.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Simulation - wise formation error
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado")
-    #ax.plot(ref_arr,var_arr_2, label = "Posición")
-    #ax.plot(ref_arr,var_arr_3, label = "Rotación")
-    #fig.legend( loc=2)
+    ax.scatter(ref_arr,var_arr_2, label = "Posición",
+            marker = ".", alpha = 0.5,color = colors[0])
+    ax.scatter(ref_arr,var_arr_3, label = "Rotación",
+            marker = "x", alpha = 0.5,color=colors[1])
+    fig.legend( loc=2)
+    plt.tight_layout()
+    plt.savefig('Formation error_byExp.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #   Kernel plots formation error
+    
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de traslación")
     density = gaussian_kde(var_arr_2)
     dh = var_arr_2.max() - var_arr_2.min()
     xs = np.linspace(var_arr_2.min()-dh*0.1,var_arr_2.max()+dh*0.1,200)
     density.covariance_factor = lambda : .25
     density._compute_covariance()
     plt.plot(xs,density(xs),color=colors[0])
+    plt.tight_layout()
+    plt.savefig('Formation error_Kernel_desity_T.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
     
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de rotación")
     density = gaussian_kde(var_arr_3)
     dh = var_arr_3.max() - var_arr_3.min()
     xs = np.linspace(var_arr_3.min()-dh*0.1,var_arr_3.max()+dh*0.1,200)
@@ -1089,13 +1157,38 @@ def experiment_all_random(nReps = 100, repeat = False):
     plt.plot(xs,density(xs),color=colors[1])
     
     plt.tight_layout()
-    plt.savefig('Formation error.pdf',bbox_inches='tight')
+    plt.savefig('Formation error_Kernel_desity_R.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
-    print("Total number of simulations = "+str(nReps))
+    ##  Heatmap
+    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
+    print(h)
+    print(x)
+    print(y)
+    fig, ax = plt.subplots()
+    fig.suptitle("Heatmap de errores de rotación")
+    
+    ax.imshow(h)
+    ax.invert_yaxis()
+    x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
+    y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
+    ax.set_yticks(np.arange(len(x)))
+    ax.set_xticks(np.arange(len(y)))
+    ax.set_xticklabels(x)
+    ax.set_yticklabels(y)
+    for i in range(len(y)):
+        for j in range(len(x)):
+            text = ax.text(j, i, h[i, j],
+                        ha="center", va="center", color="w")
 
-
+    
+    plt.tight_layout()
+    plt.savefig('Formation error_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    
 
 ###########################################################################
 #
@@ -1395,21 +1488,21 @@ def experiment_initalConds(justPlot = False,
     
 def main():
     
-    #   REPEAT
-    experiment(directory="3",
-                t_end = 100,
-                repeat = True)
-    return
+    ##   REPEAT
+    #experiment(directory="3",
+                #t_end = 100,
+                #repeat = True)
+    #return
 
-    #   VIEWER
-    view3D('3', xLimit = [-10,10], yLimit = [-10,10],zLimit = [0,20])
-    #view3D('5')
-    #view3D('20')
-    #view3D('26')
-    return 
+    ##   VIEWER
+    #view3D('3', xLimit = [-10,10], yLimit = [-10,10],zLimit = [0,20])
+    ##view3D('5')
+    ##view3D('20')
+    ##view3D('26')
+    #return 
     
     #   Experimento exhaustivo de posiciones y referencias random
-    experiment_all_random(nReps = 20)
+    experiment_all_random(nReps = 5, enablePlotExp= False)
     print("Echo")
     return
     

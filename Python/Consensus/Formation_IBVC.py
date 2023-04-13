@@ -440,7 +440,7 @@ def experiment(directory = "0",
                tanhLimit = False,
                midMarker = False,
                enablePlot = True,
-               repeat = None):
+               repeat = False):
     
     #   Referencia de selecciones
     
@@ -975,7 +975,7 @@ def experiment_all_random(nReps = 100,
                           repeat = False):
     
     if justPlot:
-        npzfile = np.load(directory+'/data.npz')
+        npzfile = np.load('data.npz')
         n_agents = npzfile['n_agents']
         var_arr = npzfile['var_arr']
         var_arr_2 = npzfile['var_arr_2']
@@ -1026,36 +1026,59 @@ def experiment_all_random(nReps = 100,
                     tmp = offset + tmp*dRange
                     cam = cm.camera()
                     agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    #Z = Z_select(1, agent, Ph,None,None, None,None)
+                    
                     while agent.count_points_in_FOV(Ph) != nP :
                         tmp = np.random.rand(6)
                         tmp = offset + tmp*dRange
                         cam = cm.camera()
                         agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                        #Z = Z_select(1, agent, Ph,None,None, None,None)
                     
                     p0[:,i] = tmp.copy()
                     
+                    #   BEGIN referencias aleatorias
                     tmp = np.random.rand(6)
                     tmp = offset + tmp*dRange
                     cam = cm.camera()
                     agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    #Z = Z_select(1, agent, Ph,None,None, None,None)
+                    
                     while agent.count_points_in_FOV(Ph) != nP:
                         tmp = np.random.rand(6)
                         tmp = offset + tmp*dRange
                         cam = cm.camera()
                         agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                        #Z = Z_select(1, agent, Ph,None,None, None,None)
                     
                     pd[:,i] = tmp.copy()
+                    #   END Referencias aleatorias
+                ##   BEGIN referencias fijas
+                #pd = circle(n_agents,1,1)
+                    
+                ##   END Referencias fijas
+                
+                ##   BEGIN referencias con perturbación
+                #pd = circle(n_agents,1,1)
+                #dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
+                #for i in range(nC):
+                    #tmp = np.random.rand(6)-0.5
+                    #tmp = pd[:,i] + tmp*dRange*2
+                    #cam = cm.camera()
+                    #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                    
+                    #while agent.count_points_in_FOV(Ph) != nP:
+                        #tmp = np.random.rand(6)-0.5
+                        #tmp = pd[:,i] + tmp*dRange*2
+                        #cam = cm.camera()
+                        #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                ##   END Referencias con perturbación
+                    
+                    
+                    
                 
                 #   Save starting distance p0 - pd
                 state_init_distance[:,0,k] = norm(p0[:3,:]-pd[:3,:],axis = 0)
                 for i in range(nC):
-                    _R =  cm.rot(p0[5,i],'z').T 
-                    _R = cm.rot(p0[4,i],'y').T @ _R
-                    _R = cm.rot(p0[3,i],'x').T @ _R
+                    _R =  cm.rot(pd[5,i],'z').T 
+                    _R = cm.rot(pd[4,i],'y').T @ _R
+                    _R = cm.rot(pd[3,i],'x').T @ _R
                     _R =  cm.rot(p0[3,i],'x') @ _R
                     _R = cm.rot(p0[4,i],'y') @ _R
                     _R = cm.rot(p0[5,i],'z') @ _R
@@ -1095,7 +1118,7 @@ def experiment_all_random(nReps = 100,
     
     ##      Simulation - wise consensus error
     fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso")
+    fig.suptitle("Error de consenso por experimento")
     #plt.ylim([-2.,2.])
     for i in range(n_agents):
         ax.scatter(ref_arr, var_arr[i,:], 
@@ -1109,7 +1132,7 @@ def experiment_all_random(nReps = 100,
     
     ##   Kernel density consensus
     fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso")
+    fig.suptitle("Error de consenso (Densidad por Kernels)")
     #plt.ylim([-2.,2.])
     
     var_arr = norm(var_arr,axis = 0)
@@ -1119,12 +1142,12 @@ def experiment_all_random(nReps = 100,
     density.covariance_factor = lambda : .25
     density._compute_covariance()
     plt.plot(xs,density(xs),color=colors[0])
-    
+    plt.scatter(var_arr,np.zeros(nReps),
+                marker = "|", alpha = 0.5,color=colors[0])
     plt.tight_layout()
     plt.savefig('Consensus error_Kernel_density.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
-    
     
     ##  Histogram consensus
     fig, ax = plt.subplots()
@@ -1136,9 +1159,35 @@ def experiment_all_random(nReps = 100,
     #plt.show()
     plt.close()
     
+    
+    ##  Histogram consensus Zoom
+    fig, ax = plt.subplots()
+    fig.suptitle("Histograma de error de consenso (zoom)")
+    counts, bins = np.histogram(var_arr[var_arr < 0.5])
+    plt.stairs(counts, bins)
+    plt.tight_layout()
+    plt.savefig('Consensus error_Histogram_zoom.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Relación con condiciones iniciales
+    fig, ax = plt.subplots()
+    fig.suptitle("Error de consenso por experimento")
+    #plt.ylim([-2.,2.])
+    for i in range(n_agents):
+        ax.scatter(var_arr, state_init_distance[i,0,:],
+                    marker = "*", alpha = 0.5,color=colors[i])
+        ax.scatter(var_arr, state_init_distance[i,1,:],
+                    marker = "x", alpha = 0.5,color=colors[i])
+    
+    plt.tight_layout()
+    plt.savefig('Consenso_vs_InitCond.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
     ##  Simulation - wise formation error
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado")
+    fig.suptitle("Errores de estado por experimento")
     ax.scatter(ref_arr,var_arr_2, label = "Posición",
             marker = ".", alpha = 0.5,color = colors[0])
     ax.scatter(ref_arr,var_arr_3, label = "Rotación",
@@ -1148,6 +1197,18 @@ def experiment_all_random(nReps = 100,
     plt.savefig('Formation error_byExp.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+    
+    ##  Correlación err T,R
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado")
+    ax.scatter(var_arr_2,var_arr_3, 
+            marker = "*", alpha = 0.5,color = colors[0])
+    plt.tight_layout()
+    plt.savefig('Formation error_Scatter.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    
     
     #   Kernel plots formation error
     
@@ -1159,6 +1220,9 @@ def experiment_all_random(nReps = 100,
     density.covariance_factor = lambda : .25
     density._compute_covariance()
     plt.plot(xs,density(xs),color=colors[0])
+    plt.scatter(var_arr_2,np.zeros(nReps),
+                marker = "|", alpha = 0.5,color=colors[0])
+    
     plt.tight_layout()
     plt.savefig('Formation error_Kernel_desity_T.pdf',bbox_inches='tight')
     #plt.show()
@@ -1172,6 +1236,8 @@ def experiment_all_random(nReps = 100,
     density.covariance_factor = lambda : .25
     density._compute_covariance()
     plt.plot(xs,density(xs),color=colors[1])
+    plt.scatter(var_arr_3,np.zeros(nReps),
+                marker = "|", alpha = 0.5,color=colors[1])
     
     plt.tight_layout()
     plt.savefig('Formation error_Kernel_desity_R.pdf',bbox_inches='tight')
@@ -1181,7 +1247,7 @@ def experiment_all_random(nReps = 100,
     ##  Heatmap
     h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
     fig, ax = plt.subplots()
-    fig.suptitle("Heatmap de errores de rotación")
+    fig.suptitle("Heatmap de errores de formación")
     
     ax.imshow(h)
     ax.invert_yaxis()
@@ -1191,6 +1257,8 @@ def experiment_all_random(nReps = 100,
     ax.set_xticks(np.arange(len(y)))
     ax.set_xticklabels(x)
     ax.set_yticklabels(y)
+    ax.set_xlabel("Error de traslación")
+    ax.set_ylabel("Error de rotación")
     for i in range(len(y)):
         for j in range(len(x)):
             text = ax.text(j, i, h[i, j],
@@ -1199,6 +1267,46 @@ def experiment_all_random(nReps = 100,
     
     plt.tight_layout()
     plt.savefig('Formation error_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Heatmap Zoom
+    var_arr_3 = var_arr_3[var_arr_2 < 0.2]
+    var_arr_2 = var_arr_2[var_arr_2 < 0.2]
+    var_arr_2 = var_arr_2[var_arr_3 < 0.2]
+    var_arr_3 = var_arr_3[var_arr_3 < 0.2]
+    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
+    fig, ax = plt.subplots()
+    fig.suptitle("Heatmap de errores de formación (Zoom)")
+    
+    ax.imshow(h)
+    ax.invert_yaxis()
+    x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
+    y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
+    ax.set_yticks(np.arange(len(x)))
+    ax.set_xticks(np.arange(len(y)))
+    ax.set_xticklabels(x)
+    ax.set_yticklabels(y)
+    ax.set_xlabel("Error de traslación")
+    ax.set_ylabel("Error de rotación")
+    for i in range(len(y)):
+        for j in range(len(x)):
+            text = ax.text(j, i, h[i, j],
+                        ha="center", va="center", color="w")
+
+    
+    plt.tight_layout()
+    plt.savefig('Formation error_heatmap_zoom.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Correlación err T,R Zoom
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de estado (Zoom)")
+    ax.scatter(var_arr_2,var_arr_3, 
+            marker = "*", alpha = 0.5,color = colors[0])
+    plt.tight_layout()
+    plt.savefig('Formation error_Scatter_zoom.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
@@ -1516,7 +1624,9 @@ def main():
     #return 
     
     #   Experimento exhaustivo de posiciones y referencias random
-    experiment_all_random(nReps = 100, enablePlotExp= False)
+    experiment_all_random(nReps = 100, 
+                          #justPlot = True,
+                          enablePlotExp= False)
     print("Echo")
     return
     

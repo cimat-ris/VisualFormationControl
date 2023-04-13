@@ -971,106 +971,123 @@ def experiment(directory = "0",
 
 def experiment_all_random(nReps = 100, 
                           enablePlotExp = True,
+                          justPlot = False,
                           repeat = False):
     
-    n_agents = 4
-    var_arr = np.zeros((n_agents,nReps))
-    var_arr_2 = np.zeros(nReps)
-    var_arr_3 = np.zeros(nReps)
-    state_init_distance = np.zeros((n_agents,2,nReps))
-    mask = np.zeros(nReps)
+    if justPlot:
+        npzfile = np.load(directory+'/data.npz')
+        n_agents = npzfile['n_agents']
+        var_arr = npzfile['var_arr']
+        var_arr_2 = npzfile['var_arr_2']
+        var_arr_3 = npzfile['var_arr_3']
+        state_init_distance = npzfile['state_init_distance']
+        Misscount = npzfile['Misscount']
+        nReps = var_arr.shape[1]
+    else:
+        n_agents = 4
+        var_arr = np.zeros((n_agents,nReps))
+        var_arr_2 = np.zeros(nReps)
+        var_arr_3 = np.zeros(nReps)
+        state_init_distance = np.zeros((n_agents,2,nReps))
+        Misscount = 0
+        
+        for k in range(nReps):
+            FOVflag = True
+            while FOVflag:
+                #   Points
+                # Range
+                xRange = [-2,2]
+                yRange = [-2,2]
+                zRange = [-1,0]
+                
+                nP = random.randint(4,11)
+                P = np.random.rand(3,nP)
+                P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+                P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+                P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+                Ph = np.r_[P,np.ones((1,nP))]
+                
+                #   Cameras
+                # Range
+                xRange = [-2,2]
+                yRange = [-2,2]
+                zRange = [0,3]
+                
+                nC = 4
+                p0 = np.zeros((6,nC))
+                pd = np.zeros((6,nC))
+                
+                offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+                dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+                dRange -= offset
+                for i in range(nC):
+                    
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                    #Z = Z_select(1, agent, Ph,None,None, None,None)
+                    while agent.count_points_in_FOV(Ph) != nP :
+                        tmp = np.random.rand(6)
+                        tmp = offset + tmp*dRange
+                        cam = cm.camera()
+                        agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                        #Z = Z_select(1, agent, Ph,None,None, None,None)
+                    
+                    p0[:,i] = tmp.copy()
+                    
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                    #Z = Z_select(1, agent, Ph,None,None, None,None)
+                    while agent.count_points_in_FOV(Ph) != nP:
+                        tmp = np.random.rand(6)
+                        tmp = offset + tmp*dRange
+                        cam = cm.camera()
+                        agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                        #Z = Z_select(1, agent, Ph,None,None, None,None)
+                    
+                    pd[:,i] = tmp.copy()
+                
+                #   Save starting distance p0 - pd
+                state_init_distance[:,0,k] = norm(p0[:3,:]-pd[:3,:],axis = 0)
+                for i in range(nC):
+                    _R =  cm.rot(p0[5,i],'z').T 
+                    _R = cm.rot(p0[4,i],'y').T @ _R
+                    _R = cm.rot(p0[3,i],'x').T @ _R
+                    _R =  cm.rot(p0[3,i],'x') @ _R
+                    _R = cm.rot(p0[4,i],'y') @ _R
+                    _R = cm.rot(p0[5,i],'z') @ _R
+                    state_init_distance[i,1,k] = np.arccos((_R.trace()-1.)/2.)
+                
+                ret = experiment(directory=str(k),
+                        #k_int = 0.1,
+                            pd = pd,
+                            p0 = p0,
+                            P = P,
+                            #set_derivative = True,
+                            #tanhLimit = True,
+                            #depthOp = 4, Z_set = 1.,
+                            t_end = 100,
+                            enablePlot = enablePlotExp,
+                            repeat = repeat)
+                [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
+                if FOVflag:
+                    Misscount += 1
+            
+        #   Save data
+        
+        np.savez('data.npz',
+                 n_agents = n_agents,
+                var_arr = var_arr,
+                var_arr_2 = var_arr_2,
+                var_arr_3 = var_arr_3,
+                state_init_distance = state_init_distance,
+                Misscount = Misscount)
     
-    for k in range(nReps):
-        #   Points
-        # Range
-        xRange = [-2,2]
-        yRange = [-2,2]
-        zRange = [-1,0]
-        
-        nP = random.randint(4,11)
-        P = np.random.rand(3,nP)
-        P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-        P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-        P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
-        Ph = np.r_[P,np.ones((1,nP))]
-        
-        #   Cameras
-        # Range
-        xRange = [-2,2]
-        yRange = [-2,2]
-        zRange = [0,3]
-        
-        nC = 4
-        p0 = np.zeros((6,nC))
-        pd = np.zeros((6,nC))
-        
-        offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
-        dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-        dRange -= offset
-        for i in range(nC):
-            
-            tmp = np.random.rand(6)
-            tmp = offset + tmp*dRange
-            cam = cm.camera()
-            agent = ctr.agent(cam, np.zeros(6), tmp,P)
-            #Z = Z_select(1, agent, Ph,None,None, None,None)
-            while agent.count_points_in_FOV(Ph) != nP :
-                tmp = np.random.rand(6)
-                tmp = offset + tmp*dRange
-                cam = cm.camera()
-                agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                #Z = Z_select(1, agent, Ph,None,None, None,None)
-            
-            p0[:,i] = tmp.copy()
-            
-            tmp = np.random.rand(6)
-            tmp = offset + tmp*dRange
-            cam = cm.camera()
-            agent = ctr.agent(cam, np.zeros(6), tmp,P)
-            #Z = Z_select(1, agent, Ph,None,None, None,None)
-            while agent.count_points_in_FOV(Ph) != nP:
-                tmp = np.random.rand(6)
-                tmp = offset + tmp*dRange
-                cam = cm.camera()
-                agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                #Z = Z_select(1, agent, Ph,None,None, None,None)
-            
-            pd[:,i] = tmp.copy()
-        
-        #   Save starting distance p0 - pd
-        state_init_distance[:,0,k] = norm(p0[:3,:]-pd[:3,:],axis = 0)
-        for i in range(nC):
-            _R =  cm.rot(p0[5,i],'z').T 
-            _R = cm.rot(p0[4,i],'y').T @ _R
-            _R = cm.rot(p0[3,i],'x').T @ _R
-            _R =  cm.rot(p0[3,i],'x') @ _R
-            _R = cm.rot(p0[4,i],'y') @ _R
-            _R = cm.rot(p0[5,i],'z') @ _R
-            state_init_distance[i,1,k] = np.arccos((_R.trace()-1.)/2.)
-        
-        ret = experiment(directory=str(k),
-                #k_int = 0.1,
-                    pd = pd,
-                    p0 = p0,
-                    P = P,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #depthOp = 4, Z_set = 1.,
-                    t_end = 100,
-                    enablePlot = enablePlotExp,
-                    repeat = repeat)
-        [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
-        if FOVflag:
-            mask[k] = 1
-        
-    #   Adjust mask
-    
-    print("Failed simulations = ",mask.sum()," / ", nReps)
-    var_arr = var_arr[:,mask==0]
-    var_arr_2 = var_arr_2[mask==0]
-    var_arr_3 = var_arr_3[mask==0]
-    state_init_distance = state_init_distance[:,:,mask==0]
-    ref_arr = np.arange(nReps-int(mask.sum()))
+    print("Failed simulations = ",Misscount," / ", nReps+Misscount)
+    ref_arr = np.arange(nReps)
     
     #   Plot data
     
@@ -1163,9 +1180,6 @@ def experiment_all_random(nReps = 100,
     
     ##  Heatmap
     h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
-    print(h)
-    print(x)
-    print(y)
     fig, ax = plt.subplots()
     fig.suptitle("Heatmap de errores de rotación")
     
@@ -1502,7 +1516,7 @@ def main():
     #return 
     
     #   Experimento exhaustivo de posiciones y referencias random
-    experiment_all_random(nReps = 5, enablePlotExp= False)
+    experiment_all_random(nReps = 100, enablePlotExp= False)
     print("Echo")
     return
     

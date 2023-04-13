@@ -85,9 +85,6 @@ def circle(n_agents,r,h):
 def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     Z = np.ones((1,P.shape[1]))
     if depthOp ==1:
-        #   TODO creo que esto está mal calculado
-        #M = np.c_[ agent.camera.R.T, -agent.camera.R.T @ agent.camera.p[:3] ]
-        #Z = M @ P
         Z = agent.camera.Preal @ P
         Z = Z[2,:]
     elif depthOp == 6:
@@ -232,38 +229,6 @@ def plot_err_consenso(ref_arr,
         plt.show()
     plt.close()
 
-def plot_err_formacion(ref_arr,
-                      arr_error,
-                      colors,
-                      labels,
-                      limits = None,
-                      enableShow = False,
-                      title = "Error de formación",
-                      filename = "FormationError.pdf"):
-    #   Variantes
-    n = arr_error.shape[0]
-    
-    fig, ax = plt.subplots()
-    fig.suptitle(title)
-    
-    symbols = []
-    for i in range(n):
-        ax.scatter(ref_arr,arr_error[i,0,:],
-                   marker='.', label  = labels[i]+ " Tras", 
-                   alpha = 0.5, color = colors[i])
-        ax.scatter(ref_arr,arr_error[i,1,:],
-                   marker='*', label  = labels[i]+ " Rot", 
-                   alpha = 0.5, color = colors[i])
-    
-    fig.legend( loc=1)
-    if not limits is None:
-        plt.ylim(limits)
-    plt.tight_layout()
-    plt.savefig(filename,bbox_inches='tight')
-    if enableShow:
-        plt.show()
-    plt.close()
-
 ################################################################################
 ################################################################################
 #
@@ -282,10 +247,6 @@ def error_state(reference,  agents, name= None):
     state = np.zeros((6,n))
     for i in range(len(agents)):
         state[:,i] = agents[i].camera.p
-        #state[:3,i] = agents[i].camera.p
-        #state[3,i] = agents[i].camera.roll
-        #state[4,i] = agents[i].camera.pitch
-        #state[5,i] = agents[i].camera.yaw
     
     #   Obten centroide
     centroide_ref = reference[:3,:].sum(axis=1)/n
@@ -299,7 +260,6 @@ def error_state(reference,  agents, name= None):
     new_reference[:3,:] /= norm(new_reference[:3,:],axis = 0).mean()
     
     new_state = state.copy()
-    #new_state[:3,:] = new_state[:3,:] - centroide_state
     new_state[0] -= centroide_state[0]
     new_state[1] -= centroide_state[1]
     new_state[2] -= centroide_state[2]
@@ -323,13 +283,11 @@ def error_state(reference,  agents, name= None):
     new_state[:3,:] = R.T @ new_state[:3,:]
     
     #   Actualizando escala y Obteniendo error de traslaciones
-    #new_state[:3,:] /= norm(new_state[:3,:],axis = 0).mean()
     f = lambda r : (norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
     r_state = minimize_scalar(f, method='brent')
     t_err = f(r_state.x)
     t_err = np.sqrt(t_err)
-    #print("scale diff = ",norm(new_state[:3,:],axis = 0).mean(),'*',  r_state.x)
-    #print("scale diff = ",norm(new_state[:3,:],axis = 0).mean()*  r_state.x)
+    
     new_state[:3,:] = r_state.x * new_state[:3,:]
     
     
@@ -386,10 +344,6 @@ def error_state_equal(  agents, name = None):
     state = np.zeros((6,n))
     for i in range(n):
         state[:,i] = agents[i].camera.p
-        #state[:3,i] = agents[i].camera.p
-        #state[3,i] = agents[i].camera.roll
-        #state[4,i] = agents[i].camera.pitch
-        #state[5,i] = agents[i].camera.yaw
     
     reference = np.average(state,axis =1)
     
@@ -484,7 +438,7 @@ def experiment(directory = "0",
         n_points = P.shape[1] #Number of image points
         P = np.r_[P,np.ones((1,n_points))] # change to homogeneous
         
-        
+        #   Adjusto case of reference and initial conditions
         if p0 is None and pd is None:
             print("Reference and initial porsitions not provided")
             return
@@ -496,10 +450,6 @@ def experiment(directory = "0",
             pd = np.zeros(p0.shape)
         n_agents = p0.shape[1] 
         
-        
-        #   Parameters
-        
-        case_n = 1  #   Case selector if needed
         
         #   Graphs
         if adjMat is None:
@@ -518,7 +468,6 @@ def experiment(directory = "0",
         
     #   Conectivity graph
     G = gr.graph(adjMat)
-    #G.plot()
     L = G.laplacian()
     G.plot()
     
@@ -655,10 +604,6 @@ def experiment(directory = "0",
             #   save data 
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
             pos_arr[j,:,i] = agents[j].camera.p.T.copy()
-            #pos_arr[j,:,i] = np.r_[agents[j].camera.p.T ,
-                                   #agents[j].camera.roll,
-                                   #agents[j].camera.pitch,
-                                   #agents[j].camera.yaw]
             
             #   Depth calculation
             Z = Z_select(depthOp, agents[j], P,Z_set,p0,pd,j)
@@ -687,8 +632,6 @@ def experiment(directory = "0",
                 U = 0.3*np.tanh(U)
             
             #   Detección de choque del plano de cámara y los puntos de escena
-            #Z_test = Z_select(1, agents[j], P,Z_set,p0,pd,j)
-            #if any(Z_test < 0.):
             if agents[j].count_points_in_FOV(P) != n_points:
                 if depthFlags[j] == 0. :
                     depthFlags[j] = i
@@ -702,7 +645,7 @@ def experiment(directory = "0",
             
             if U is None:
                 print("Invalid U control")
-                break
+                return None
             
             
             U_array[j,:,i] = U
@@ -731,9 +674,6 @@ def experiment(directory = "0",
         print("X_"+str(j)+" = "+str(agents[j].camera.p))
     for j in range(n_agents):
         print("V_"+str(j)+" = "+str(U_array[j,:,-1]))
-    #for j in range(n_agents):
-        #print("Angles_"+str(j)+" = "+str(agents[j].camera.roll)+
-              #", "+str(agents[j].camera.pitch)+", "+str(agents[j].camera.yaw))
     
     print("Mean inital heights = ",np.mean(p0[2,:]))
     print("Mean camera heights = ",np.mean(np.r_[p0[2,:],pd[2,:]]))
@@ -760,10 +700,6 @@ def experiment(directory = "0",
     for i in range(n_agents):
         cam = cm.camera()
         end_position[i,:] = agents[i].camera.p.copy()
-        #end_position[i,:] = np.r_[agents[i].camera.p,
-                                  #agents[i].camera.roll,
-                                  #agents[i].camera.pitch,
-                                  #agents[i].camera.yaw]
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
         state_err = error_state(pd,new_agents,directory+"/3D_error")
@@ -967,147 +903,167 @@ def experiment(directory = "0",
 ###########################################################################
 
 
-
-
-def experiment_all_random(nReps = 100, 
-                          enablePlotExp = True,
-                          justPlot = False,
-                          repeat = False):
+def experiment_repeat(nReps = 1,
+                      enablePlotExp = True):
     
-    if justPlot:
-        npzfile = np.load('data.npz')
-        n_agents = npzfile['n_agents']
-        var_arr = npzfile['var_arr']
-        var_arr_2 = npzfile['var_arr_2']
-        var_arr_3 = npzfile['var_arr_3']
-        state_init_distance = npzfile['state_init_distance']
-        Misscount = npzfile['Misscount']
-        nReps = var_arr.shape[1]
-    else:
-        n_agents = 4
-        var_arr = np.zeros((n_agents,nReps))
-        var_arr_2 = np.zeros(nReps)
-        var_arr_3 = np.zeros(nReps)
-        state_init_distance = np.zeros((n_agents,2,nReps))
-        Misscount = 0
-        
-        for k in range(nReps):
-            FOVflag = True
-            while FOVflag:
-                #   Points
-                # Range
-                xRange = [-2,2]
-                yRange = [-2,2]
-                zRange = [-1,0]
-                
-                nP = random.randint(4,11)
-                P = np.random.rand(3,nP)
-                P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-                P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-                P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
-                Ph = np.r_[P,np.ones((1,nP))]
-                
-                #   Cameras
-                # Range
-                xRange = [-2,2]
-                yRange = [-2,2]
-                zRange = [0,3]
-                
-                nC = 4
-                p0 = np.zeros((6,nC))
-                pd = np.zeros((6,nC))
-                
-                offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
-                dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-                dRange -= offset
-                for i in range(nC):
-                    
-                    tmp = np.random.rand(6)
-                    tmp = offset + tmp*dRange
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    
-                    while agent.count_points_in_FOV(Ph) != nP :
-                        tmp = np.random.rand(6)
-                        tmp = offset + tmp*dRange
-                        cam = cm.camera()
-                        agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    
-                    p0[:,i] = tmp.copy()
-                    
-                    #   BEGIN referencias aleatorias
-                    tmp = np.random.rand(6)
-                    tmp = offset + tmp*dRange
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    
-                    while agent.count_points_in_FOV(Ph) != nP:
-                        tmp = np.random.rand(6)
-                        tmp = offset + tmp*dRange
-                        cam = cm.camera()
-                        agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    
-                    pd[:,i] = tmp.copy()
-                    #   END Referencias aleatorias
-                ##   BEGIN referencias fijas
-                #pd = circle(n_agents,1,1)
-                    
-                ##   END Referencias fijas
-                
-                ##   BEGIN referencias con perturbación
-                #pd = circle(n_agents,1,1)
-                #dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
-                #for i in range(nC):
-                    #tmp = np.random.rand(6)-0.5
-                    #tmp = pd[:,i] + tmp*dRange*2
-                    #cam = cm.camera()
-                    #agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                    
-                    #while agent.count_points_in_FOV(Ph) != nP:
-                        #tmp = np.random.rand(6)-0.5
-                        #tmp = pd[:,i] + tmp*dRange*2
-                        #cam = cm.camera()
-                        #agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                ##   END Referencias con perturbación
-                    
-                    
-                    
-                
-                #   Save starting distance p0 - pd
-                state_init_distance[:,0,k] = norm(p0[:3,:]-pd[:3,:],axis = 0)
-                for i in range(nC):
-                    _R =  cm.rot(pd[5,i],'z').T 
-                    _R = cm.rot(pd[4,i],'y').T @ _R
-                    _R = cm.rot(pd[3,i],'x').T @ _R
-                    _R =  cm.rot(p0[3,i],'x') @ _R
-                    _R = cm.rot(p0[4,i],'y') @ _R
-                    _R = cm.rot(p0[5,i],'z') @ _R
-                    state_init_distance[i,1,k] = np.arccos((_R.trace()-1.)/2.)
-                
-                ret = experiment(directory=str(k),
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    mask = np.zeros(nReps)
+    Misscount = 0
+    for k in range(nReps):
+        ret = experiment(directory=str(k),
                         #k_int = 0.1,
-                            pd = pd,
-                            p0 = p0,
-                            P = P,
                             #set_derivative = True,
                             #tanhLimit = True,
                             #depthOp = 4, Z_set = 1.,
                             t_end = 100,
                             enablePlot = enablePlotExp,
-                            repeat = repeat)
-                [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
-                if FOVflag:
-                    Misscount += 1
+                            repeat = True)
+        [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
+        if FOVflag:
+            mask[k] = 1
+            Misscount += 1
+    
+    var_arr = var_arr[:,mask==0.]
+    var_arr_2 = var_arr_2[mask==0.]
+    var_arr_3 = var_arr_3[mask==0.]
+    
+    
+    np.savez('data.npz',
+            n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            Misscount = Misscount)
+    
+    
+def experiment_all_random(nReps = 100, 
+                          enablePlotExp = True):
+    
+    
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    Misscount = 0
+    
+    for k in range(nReps):
+        FOVflag = True
+        while FOVflag:
+            #   Points
+            # Range
+            xRange = [-2,2]
+            yRange = [-2,2]
+            zRange = [-1,0]
             
-        #   Save data
+            #nP = random.randint(4,11)
+            nP = 10
+            P = np.random.rand(3,nP)
+            P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+            P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+            P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+            Ph = np.r_[P,np.ones((1,nP))]
+            
+            #   Cameras
+            # Range
+            xRange = [-2,2]
+            yRange = [-2,2]
+            zRange = [0,3]
+            
+            nC = 4
+            p0 = np.zeros((6,nC))
+            pd = np.zeros((6,nC))
+            
+            offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+            dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+            dRange -= offset
+            for i in range(nC):
+                
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                
+                while agent.count_points_in_FOV(Ph) != nP :
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                
+                p0[:,i] = tmp.copy()
+                
+                ##   BEGIN referencias aleatorias
+                #tmp = np.random.rand(6)
+                #tmp = offset + tmp*dRange
+                #cam = cm.camera()
+                #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                
+                #while agent.count_points_in_FOV(Ph) != nP:
+                    #tmp = np.random.rand(6)
+                    #tmp = offset + tmp*dRange
+                    #cam = cm.camera()
+                    #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                
+                #pd[:,i] = tmp.copy()
+                ##   END Referencias aleatorias
+            ##   BEGIN referencias fijas
+            #pd = circle(n_agents,1,1)
+                
+            ##   END Referencias fijas
+            
+            #   BEGIN referencias con perturbación
+            pd = circle(n_agents,1,1)
+            dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
+            for i in range(nC):
+                tmp = np.random.rand(6)-0.5
+                tmp = pd[:,i] + tmp*dRange*2
+                cam = cm.camera()
+                agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                
+                while agent.count_points_in_FOV(Ph) != nP:
+                    tmp = np.random.rand(6)-0.5
+                    tmp = pd[:,i] + tmp*dRange*2
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                pd[:,i] = tmp.copy()
+            #   END Referencias con perturbación
+                
+            
+            
+            ret = experiment(directory=str(k),
+                    #k_int = 0.1,
+                        pd = pd,
+                        p0 = p0,
+                        P = P,
+                        #set_derivative = True,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set = 1.,
+                        t_end = 100,
+                        enablePlot = enablePlotExp)
+            [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
+            if FOVflag:
+                Misscount += 1
         
-        np.savez('data.npz',
-                 n_agents = n_agents,
-                var_arr = var_arr,
-                var_arr_2 = var_arr_2,
-                var_arr_3 = var_arr_3,
-                state_init_distance = state_init_distance,
-                Misscount = Misscount)
+    #   Save data
+    
+    np.savez('data.npz',
+                n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            Misscount = Misscount)
+    
+def experiment_plots():
+    
+    npzfile = np.load('data.npz')
+    n_agents = npzfile['n_agents']
+    var_arr = npzfile['var_arr']
+    var_arr_2 = npzfile['var_arr_2']
+    var_arr_3 = npzfile['var_arr_3']
+    Misscount = npzfile['Misscount']
+    nReps = var_arr.shape[1]
     
     print("Failed simulations = ",Misscount," / ", nReps+Misscount)
     ref_arr = np.arange(nReps)
@@ -1170,20 +1126,7 @@ def experiment_all_random(nReps = 100,
     #plt.show()
     plt.close()
     
-    ##  Relación con condiciones iniciales
-    fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso por experimento")
-    #plt.ylim([-2.,2.])
-    for i in range(n_agents):
-        ax.scatter(var_arr, state_init_distance[i,0,:],
-                    marker = "*", alpha = 0.5,color=colors[i])
-        ax.scatter(var_arr, state_init_distance[i,1,:],
-                    marker = "x", alpha = 0.5,color=colors[i])
     
-    plt.tight_layout()
-    plt.savefig('Consenso_vs_InitCond.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
     
     ##  Simulation - wise formation error
     fig, ax = plt.subplots()
@@ -1198,11 +1141,13 @@ def experiment_all_random(nReps = 100,
     #plt.show()
     plt.close()
     
-    ##  Correlación err T,R
+    ##  Scatter err T,R
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado")
     ax.scatter(var_arr_2,var_arr_3, 
             marker = "*", alpha = 0.5,color = colors[0])
+    ax.set_xlabel("Error de traslación")
+    ax.set_ylabel("Error de rotación")
     plt.tight_layout()
     plt.savefig('Formation error_Scatter.pdf',bbox_inches='tight')
     #plt.show()
@@ -1249,18 +1194,19 @@ def experiment_all_random(nReps = 100,
     fig, ax = plt.subplots()
     fig.suptitle("Heatmap de errores de formación")
     
+    h = h.T
     ax.imshow(h)
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
-    ax.set_yticks(np.arange(len(x)))
-    ax.set_xticks(np.arange(len(y)))
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x)
     ax.set_yticklabels(y)
     ax.set_xlabel("Error de traslación")
     ax.set_ylabel("Error de rotación")
-    for i in range(len(y)):
-        for j in range(len(x)):
+    for i in range(len(x)):
+        for j in range(len(y)):
             text = ax.text(j, i, h[i, j],
                         ha="center", va="center", color="w")
 
@@ -1279,19 +1225,20 @@ def experiment_all_random(nReps = 100,
     fig, ax = plt.subplots()
     fig.suptitle("Heatmap de errores de formación (Zoom)")
     
+    h = h.T
     ax.imshow(h)
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
-    ax.set_yticks(np.arange(len(x)))
-    ax.set_xticks(np.arange(len(y)))
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x)
     ax.set_yticklabels(y)
     ax.set_xlabel("Error de traslación")
     ax.set_ylabel("Error de rotación")
-    for i in range(len(y)):
-        for j in range(len(x)):
-            text = ax.text(j, i, h[i, j],
+    for i in range(len(x)):
+        for j in range(len(y)):
+            text = ax.text(j, i , h[i, j],
                         ha="center", va="center", color="w")
 
     
@@ -1300,303 +1247,17 @@ def experiment_all_random(nReps = 100,
     #plt.show()
     plt.close()
     
-    ##  Correlación err T,R Zoom
+    ##  Scatter err T,R Zoom
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado (Zoom)")
     ax.scatter(var_arr_2,var_arr_3, 
             marker = "*", alpha = 0.5,color = colors[0])
+    ax.set_xlabel("Error de traslación")
+    ax.set_ylabel("Error de rotación")
     plt.tight_layout()
     plt.savefig('Formation error_Scatter_zoom.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
-    
-    
-
-###########################################################################
-#
-#   Experiment Initial condiditon variation
-#
-###########################################################################
-
-
-
-
-def experiment_initalConds(justPlot = False,
-                          midMarker = False,
-                          noRef = True, # graph WoRef
-                          set_derivative = True,
-                          r = 0.8,
-                        n = 1,
-                        k_int = 0.1,
-                        t_f = 100):
-    
-    #   For grid
-    #n = n**2
-    #sqrtn = int(np.sqrt(n))
-    
-    if justPlot:
-        
-        #   Load
-        arr_error = np.load('arr_err.npy')
-        arr_epsilon = np.load('arr_epsilon.npy')
-        n = arr_epsilon.shape[2]
-        ref_arr = np.arange(n)
-        variantes = arr_error.shape[0]
-        
-    else:
-        
-        variantes = 1
-        if k_int != 0.:
-            variantes *= 2
-        if noRef:
-            variantes *= 2
-        if set_derivative:
-            variantes *= 2
-        ref_arr = np.arange(n)
-        #   4 variantes X 4 agentes X n repeticiones
-        arr_error = np.zeros((variantes,4,n))
-        #   4 variantes X 2 componentes X n repeticiones
-        arr_epsilon = np.zeros((variantes,2,n))
-        idx = 0
-        for i in range(n):
-            
-            print(" ---  Case ", i, " RP--- ")
-            
-            ret = None
-            while ret is None:
-                
-                #   Aleatorio
-                #p0=[[0.8,0.8,-0.8,-.8],
-                    #[-0.8,0.8,0.8,-0.8],
-                p0=[[-0.8,0.8,0.8,-.8],
-                    [0.8,0.8,-0.8,-0.8],
-                    #[1.4,0.8,1.2,1.6],
-                    [1.2,1.2,1.2,1.2],
-                    [np.pi,np.pi,np.pi,np.pi],
-                    #[0.1,0.1,-0.1,0.1],
-                    [0.,0.,-0.,0.],
-                    [0,0,0,0]]
-                
-                p0 = np.array(p0)
-                p0[:3,:] += r *2*( np.random.rand(3,p0.shape[1])-0.5)
-                p0[2,p0[2,:]<0.6] = 0.6
-                #p0[3,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /7 #4
-                #p0[4,:] += 2*( np.random.rand(1,p0.shape[1])-0.5) * np.pi / 4
-                p0[5,:] += 2*( np.random.rand(p0.shape[1])-0.5) * np.pi /2
-                
-                ##   Grid
-                #p0=[[0.8,0.8,-0.8,-.8],
-                    #[-0.8,0.8,0.8,-0.8],
-                ##p0=[[-0.8,0.8,0.8,-.8],
-                    ##[0.8,0.8,-0.8,-0.8],
-                    ##[1.4,0.8,1.2,1.6],
-                    #[1.2,1.2,1.2,1.2],
-                    #[np.pi,np.pi,np.pi,np.pi],
-                    ##[0.1,0.1,-0.1,0.1],
-                    #[0.,0.,-0.,0.],
-                    #[0,0,0,0]]
-                
-                #p0 = np.array(p0)
-                #p0[0,:] += 1.*2*(int(i/sqrtn)-sqrtn/2)
-                #p0[1,:] += 1.*(i%sqrtn-sqrtn/2)
-                
-                
-                
-                #   Con referencia P
-                ret = experiment(directory=str(idx),
-                                 midMarker = midMarker,
-                            h = 1 ,
-                            r = 1.,
-                            #tanhLimit = True,
-                            #depthOp = 4, Z_set=2.,
-                            depthOp = 1,
-                            p0 = p0,
-                            t_end = t_f)
-            
-            arr_error[idx%variantes,:,i] = ret[0]
-            arr_epsilon[idx%variantes,0,i] = ret[1]
-            arr_epsilon[idx%variantes,1,i] = ret[2]
-            idx += 1
-            
-            #   Sin referencia P
-            if noRef:
-                print(" ---  Case ", i, " P--- ")
-                ret = experiment(directory=str(idx),
-                            midMarker = midMarker,
-                            h = 1 ,
-                            r = 1.,
-                            #tanhLimit = True,
-                            #depthOp = 4, Z_set=2.,
-                            depthOp = 1,
-                            p0 = p0,
-                            set_consensoRef = False,
-                            t_end = t_f)
-                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                idx += 1
-            
-            if k_int != 0.:
-                #   Con referencia PI
-                print(" ---  Case ", i, " RPI--- ")
-                ret = experiment(directory=str(idx),
-                            midMarker = midMarker,
-                            k_int =k_int,
-                            h = 1 ,
-                            r = 1.,
-                            #tanhLimit = True,
-                            #depthOp = 4, Z_set=2.,
-                            depthOp = 1,
-                            p0 = p0,
-                            t_end = t_f)
-                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                idx += 1
-                
-                #   Sin referencia PI
-                if noRef:
-                    print(" ---  Case ", i, " PI--- ")
-                    ret = experiment(directory=str(idx),
-                                midMarker = midMarker,
-                                k_int = k_int,
-                                h = 1 ,
-                                r = 1.,
-                                #tanhLimit = True,
-                                #depthOp = 4, Z_set=2.,
-                                depthOp = 1,
-                                p0 = p0,
-                                set_consensoRef = False,
-                                t_end = 20)
-                    [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                    idx += 1
-                    
-            if set_derivative:
-                #   Con referencia PD
-                print(" ---  Case ", i, " RPD--- ")
-                ret = experiment(directory=str(idx),
-                            midMarker = midMarker,
-                            set_derivative = set_derivative,
-                            h = 1 ,
-                            r = 1.,
-                            #tanhLimit = True,
-                            #depthOp = 4, Z_set=2.,
-                            depthOp = 1,
-                            p0 = p0,
-                            t_end = t_f)
-                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                idx += 1
-                
-                #   Sin referencia PD
-                if noRef:
-                    print(" ---  Case ", i, " PD--- ")
-                    ret = experiment(directory=str(idx),
-                                midMarker = midMarker,
-                                set_derivative = set_derivative,
-                                h = 1 ,
-                                r = 1.,
-                                #tanhLimit = True,
-                                #depthOp = 4, Z_set=2.,
-                                depthOp = 1,
-                                p0 = p0,
-                                set_consensoRef = False,
-                                t_end = 20)
-                    [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                    idx += 1
-                    
-            if set_derivative and k_int != 0:
-                #   Con referencia PI
-                print(" ---  Case ", i, " RPID--- ")
-                ret = experiment(directory=str(idx),
-                            midMarker = midMarker,
-                            set_derivative = set_derivative,
-                            k_int = k_int,
-                            h = 1 ,
-                            r = 1.,
-                            #tanhLimit = True,
-                            #depthOp = 4, Z_set=2.,
-                            depthOp = 1,
-                            p0 = p0,
-                            t_end = t_f)
-                [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                idx += 1
-                
-                #   Sin referencia PI
-                if noRef:
-                    print(" ---  Case ", i, " PID--- ")
-                    ret = experiment(directory=str(idx),
-                                midMarker = midMarker,
-                                set_derivative = set_derivative,
-                                k_int = k_int,
-                                h = 1 ,
-                                r = 1.,
-                                #tanhLimit = True,
-                                #depthOp = 4, Z_set=2.,
-                                depthOp = 1,
-                                p0 = p0,
-                                set_consensoRef = False,
-                                t_end = 20)
-                    [arr_error[idx%variantes,:,i], arr_epsilon[idx%variantes,0,i], arr_epsilon[idx%variantes,1,i]] = ret
-                    idx += 1
-        np.save('arr_err.npy',arr_error)
-        np.save('arr_epsilon.npy',arr_epsilon)
-        
-        
-    #   Plot data
-    colors = randint(0,255,3*arr_error.shape[1]*variantes)/255.0
-    colors = colors.reshape((arr_error.shape[1]*variantes,3))
-    
-    #   Consenso con referencia 
-    if k_int != 0. and not set_derivative:
-        idx_sel = [0,1]
-        labels = ["P","PI"]
-    elif k_int == 0. and set_derivative:
-        idx_sel = [0,1]
-        labels = ["P","PD"]
-    elif k_int != 0. and set_derivative:
-        idx_sel = [0,1,2,3]
-        labels = ["P","PI","PD","PID"]
-    else:
-        idx_sel = [0]
-        labels = ["P"]
-    
-    if noRef:
-        for i in range(len(idx_sel)):
-            idx_sel[i] *= 2
-    
-    plot_err_consenso(ref_arr,
-                      arr_error[idx_sel,:,:],
-                      colors[idx_sel],
-                      labels,
-                      title = "Error de consenso con referencia",
-                      filename = "ConsensusError_WRef.pdf")
-    plot_err_formacion(ref_arr,
-                      arr_epsilon[idx_sel,:,:],
-                      colors[idx_sel],
-                      labels,
-                      title = "Error de formación con referencia",
-                      filename = "FormationError_WRef.pdf")
-    plot_err_formacion(ref_arr,
-                      arr_epsilon[idx_sel,:,:],
-                      colors[idx_sel],
-                      labels,
-                      limits = [0,0.1],
-                      title = "Error de formación con referencia",
-                      filename = "FormationError_WRef_zoom.pdf")
-    
-    #   Sin referencia
-    if noRef:
-        #   Consenso sin referencia
-        for i in range(len(idx_sel)):
-            idx_sel[i] += 1
-        plot_err_consenso(ref_arr,
-                      arr_error[idx_sel,:,:],
-                      colors[idx_sel],
-                      labels,
-                      title = "Error de consenso sin referencia",
-                      filename = "ConsensusError_WoRef.pdf")
-        plot_err_formacion(ref_arr,
-                      arr_epsilon[idx_sel,:,:],
-                      colors[idx_sel],
-                      labels,
-                      title = "Error de formación sin referencia",
-                      filename = "FormationError_WoRef.pdf")
     
 
 ################################################################################
@@ -1623,10 +1284,25 @@ def main():
     ##view3D('26')
     #return 
     
+    ##  TODO
+    ##  Exprimentos con n de puntos fijos
+    ##  Experimentos con puntos PZ = 0
+    ##  Experimento con caso 2 'transformaciones
+    ##  + Integrador con el anterior 
+    ##  + Profundidades constantes con el anterior
+    ##  Mayor número de agentes
+    
     #   Experimento exhaustivo de posiciones y referencias random
-    experiment_all_random(nReps = 100, 
-                          #justPlot = True,
+    experiment_all_random(nReps = 20, 
                           enablePlotExp= False)
+    
+    #   Experimento anterior con profundidad constante
+    #experiment_repeat(nReps = 100,
+                      #enablePlotExp = False)
+    
+    #   Plot data
+    experiment_plots()
+    
     print("Echo")
     return
     
@@ -1785,56 +1461,7 @@ def main():
     
     return
 
-    ret = experiment(directory='0',
-               #k_int = 0.1,
-                pd = pd,
-                p0 = p0,
-                P = P,
-                #set_derivative = True,
-                #tanhLimit = True,
-                #depthOp = 4, Z_set = 1.,
-                t_end = 100)
     
-    
-    
-    return
-    
-    ##   Experimentos de variación de altura
-    #experiment_height()
-    #return
-    
-    
-    ##  Experimentos de variación de parámetros de contol
-   
-    #   Lambda values
-    #exp_select = [0.25, 0.5, 0.75, 1., 1.5, 1.25, 1.5, 1.75, 2., 5., 10., 15.]
-    #   gdl
-    #exp_select = [1, 2, 3]
-    #   Z_set (depthOp = 4)
-    exp_select = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]
-    exp_select = [ 2.0 ]
-    
-    n_agents = 4
-    var_arr = np.zeros((len(exp_select),n_agents,1))
-    ref_arr = np.array(exp_select)
-    for i in range(len(exp_select)):
-        ret = experiment(directory=str(i),
-                        depthOp = 1,
-                        Z_set = exp_select[i],
-                        lamb = 0.1,
-                        gdl = 3,
-                        #zOffset = 1.0 ,
-                        t_end = 20)
-        var_arr[i,:,0] = ret[0]
-        
-    
-    #   Plot data
-    
-    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
-    plot_err_consenso(ref_arr,
-                      var_arr,
-                      colors,
-                      labels)
     
     
 

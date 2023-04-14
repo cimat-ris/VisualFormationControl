@@ -534,6 +534,7 @@ def experiment(directory = "0",
     elif gdl == 3:
         s_store = np.zeros((n_agents,3,steps))
     FOVflag = False
+    state_err = error_state(pd,agents)
     
     #   Print simulation data:
     print("------------------BEGIN-----------------")
@@ -702,9 +703,9 @@ def experiment(directory = "0",
         end_position[i,:] = agents[i].camera.p.copy()
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
-        state_err = error_state(pd,new_agents,directory+"/3D_error")
+        state_err +=  error_state(pd,new_agents,directory+"/3D_error")
     else:
-        state_err = error_state_equal(new_agents,directory+"/3D_error")
+        state_err +=  error_state_equal(new_agents,directory+"/3D_error")
         
     print("State error = "+str(state_err))
     if FOVflag:
@@ -720,7 +721,7 @@ def experiment(directory = "0",
     colors = colors.reshape((n_colors,3))
     
     if not enablePlot:
-        return [ret_err, state_err[0],state_err[1], FOVflag]
+        return [ret_err, state_err, FOVflag]
     
     #   Camera positions in X,Y 
     mp.plot_position(pos_arr,
@@ -884,7 +885,7 @@ def experiment(directory = "0",
                     labels = ["0","1","2","3","4","5","6","7"])
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
-    return [ret_err, state_err[0],state_err[1], FOVflag]
+    return [ret_err, state_err, FOVflag]
 
 
 
@@ -910,8 +911,11 @@ def experiment_repeat(nReps = 1,
     var_arr = np.zeros((n_agents,nReps))
     var_arr_2 = np.zeros(nReps)
     var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
     mask = np.zeros(nReps)
     Misscount = 0
+    
     for k in range(nReps):
         ret = experiment(directory=str(k),
                         #k_int = 0.1,
@@ -921,7 +925,12 @@ def experiment_repeat(nReps = 1,
                             t_end = 100,
                             enablePlot = enablePlotExp,
                             repeat = True)
-        [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_2[k] = errors[0]
+        var_arr_3[k] = errors[1]
+        var_arr_et[k] = errors[2]
+        var_arr_er[k] = errors[3]
+        
         if FOVflag:
             mask[k] = 1
             Misscount += 1
@@ -936,6 +945,8 @@ def experiment_repeat(nReps = 1,
             var_arr = var_arr,
             var_arr_2 = var_arr_2,
             var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
             Misscount = Misscount)
     
     
@@ -947,6 +958,8 @@ def experiment_all_random(nReps = 100,
     var_arr = np.zeros((n_agents,nReps))
     var_arr_2 = np.zeros(nReps)
     var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
     Misscount = 0
     
     for k in range(nReps):
@@ -963,7 +976,8 @@ def experiment_all_random(nReps = 100,
             P = np.random.rand(3,nP)
             P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
             P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-            P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+            #P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+            P[2,:] = 0.
             Ph = np.r_[P,np.ones((1,nP))]
             
             #   Cameras
@@ -994,41 +1008,41 @@ def experiment_all_random(nReps = 100,
                 
                 p0[:,i] = tmp.copy()
                 
-                ##   BEGIN referencias aleatorias
-                #tmp = np.random.rand(6)
-                #tmp = offset + tmp*dRange
-                #cam = cm.camera()
-                #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                #   BEGIN referencias aleatorias
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, np.zeros(6), tmp,P)
                 
-                #while agent.count_points_in_FOV(Ph) != nP:
-                    #tmp = np.random.rand(6)
-                    #tmp = offset + tmp*dRange
-                    #cam = cm.camera()
-                    #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                while agent.count_points_in_FOV(Ph) != nP:
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
                 
-                #pd[:,i] = tmp.copy()
-                ##   END Referencias aleatorias
+                pd[:,i] = tmp.copy()
+                #   END Referencias aleatorias
             ##   BEGIN referencias fijas
             #pd = circle(n_agents,1,1)
                 
             ##   END Referencias fijas
             
-            #   BEGIN referencias con perturbación
-            pd = circle(n_agents,1,1)
-            dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
-            for i in range(nC):
-                tmp = np.random.rand(6)-0.5
-                tmp = pd[:,i] + tmp*dRange*2
-                cam = cm.camera()
-                agent = ctr.agent(cam, np.zeros(6), tmp,P)
+            ##   BEGIN referencias con perturbación
+            #pd = circle(n_agents,1,1)
+            #dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
+            #for i in range(nC):
+                #tmp = np.random.rand(6)-0.5
+                #tmp = pd[:,i] + tmp*dRange*2
+                #cam = cm.camera()
+                #agent = ctr.agent(cam, np.zeros(6), tmp,P)
                 
-                while agent.count_points_in_FOV(Ph) != nP:
-                    tmp = np.random.rand(6)-0.5
-                    tmp = pd[:,i] + tmp*dRange*2
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, np.zeros(6), tmp,P)
-                pd[:,i] = tmp.copy()
-            #   END Referencias con perturbación
+                #while agent.count_points_in_FOV(Ph) != nP:
+                    #tmp = np.random.rand(6)-0.5
+                    #tmp = pd[:,i] + tmp*dRange*2
+                    #cam = cm.camera()
+                    #agent = ctr.agent(cam, np.zeros(6), tmp,P)
+                #pd[:,i] = tmp.copy()
+            ##   END Referencias con perturbación
                 
             
             
@@ -1042,7 +1056,11 @@ def experiment_all_random(nReps = 100,
                         #depthOp = 4, Z_set = 1.,
                         t_end = 100,
                         enablePlot = enablePlotExp)
-            [var_arr[:,k], var_arr_2[k], var_arr_3[k], FOVflag] = ret
+            [var_arr[:,k], errors, FOVflag] = ret
+            var_arr_et[k] = errors[0]
+            var_arr_er[k] = errors[1]
+            var_arr_2[k] = errors[2]
+            var_arr_3[k] = errors[3]
             if FOVflag:
                 Misscount += 1
         
@@ -1053,6 +1071,8 @@ def experiment_all_random(nReps = 100,
             var_arr = var_arr,
             var_arr_2 = var_arr_2,
             var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
             Misscount = Misscount)
     
 def experiment_plots():
@@ -1062,6 +1082,8 @@ def experiment_plots():
     var_arr = npzfile['var_arr']
     var_arr_2 = npzfile['var_arr_2']
     var_arr_3 = npzfile['var_arr_3']
+    var_arr_et = npzfile['var_arr_et']
+    var_arr_er = npzfile['var_arr_er']
     Misscount = npzfile['Misscount']
     nReps = var_arr.shape[1]
     
@@ -1144,8 +1166,15 @@ def experiment_plots():
     ##  Scatter err T,R
     fig, ax = plt.subplots()
     fig.suptitle("Errores de estado")
+    ax.scatter(var_arr_et,var_arr_er, 
+            marker = "*", alpha = 0.5,color = colors[1])
     ax.scatter(var_arr_2,var_arr_3, 
             marker = "*", alpha = 0.5,color = colors[0])
+    for i in range(nReps):
+        ax.plot([var_arr_et[i],var_arr_2[i]],
+                [var_arr_er[i],var_arr_3[i]],
+                alpha = 0.5, color = colors[0],
+                linewidth = 0.5)
     ax.set_xlabel("Error de traslación")
     ax.set_ylabel("Error de rotación")
     plt.tight_layout()
@@ -1293,8 +1322,8 @@ def main():
     ##  Mayor número de agentes
     
     #   Experimento exhaustivo de posiciones y referencias random
-    experiment_all_random(nReps = 20, 
-                          enablePlotExp= False)
+    #experiment_all_random(nReps = 100, 
+                          #enablePlotExp= False)
     
     #   Experimento anterior con profundidad constante
     #experiment_repeat(nReps = 100,

@@ -1124,7 +1124,7 @@ def experiment_plots(dirBase = ""):
     nReps = var_arr.shape[1]
     
     print("Simulations that failed = ",Misscount+mask.sum()," / ", nReps+Misscount)
-    ref_arr = np.arange(nReps)
+    
     etsup = np.where((var_arr_2 > var_arr_et) &
                      (mask == 0.))[0]
     ersup = np.where((var_arr_3 > var_arr_er) &
@@ -1148,6 +1148,8 @@ def experiment_plots(dirBase = ""):
     var_arr_3 = var_arr_3[mask==0.]
     var_arr_et = var_arr_et[mask==0.]
     var_arr_er = var_arr_er[mask==0.]
+    nReps = var_arr.shape[1]
+    ref_arr = np.arange(nReps)
     
     #   Plot data
     
@@ -1391,11 +1393,11 @@ def main():
                           #dirBase = "rand_flat_10/",
                           #nP = 10,
                           #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "rand_flat_10/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "rand_flat_10/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
     experiment_plots(dirBase = "rand_flat_10/")
     
     

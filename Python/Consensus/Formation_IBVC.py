@@ -420,6 +420,16 @@ def experiment(directory = "0",
         n_agents = p0.shape[1] #Number of agents
         pd = npzfile["pd"]
         adjMat = npzfile["adjMat"]
+        
+        #   BEGIN TEST over P
+        
+        P[2,:] = 0.
+        #P[:,1] = np.array([2.5,-1,-0.23240457,1])
+        #P = np.c_[P,np.array([-0.9,0.5,-0.1,1]).reshape((4,1))]
+        #n_points += 1
+        #P[:,3] = np.array([-0.32326981])
+        
+        #   END TEST
     else:
         #   3D scenc points
         n_points = P.shape[1] #Number of image points
@@ -617,7 +627,7 @@ def experiment(directory = "0",
             U,u, s, vh  = agents[j].get_control(control_type,lamb,Z,args)
             s_store[j,:,i] = s
             if tanhLimit:
-                U = 0.3*np.tanh(U)
+                U = np.tanh(U)
             
             #   Detección de choque del plano de cámara y los puntos de escena
             if agents[j].count_points_in_FOV(P) != n_points:
@@ -694,7 +704,10 @@ def experiment(directory = "0",
         state_err +=  error_state(pd,new_agents,directory+"/3D_error")
     else:
         state_err +=  error_state_equal(new_agents,directory+"/3D_error")
-        
+    
+    print(err_array[:,:,0])
+    print(err_array[:,:,0].max())
+    
     print("State error = "+str(state_err))
     if FOVflag:
         print("WARNING : Cammera plane hit scene points: ", depthFlags)
@@ -709,6 +722,11 @@ def experiment(directory = "0",
     n_colors = max(n_agents,2*n_points)
     colors = randint(0,255,3*n_colors)/255.0
     colors = colors.reshape((n_colors,3))
+    
+    #   Save 3D plot data:
+    np.savez(directory + "/data3DPlot.npz",
+            P = P, pos_arr=pos_arr, p0 = p0,
+            pd = pd, end_position = end_position )
     
     if not enablePlot:
         return [ret_err, state_err, FOVflag]
@@ -788,11 +806,6 @@ def experiment(directory = "0",
     plt.savefig(name+'.pdf',bbox_inches='tight')
     plt.close()
     
-    #   Save 3D plot data:
-    np.savez(directory + "/data3DPlot.npz",
-             P = P, pos_arr=pos_arr, p0 = p0,
-             pd = pd, end_position = end_position )
-    
     #   Descriptores x agente
     for i in range(n_agents):
         mp.plot_descriptors(desc_arr[i,:,:],
@@ -807,7 +820,7 @@ def experiment(directory = "0",
                 serr_array[:,:],
                 colors,
                 ylimits = [-0.1,1.1],
-                name = directory+"/State_Error_"+str(i),
+                name = directory+"/State_Error",
                 label = "Formation Error",
                 labels = ["traslation","rotation"])
     
@@ -922,7 +935,7 @@ def experiment_repeat(nReps = 1,
                                 t_end = 100,
                                 enablePlot = enablePlotExp,
                                 repeat = True)
-        if intMatSel  == 4:
+        if intMatSel  == 2:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
                                 depthOp = 4, Z_set = 1.,
@@ -1133,7 +1146,9 @@ def experiment_plots(dirBase = ""):
                     (var_arr_2 > var_arr_et) &
                      (mask == 0.))[0]
     
-    
+    #print(var_arr)
+    #print(mask)
+    np.set_printoptions(linewidth=np.inf)
     print("Simulations that increased et = ", etsup.shape[0], " / ", nReps)
     print(etsup)
     print("Simulations that increased er = ", ersup.shape[0], " / ", nReps)
@@ -1143,6 +1158,9 @@ def experiment_plots(dirBase = ""):
     
     #   Masking
     print("Failed repeats = ", np.where(mask == 1))
+    if (np.count_nonzero(mask == 1.) == mask.shape[0]):
+        print("Simulations : No data to process")
+        return
     var_arr = var_arr[:,mask==0.]
     var_arr_2 = var_arr_2[mask==0.]
     var_arr_3 = var_arr_3[mask==0.]
@@ -1151,6 +1169,7 @@ def experiment_plots(dirBase = ""):
     nReps = var_arr.shape[1]
     ref_arr = np.arange(nReps)
     
+    #print(var_arr)
     #   Plot data
     
     colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
@@ -1238,6 +1257,8 @@ def experiment_plots(dirBase = ""):
                 linewidth = 0.5)
     ax.set_xlabel("Error de traslación")
     ax.set_ylabel("Error de rotación")
+    plt.xlim((-0.1,1.1))
+    plt.ylim((-0.1,3.1))
     plt.tight_layout()
     plt.savefig(dirBase+'Formation error_Scatter.pdf',bbox_inches='tight')
     #plt.show()
@@ -1361,12 +1382,74 @@ def experiment_plots(dirBase = ""):
     
 def main():
     
+    
+    return 
     #   REPEAT
-    #experiment(directory="6",
+    #n = 0
+    #n = 91
+    #n=7
+    #experiment(directory=str(n),
+                #t_end = 100,
+                ##tanhLimit = True,
+                ##k_int = 0.1,
+                #repeat = True)
+    #view3D(str(n))
+    #return
+    #n = 10
+    #experiment(directory=str(n),
                 #t_end = 100,
                 #repeat = True)
-    #view3D('6')
+    #view3D(str(n))
+    
+    #   Incremento solo de traslación 3D
+    #n = 25
+    #experiment(directory=str(n),
+                #t_end = 100,
+                #repeat = True)
+    #view3D(str(n))
+    
+    
+    #   Revisando casos de éxito con puntos planos
+    #for i in [7, 37, 41, 65, 67, 75]:
+        #experiment(directory=str(i),
+                #t_end = 100,
+                #repeat = True)
+        ##view3D(str(i))
     #return
+    
+    #   Revisando casos que mejoran con el integral
+    for i in [36,60,71,85]:
+        experiment(directory=str(i),
+                t_end = 100,
+                k_int = 0.1,
+                repeat = True)
+        view3D(str(i))
+    return
+    
+    #   Incremento solo de rotacion 3D
+    n = 52
+    experiment(directory=str(n),
+                t_end = 100,
+                repeat = True)
+    view3D(str(n))
+    return 
+
+    #   Incremento de ambos errores en el caso 3D
+    #for i in [32,34]:
+        #experiment(directory=str(i),
+                #t_end = 100,
+                #repeat = True)
+        #view3D(str(i))
+    #return
+
+    
+    #   Incremento de ambos errores del caso plano
+    for i in [8, 10, 13, 17, 19, 20]:
+        experiment(directory=str(i),
+                t_end = 100,
+                repeat = True)
+        view3D(str(i))
+    return
 
     ##   VIEWER
     #view3D('3', xLimit = [-10,10], yLimit = [-10,10],zLimit = [0,20])
@@ -1383,8 +1466,8 @@ def main():
     ##  + Profundidades constantes con el anterior
     ##  Mayor número de agentes
     
-    k_int = 0.1
-    intMatSel = 1
+    k_int = 0.
+    intMatSel = 2
     
     #   Experimento con puntos planos, 10 puntos, all random
     #experiment_all_random(nReps = 100, 
@@ -1393,21 +1476,21 @@ def main():
                           #dirBase = "rand_flat_10/",
                           #nP = 10,
                           #enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "rand_flat_10/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
+    experiment_repeat(nReps = 100,
+                      dirBase = "rand_flat_10/",
+                      k_int = k_int ,
+                      intMatSel = intMatSel,
+                        enablePlotExp = False)
     experiment_plots(dirBase = "rand_flat_10/")
     
     
-    #   Experimento con puntos planos, 4 puntos, all random
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 1,
-                          #pFlat = True,
-                          #dirBase = "rand_flat_4/",
-                          #nP = 4,
-                          #enablePlotExp= False)
+    ##   Experimento con puntos planos, 4 puntos, all random
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 1,
+                          ##pFlat = True,
+                          ##dirBase = "rand_flat_4/",
+                          ##nP = 4,
+                          ##enablePlotExp= False)
     experiment_repeat(nReps = 100,
                       dirBase = "rand_flat_4/",
                       k_int = k_int ,

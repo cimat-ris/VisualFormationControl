@@ -376,6 +376,8 @@ def experiment(directory = "0",
                p0 = None,
                pd = None,
                P = np.array(SceneP), 
+               gamma0 = None,
+               gammaInf = None,
                set_derivative = False,
                atTarget = False,
                tanhLimit = False,
@@ -480,6 +482,8 @@ def experiment(directory = "0",
         cam = cm.camera()
         agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,
                                 k_int = k_int,
+                                gamma0 = gamma0,
+                                gammaInf = gammaInf,
                                 set_consensoRef = set_consensoRef,
                                 set_derivative = set_derivative))
     
@@ -1383,18 +1387,19 @@ def experiment_plots(dirBase = ""):
 def main():
     
     
-    return 
     #   REPEAT
     #n = 0
     #n = 91
-    #n=7
-    #experiment(directory=str(n),
-                #t_end = 100,
-                ##tanhLimit = True,
-                ##k_int = 0.1,
-                #repeat = True)
-    #view3D(str(n))
-    #return
+    n=37
+    experiment(directory=str(n),
+                t_end = 100,
+                gammaInf = 1.,
+                gamma0 = 2.1,
+                #tanhLimit = True,
+                #k_int = 0.1,
+                repeat = True)
+    view3D(str(n))
+    return
     #n = 10
     #experiment(directory=str(n),
                 #t_end = 100,

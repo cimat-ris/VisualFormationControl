@@ -194,6 +194,8 @@ class agent:
                  points,
                  k = 1,
                  k_int = 0,
+                 gamma0 = None,
+                 gammaInf = None,
                  set_derivative = True,
                  set_consensoRef = True ):
         
@@ -227,6 +229,19 @@ class agent:
         self.error = self.error_p.copy()
         self.error_int = np.zeros(self.error.shape)
         
+        self.gammaAdapt = False
+        if (not gamma0 is None) or (not gammaInf is None):
+            self.gammaAdapt = True
+            
+            if gamma0 is None:
+                self.gamma0 = 1.
+            else:
+                self.gamma0 = gamma0
+            if gammaInf is None:
+                self.gammaInf = 1.
+            else:
+                self.gammaInf = gammaInf
+        
         self.Ls_set = None
         self.inv_Ls_set = None
         
@@ -247,8 +262,17 @@ class agent:
                                args["deg"],
                                self.inv_Ls_set,
                                args["gdl"])
+            gamma = 1.
+            if self.gammaAdapt:
+                gamma =  np.linalg.norm(args["error"])
+                gamma =  -5. * gamma
+                gamma =  gamma / (self.gamma0 - self.gammaInf)
+                gamma =  np.exp(gamma)
+                gamma =  gamma * (self.gamma0 - self.gammaInf) 
+                gamma += self.gammaInf
+                #print(gamma)
             #print(s)
-            return -lamb * U,u, s, vh
+            return -lamb * gamma * U,u, s, vh
         elif sel == 2:
             return  -lamb* Homography(args["H"],
                                      args["delta_pref"],

@@ -425,7 +425,7 @@ def experiment(directory = "0",
         
         #   BEGIN TEST over P
         
-        P[2,:] = 0.
+        #P[2,:] = 0.
         #P[:,1] = np.array([2.5,-1,-0.23240457,1])
         #P = np.c_[P,np.array([-0.9,0.5,-0.1,1]).reshape((4,1))]
         #n_points += 1
@@ -914,6 +914,8 @@ def experiment(directory = "0",
 def experiment_repeat(nReps = 1,
                       dirBase = "",
                       k_int = 0,
+                      gamma0 = None,
+                       gammaInf = None,
                       intMatSel = 1,
                       enablePlotExp = True):
     
@@ -936,12 +938,16 @@ def experiment_repeat(nReps = 1,
         if intMatSel  == 1:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
+                            gamma0 = gamma0,
+                                gammaInf = gammaInf,
                                 t_end = 100,
                                 enablePlot = enablePlotExp,
                                 repeat = True)
         if intMatSel  == 2:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
+                                gamma0 = gamma0,
+                                gammaInf = gammaInf,
                                 depthOp = 4, Z_set = 1.,
                                 t_end = 100,
                                 enablePlot = enablePlotExp,
@@ -1137,21 +1143,47 @@ def experiment_plots(dirBase = ""):
     var_arr_et = npzfile['var_arr_et']
     var_arr_er = npzfile['var_arr_er']
     Misscount = npzfile['Misscount']
-    mask = npzfile['mask']
     nReps = var_arr.shape[1]
     
-    print("Simulations that failed = ",Misscount+mask.sum()," / ", nReps+Misscount)
+    etsup = None
+    ersup = None
+    esup = None
     
-    etsup = np.where((var_arr_2 > var_arr_et) &
-                     (mask == 0.))[0]
-    ersup = np.where((var_arr_3 > var_arr_er) &
-                     (mask == 0.))[0]
-    esup = np.where((var_arr_3 > var_arr_er) &
-                    (var_arr_2 > var_arr_et) &
-                     (mask == 0.))[0]
-    
-    #print(var_arr)
-    #print(mask)
+    if npzfile.__contains__('mask'):
+        
+        mask = npzfile['mask']
+        print("Simulations that failed = ",Misscount+mask.sum()," / ", nReps+Misscount)
+        
+        etsup = np.where((var_arr_2 > var_arr_et) &
+                        (mask == 0.))[0]
+        ersup = np.where((var_arr_3 > var_arr_er) &
+                        (mask == 0.))[0]
+        esup = np.where((var_arr_3 > var_arr_er) &
+                        (var_arr_2 > var_arr_et) &
+                        (mask == 0.))[0]
+        
+        
+        
+        #   Masking
+        print("Failed repeats = ", np.where(mask == 1))
+        if (np.count_nonzero(mask == 1.) == mask.shape[0]):
+            print("Simulations : No data to process")
+            return
+        var_arr = var_arr[:,mask==0.]
+        var_arr_2 = var_arr_2[mask==0.]
+        var_arr_3 = var_arr_3[mask==0.]
+        var_arr_et = var_arr_et[mask==0.]
+        var_arr_er = var_arr_er[mask==0.]
+        
+    else:
+        print("Simulations that failed = ",Misscount," / ", nReps+Misscount)
+        
+        etsup = np.where((var_arr_2 > var_arr_et))[0]
+        ersup = np.where((var_arr_3 > var_arr_er))[0]
+        esup = np.where((var_arr_3 > var_arr_er) &
+                        (var_arr_2 > var_arr_et) )[0]
+        
+        
     np.set_printoptions(linewidth=np.inf)
     print("Simulations that increased et = ", etsup.shape[0], " / ", nReps)
     print(etsup)
@@ -1159,20 +1191,8 @@ def experiment_plots(dirBase = ""):
     print(ersup)
     print("Simulations that increased both err = ", esup.shape[0], " / ", nReps)
     print(esup)
-    
-    #   Masking
-    print("Failed repeats = ", np.where(mask == 1))
-    if (np.count_nonzero(mask == 1.) == mask.shape[0]):
-        print("Simulations : No data to process")
-        return
-    var_arr = var_arr[:,mask==0.]
-    var_arr_2 = var_arr_2[mask==0.]
-    var_arr_3 = var_arr_3[mask==0.]
-    var_arr_et = var_arr_et[mask==0.]
-    var_arr_er = var_arr_er[mask==0.]
     nReps = var_arr.shape[1]
     ref_arr = np.arange(nReps)
-    
     #print(var_arr)
     #   Plot data
     
@@ -1373,6 +1393,193 @@ def experiment_plots(dirBase = ""):
     plt.savefig(dirBase+'Formation error_Scatter_zoom.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+
+
+def plot_error_stats(nReps = 100,
+                     dirBase = ""):
+    
+    arr_err = np.zeros(nReps)
+    
+    for k in range(nReps):
+        directory=dirBase+str(k)
+        npzfile = np.load(directory+'/data.npz')
+        P = npzfile["P"]
+        n_points = P.shape[1] #Number of image points
+        p0 = npzfile["p0"]
+        n_agents = p0.shape[1] #Number of agents
+        pd = npzfile["pd"]
+        adjMat = npzfile["adjMat"]
+        tmp=np.zeros(n_agents)
+        for i in range(n_agents):
+            cam = cm.camera()
+            agent = ctr.agent(cam,pd[:,i],p0[:,i],P)
+            tmp[i] = np.linalg.norm(agent.s_ref_n)
+        arr_err[k] = np.linalg.norm(tmp)/ n_agents
+    
+    npzfile = np.load(dirBase+'data.npz')
+    n_agents = npzfile['n_agents']
+    var_arr = npzfile['var_arr']
+    var_arr_2 = npzfile['var_arr_2']
+    var_arr_3 = npzfile['var_arr_3']
+    var_arr_et = npzfile['var_arr_et']
+    var_arr_er = npzfile['var_arr_er']
+    Misscount = npzfile['Misscount']
+    #mask = npzfile['mask']
+    nReps = var_arr.shape[1]
+    
+    var_arr = norm(var_arr,axis = 0)/n_agents
+    
+    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    
+    ##  Scatter err T, Ce
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores traslación final vs consenso inicial")
+    ax.scatter(var_arr_2,arr_err, 
+            marker = "*", alpha = 0.5,color = colors[0],
+            label= "Inicial")
+    ax.scatter(var_arr_2,var_arr, 
+            marker = "*", alpha = 0.5,color = colors[1],
+            label= "Final")
+    for i in range(nReps):
+        ax.plot([var_arr_2[i],var_arr_2[i]],
+                [arr_err[i],var_arr[i]],
+                alpha = 0.5, color = colors[1],
+                linewidth = 0.5)
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Error de traslación final")
+    ax.set_ylabel("Error de consenso inicial")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,20))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Error traslacion vs consenso.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Scatter err R, Ce
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores traslación final vs consenso inicial")
+    ax.scatter(var_arr_3,arr_err, 
+            marker = "*", alpha = 0.5,color = colors[0],
+            label= "Inicial")
+    ax.scatter(var_arr_3,var_arr, 
+            marker = "*", alpha = 0.5,color = colors[1],
+            label= "Final")
+    for i in range(nReps):
+        ax.plot([var_arr_3[i],var_arr_3[i]],
+                [arr_err[i],var_arr[i]],
+                alpha = 0.5, color = colors[1],
+                linewidth = 0.5)
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Error de rotación final")
+    ax.set_ylabel("Error de consenso inicial")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Error rotacion vs consenso.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Scatter err init, end
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores traslación inicial vs Formación final")
+    ax.scatter(var_arr_et,var_arr_2, 
+            marker = "*", alpha = 0.5,color = colors[0],
+            label= "Inicial")
+    ax.scatter(var_arr_et,var_arr_3, 
+            marker = "*", alpha = 0.5,color = colors[1],
+            label= "Final")
+    for i in range(nReps):
+        ax.plot([var_arr_et[i],var_arr_et[i]],
+                [var_arr_2[i],var_arr_3[i]],
+                alpha = 0.5, color = colors[1],
+                linewidth = 0.5)
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Error de traslación final")
+    ax.set_ylabel("Error de Formación inicial")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Error traslación vs EF.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ##  Scatter err end, init
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores traslación inicial vs Formación final")
+    ax.scatter(var_arr_er,var_arr_2, 
+            marker = "*", alpha = 0.5,color = colors[0],
+            label= "Traslacion")
+    ax.scatter(var_arr_er,var_arr_3, 
+            marker = "*", alpha = 0.5,color = colors[1],
+            label= "Rotacion")
+    for i in range(nReps):
+        ax.plot([var_arr_er[i],var_arr_er[i]],
+                [var_arr_2[i],var_arr_3[i]],
+                alpha = 0.5, color = colors[1],
+                linewidth = 0.5)
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Error de rotación final")
+    ax.set_ylabel("Error de Formación inicial")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Error rotacion vs EF.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    ###  Scatter err end, init
+    #fig, ax = plt.subplots()
+    #fig.suptitle("Errores traslación final vs Formación inicial")
+    #ax.scatter(var_arr_3,var_arr_et, 
+            #marker = "*", alpha = 0.5,color = colors[0],
+            #label= "Traslacion")
+    #ax.scatter(var_arr_3,var_arr_er, 
+            #marker = "*", alpha = 0.5,color = colors[1],
+            #label= "Rotación")
+    #for i in range(nReps):
+        #ax.plot([var_arr_3[i],var_arr_3[i]],
+                #[var_arr_et[i],var_arr_er[i]],
+                #alpha = 0.5, color = colors[1],
+                #linewidth = 0.5)
+    
+    #fig.legend( loc=1)
+    #ax.set_xlabel("Error de Rotación final")
+    #ax.set_ylabel("Error de Formación inicial")
+    ##plt.xlim((-0.1,1.1))
+    ##plt.ylim((-0.1,3.1))
+    #plt.tight_layout()
+    #plt.savefig(dirBase+'Error traslación vs EF.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
+    
+    ###  Scatter err init, end
+    #fig, ax = plt.subplots()
+    #fig.suptitle("Errores traslación final vs Formación inicial")
+    #ax.scatter(var_arr_2,var_arr_et, 
+            #marker = "*", alpha = 0.5,color = colors[0],
+            #label= "traslación")
+    #ax.scatter(var_arr_2,var_arr_er, 
+            #marker = "*", alpha = 0.5,color = colors[1],
+            #label= "Rotación")
+    #for i in range(nReps):
+        #ax.plot([var_arr_2[i],var_arr_2[i]],
+                #[var_arr_et[i],var_arr_er[i]],
+                #alpha = 0.5, color = colors[1],
+                #linewidth = 0.5)
+    
+    #fig.legend( loc=1)
+    #ax.set_xlabel("Error de Traslación final")
+    #ax.set_ylabel("Error de Formación inicial")
+    ##plt.xlim((-0.1,1.1))
+    ##plt.ylim((-0.1,3.1))
+    #plt.tight_layout()
+    #plt.savefig(dirBase+'Error rotacion vs EF.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
     
 
 ################################################################################
@@ -1386,15 +1593,33 @@ def experiment_plots(dirBase = ""):
     
 def main():
     
+    #experiment_plots(dirBase = "circ_4/")
+    plot_error_stats(nReps = 100, dirBase = "circ_4/")
+    #experiment_plots(dirBase = "circ_flat_4/")
+    plot_error_stats(nReps = 100, dirBase = "circ_flat_4/")
+    #experiment_plots(dirBase = "rand_4/")
+    plot_error_stats(nReps = 100, dirBase = "rand_4/")
+    #experiment_plots(dirBase = "rand_flat_4/")
+    plot_error_stats(nReps = 100, dirBase = "rand_flat_4/")
+    #experiment_plots(dirBase = "circ_10/")
+    plot_error_stats(nReps = 100, dirBase = "circ_10/")
+    #experiment_plots(dirBase = "circ_flat_10/")
+    plot_error_stats(nReps = 100, dirBase = "circ_flat_10/")
+    #experiment_plots(dirBase = "rand_10/")
+    plot_error_stats(nReps = 100, dirBase = "rand_10/")
+    #experiment_plots(dirBase = "rand_flat_10/")
+    plot_error_stats(nReps = 100, dirBase = "rand_flat_10/")
+    return
     
     #   REPEAT
     #n = 0
     #n = 91
-    n=37
+    #n=37
+    n= 7
     experiment(directory=str(n),
                 t_end = 100,
-                gammaInf = 1.,
-                gamma0 = 2.1,
+                gammaInf = 0.1,
+                gamma0 = 1.,
                 #tanhLimit = True,
                 #k_int = 0.1,
                 repeat = True)

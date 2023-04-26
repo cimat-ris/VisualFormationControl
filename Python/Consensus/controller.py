@@ -234,7 +234,7 @@ class agent:
             self.gammaAdapt = True
             
             if gamma0 is None:
-                self.gamma0 = 1.
+                self.gamma0 = 2.
             else:
                 self.gamma0 = gamma0
             if gammaInf is None:
@@ -370,6 +370,10 @@ class agent:
         
         Z = self.camera.Preal @ P
         Z = Z[2,:]
+        
+        #   BEGIN Only front ckeck
+        #return np.count_nonzero(Z > 0.)
+        #   END Only front check
         
         a = abs(self.s_current_n[0,:]) < self.FOVxlim 
         b = abs(self.s_current_n[1,:]) < self.FOVylim

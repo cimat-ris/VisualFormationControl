@@ -489,7 +489,7 @@ def experiment(directory = "0",
     
     #   Check initial params 
     for i in range(n_agents):
-        if any(Z_select(1, agents[i], P, Z_set, p0, pd, i) < 0.):
+        if agents[i].count_points_in_FOV(P) != n_points:
             print("invalid configuration")
             return None
     
@@ -561,6 +561,8 @@ def experiment(directory = "0",
         print("\t Control Integral gain = "+str(k_int))
     if set_derivative:
         print("\t Derivative component enabled")
+    if not gamma0 is None:
+        print("\t Adaptative gain: ["+str(gamma0)+", "+ str(gammaInf)+"]")
     if tanhLimit:
         print("Hyperbolic tangent limit enabled")
     print("Depth estimation = "+depthOp_dict[depthOp])
@@ -668,7 +670,7 @@ def experiment(directory = "0",
     print("----------------------")
     print("Simulation final data")
     
-    print(error_p)
+    #print(error_p)
     ret_err = norm(error_p,axis=1)
     for j in range(n_agents):
         print(error[j,:])
@@ -684,6 +686,8 @@ def experiment(directory = "0",
     ##  Trim data if needed
     if FOVflag:
         trim = max(depthFlags)
+        if trim ==0:
+            return [ret_err, [0.,0.,0.,0.], FOVflag]
         t_array = t_array[:trim] 
         err_array = err_array[:,:,:trim]
         serr_array = serr_array[:,:trim]
@@ -1104,6 +1108,177 @@ def experiment_all_random(nReps = 100,
             print("CASE ",k)
             ret = experiment(directory=dirBase+str(k),
                     #k_int = 0.1,
+                        pd = pd,
+                        p0 = p0,
+                        P = P,
+                        #set_derivative = True,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set = 1.,
+                        t_end = 100,
+                        enablePlot = enablePlotExp)
+            #print(ret)
+            [var_arr[:,k], errors, FOVflag] = ret
+            var_arr_et[k] = errors[0]
+            var_arr_er[k] = errors[1]
+            var_arr_2[k] = errors[2]
+            var_arr_3[k] = errors[3]
+            if FOVflag:
+                Misscount += 1
+        
+    #   Save data
+    
+    np.savez(dirBase+'data.npz',
+                n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
+            mask = np.zeros(nReps),
+            Misscount = Misscount)
+    
+def repeat_local(nReps = 100, 
+                    pFlat = False,
+                    dirBase = "",
+                    dTras = 0.1,
+                    dRot = 0.3,
+                    k_int = 0.,
+                    gamma0 = None,
+                    gammaInf = None,
+                    enablePlotExp = True):
+    
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
+    mask = np.zeros(nReps)
+    Misscount = 0
+    
+    for k in range(nReps):
+        print("CASE ",k)
+        ret = experiment(directory=dirBase+str(k),
+                    k_int = k_int,
+                    gamma0 = gamma0,
+                    gammaInf = gammaInf,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set = 1.,
+                    t_end = 100,
+                    repeat = True,
+                    enablePlot = enablePlotExp)
+        #print(ret)
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_et[k] = errors[0]
+        var_arr_er[k] = errors[1]
+        var_arr_2[k] = errors[2]
+        var_arr_3[k] = errors[3]
+        if FOVflag:
+            mask[k] = 1
+            Misscount += 1
+            
+        #   Save data
+    np.savez(dirBase+'data.npz',
+             n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
+            mask = mask,
+            Misscount = Misscount)
+    
+def experiment_local(nReps = 100, 
+                    pFlat = False,
+                    dirBase = "",
+                    dTras = 0.1,
+                    dRot = 0.3,
+                    k_int = 0.,
+                    gamma0 = None,
+                    gammaInf = None,
+                    enablePlotExp = True):
+    
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
+    Misscount = 0
+    
+    #   Testing ranges 
+    # Range
+    tRange = [-dTras, dTras]
+    rotRange = [-dRot,dRot]
+    
+    print("Local testing")
+    print("Test series, pFlat = ", pFlat)
+    print("Testing ranges:")
+    print("\t Traslation delta / 2 = ",tRange)
+    print("\t Rotation delta / 2 = ",rotRange)
+    print("Local test directory = ",dirBase)
+    
+    for k in range(nReps):
+        FOVflag = True
+        
+        pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
+        while FOVflag:
+            #   Points
+            # Range
+            PxRange = [-2,2]
+            PyRange = [-2,2]
+            PzRange = [-1,0]
+            
+            nP = random.randint(4,11)
+            #nP = 4
+            #nP = 10
+            P = np.random.rand(3,nP)
+            P[0,:] = PxRange[0]+ P[0,:]*(PxRange[1]-PxRange[0])
+            P[1,:] = PyRange[0]+ P[1,:]*(PyRange[1]-PyRange[0])
+            P[2,:] = PzRange[0]+ P[2,:]*(PzRange[1]-PzRange[0])
+            if pFlat :
+                P[2,:] = 0.
+            Ph = np.r_[P,np.ones((1,nP))]
+            
+            #   Cameras
+            
+            p0 = np.zeros((6,n_agents))
+            
+            offset = np.array([tRange[0],tRange[0],tRange[0],
+                               rotRange[0],rotRange[0],rotRange[0]])
+            dRange = np.array([tRange[1],tRange[1],tRange[1],
+                               rotRange[1],rotRange[1],rotRange[1]])
+            dRange -= offset
+            
+            #iSel = {0:0,1:3,2:2,3:1}
+            
+            for i in range(n_agents):
+                
+                tmp = np.random.rand(6)
+                #tmp = pd[:,iSel[i]] + offset + tmp*dRange
+                tmp = pd[:,i] + offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+                
+                while agent.count_points_in_FOV(Ph) != nP or tmp[2]<0.:
+                    tmp = np.random.rand(6)
+                    #tmp = pd[:,iSel[i]] + offset + tmp*dRange
+                    tmp = pd[:,i] + offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, tmp, tmp,P)
+                
+                p0[:,i] = tmp.copy()
+                
+                
+            
+            
+            
+            print("CASE ",k)
+            ret = experiment(directory=dirBase+str(k),
+                        k_int = k_int,
+                        gamma0 = gamma0,
+                        gammaInf = gammaInf,
                         pd = pd,
                         p0 = p0,
                         P = P,
@@ -1580,7 +1755,8 @@ def plot_error_stats(nReps = 100,
     #plt.savefig(dirBase+'Error rotacion vs EF.pdf',bbox_inches='tight')
     ##plt.show()
     #plt.close()
-    
+
+
 
 ################################################################################
 ################################################################################
@@ -1590,46 +1766,222 @@ def plot_error_stats(nReps = 100,
 ################################################################################
 ################################################################################
 
+
+def plot_tendencias(nReps = 20,
+                    dirBase = ""):
     
+    n_agents = 4
+    colors = (randint(0,255,3*3)/255.0).reshape((3,3))
+    
+    ref = np.arange(nReps)
+    count_mask = np.zeros(nReps)
+    
+    cons_err_max = np.zeros(nReps)
+    cons_err_avr = np.zeros(nReps)
+    cons_err_min = np.zeros(nReps)
+    
+    tErr_err_max = np.zeros(nReps)
+    tErr_err_avr = np.zeros(nReps)
+    tErr_err_min = np.zeros(nReps)
+    
+    rErr_err_max = np.zeros(nReps)
+    rErr_err_avr = np.zeros(nReps)
+    rErr_err_min = np.zeros(nReps)
+    
+    for k in range(nReps):
+        
+        npzfile = np.load(dirBase+str(k)+'/data.npz')
+        n_agents = npzfile['n_agents']
+        var_arr = npzfile['var_arr']
+        var_arr = norm(var_arr,axis = 0)/n_agents
+        var_arr_2 = npzfile['var_arr_2']
+        var_arr_3 = npzfile['var_arr_3']
+        var_arr_et = npzfile['var_arr_et']
+        var_arr_er = npzfile['var_arr_er']
+        Misscount = npzfile['Misscount']
+        mask = npzfile['mask']
+        
+        print("Masks for step ",k,"=",np.where(mask == 1.)[0])
+        
+        var_arr = var_arr[mask==0.]
+        var_arr_2 = var_arr_2[mask==0.]
+        var_arr_3 = var_arr_3[mask==0.]
+        var_arr_et = var_arr_et[mask==0.]
+        var_arr_er = var_arr_er[mask==0.]
+        
+        count_mask[k] = mask.sum()
+        
+        cons_err_max[k] = var_arr.max()
+        cons_err_avr[k] = var_arr.mean()
+        cons_err_min[k] = var_arr.min()
+        
+        tErr_err_max[k] = var_arr_2.max()
+        tErr_err_avr[k] = var_arr_2.mean()
+        tErr_err_min[k] = var_arr_2.min()
+        
+        rErr_err_max[k] = var_arr_3.max()
+        rErr_err_avr[k] = var_arr_3.mean()
+        rErr_err_min[k] = var_arr_3.min()
+    
+    #   Errores de consenso
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de consenso por paso")
+    ax.plot(ref,cons_err_min, 
+            color = colors[0],
+            label= "Mínimo")
+    ax.plot(ref,cons_err_avr, 
+            color = colors[1],
+            label= "Promedio")
+    ax.plot(ref,cons_err_max, 
+            color = colors[2],
+            label= "Máximo")
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Paso")
+    ax.set_ylabel("Error de consenso")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Consenso.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #   Errores de consenso
+    fig, ax = plt.subplots()
+    fig.suptitle("Cuenta de repeticiones fuera de FOV")
+    ax.plot(ref,count_mask, 
+            color = colors[0])
+    
+    ax.set_xlabel("Paso")
+    ax.set_ylabel("Cuenta de repeticiones fallidas")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Mask.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #   Errores de traslación
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de traslación final por paso")
+    ax.plot(ref,tErr_err_min, 
+            color = colors[0],
+            label= "Mínimo")
+    ax.plot(ref,tErr_err_avr, 
+            color = colors[1],
+            label= "Promedio")
+    ax.plot(ref,tErr_err_max, 
+            color = colors[2],
+            label= "Máximo")
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Paso")
+    ax.set_ylabel("Error de traslación")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Traslación.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+        
+    #   Errores de rotación
+    fig, ax = plt.subplots()
+    fig.suptitle("Errores de rotación final por paso")
+    ax.plot(ref,rErr_err_min, 
+            color = colors[0],
+            label= "Mínimo")
+    ax.plot(ref,rErr_err_avr, 
+            color = colors[1],
+            label= "Promedio")
+    ax.plot(ref,rErr_err_max, 
+            color = colors[2],
+            label= "Máximo")
+    
+    fig.legend( loc=1)
+    ax.set_xlabel("Paso")
+    ax.set_ylabel("Error de rotación")
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.1,3.1))
+    plt.tight_layout()
+    plt.savefig(dirBase+'Rotación.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+        
+
 def main():
     
-    #experiment_plots(dirBase = "circ_4/")
-    plot_error_stats(nReps = 100, dirBase = "circ_4/")
-    #experiment_plots(dirBase = "circ_flat_4/")
-    plot_error_stats(nReps = 100, dirBase = "circ_flat_4/")
-    #experiment_plots(dirBase = "rand_4/")
-    plot_error_stats(nReps = 100, dirBase = "rand_4/")
-    #experiment_plots(dirBase = "rand_flat_4/")
-    plot_error_stats(nReps = 100, dirBase = "rand_flat_4/")
-    #experiment_plots(dirBase = "circ_10/")
-    plot_error_stats(nReps = 100, dirBase = "circ_10/")
-    #experiment_plots(dirBase = "circ_flat_10/")
-    plot_error_stats(nReps = 100, dirBase = "circ_flat_10/")
-    #experiment_plots(dirBase = "rand_10/")
-    plot_error_stats(nReps = 100, dirBase = "rand_10/")
-    #experiment_plots(dirBase = "rand_flat_10/")
-    plot_error_stats(nReps = 100, dirBase = "rand_flat_10/")
-    return
     
-    #   REPEAT
-    #n = 0
-    #n = 91
-    #n=37
-    n= 7
-    experiment(directory=str(n),
-                t_end = 100,
-                gammaInf = 0.1,
-                gamma0 = 1.,
-                #tanhLimit = True,
-                #k_int = 0.1,
-                repeat = True)
-    view3D(str(n))
-    return
-    #n = 10
+    
+    #   Comparaciones de errores finales bajo condiciones de inicio
+    ##experiment_plots(dirBase = "circ_4/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_4/")
+    ##experiment_plots(dirBase = "circ_flat_4/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_flat_4/")
+    ##experiment_plots(dirBase = "rand_4/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_4/")
+    ##experiment_plots(dirBase = "rand_flat_4/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_flat_4/")
+    ##experiment_plots(dirBase = "circ_10/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_10/")
+    ##experiment_plots(dirBase = "circ_flat_10/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_flat_10/")
+    ##experiment_plots(dirBase = "rand_10/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_10/")
+    ##experiment_plots(dirBase = "rand_flat_10/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_flat_10/")
+    #return
+    
+    ##   REPEAT
+    ##n = 0
+    ##n = 91
+    ##n=37
+    #   97, 89
+    #n= 76
     #experiment(directory=str(n),
                 #t_end = 100,
+                #gammaInf = 2.,
+                #gamma0 = 5.,
+                ##set_derivative = True,
+                ##tanhLimit = True,
+                ##k_int = 0.1,
                 #repeat = True)
     #view3D(str(n))
+    #return
+    
+    experiment(directory="local/0/53",
+                t_end = 200,
+                #gammaInf = 2.,
+                #gamma0 = 5.,
+                #set_derivative = True,
+                #tanhLimit = True,
+                k_int = 0.1,
+                repeat = True)
+    view3D("local/0/53")
+    return
+    
+    #   Revisando casos de falla con ganancia adaptativa conn FOV simple
+    #for i in [15, 19, 21, 43, 46, 58, 62, 63, 73, 76, 89, 98]:
+    #for i in [46, 63, 73, 89]:
+        #experiment(directory=str(i),
+                #t_end = 100,
+                #gammaInf = 2.,
+                #gamma0 = 5.,
+                #enablePlot = False,
+                #repeat = True)
+        #view3D(str(i))
+    #return
+    
+    ##  Test gamma
+    #n= 31
+    #experiment(directory=str(n),
+                #t_end = 100,
+                ##gammaInf = 0.1,
+                ##gamma0 = 1.,
+                ##tanhLimit = True,
+                ##k_int = 0.1,
+                #repeat = True)
+    #view3D(str(n))
+    #return
     
     #   Incremento solo de traslación 3D
     #n = 25
@@ -1647,22 +1999,22 @@ def main():
         ##view3D(str(i))
     #return
     
-    #   Revisando casos que mejoran con el integral
-    for i in [36,60,71,85]:
-        experiment(directory=str(i),
-                t_end = 100,
-                k_int = 0.1,
-                repeat = True)
-        view3D(str(i))
-    return
+    ##   Revisando casos que mejoran con el integral
+    #for i in [36,60,71,85]:
+        #experiment(directory=str(i),
+                #t_end = 100,
+                #k_int = 0.1,
+                #repeat = True)
+        #view3D(str(i))
+    #return
     
-    #   Incremento solo de rotacion 3D
-    n = 52
-    experiment(directory=str(n),
-                t_end = 100,
-                repeat = True)
-    view3D(str(n))
-    return 
+    ##   Incremento solo de rotacion 3D
+    #n = 52
+    #experiment(directory=str(n),
+                #t_end = 100,
+                #repeat = True)
+    #view3D(str(n))
+    #return 
 
     #   Incremento de ambos errores en el caso 3D
     #for i in [32,34]:
@@ -1673,28 +2025,62 @@ def main():
     #return
 
     
-    #   Incremento de ambos errores del caso plano
-    for i in [8, 10, 13, 17, 19, 20]:
-        experiment(directory=str(i),
-                t_end = 100,
-                repeat = True)
-        view3D(str(i))
-    return
+    ##   Incremento de ambos errores del caso plano
+    #for i in [8, 10, 13, 17, 19, 20]:
+        #experiment(directory=str(i),
+                #t_end = 100,
+                #repeat = True)
+        #view3D(str(i))
+    #return
 
     ##   VIEWER
     #view3D('3', xLimit = [-10,10], yLimit = [-10,10],zLimit = [0,20])
     ##view3D('5')
     ##view3D('20')
-    ##view3D('26')
+    ##return
+    
+    ##  Casos patologicos
+    #   Estados cuasiestacionarios
+    #view3D('local/0/31')
+    #view3D('local/0/22')
+    #view3D('local/0/18')
+    #view3D('local/0/20')
+    #view3D('local/0/9')
+    
+    #   Aumenta alguno de los dos errores
+    #view3D('local/1/54')
+    #view3D('local/1/84')
+    
+    #   Aumentan los dos errores
+    #view3D('local/5/33')
     #return 
     
-    ##  TODO
-    ##  Exprimentos con n de puntos fijos
-    ##  Experimentos con puntos PZ = 0
-    ##  Experimento con caso 2 'transformaciones
-    ##  + Integrador con el anterior 
-    ##  + Profundidades constantes con el anterior
-    ##  Mayor número de agentes
+    
+    ##  Repetición de xperimentos locales
+    #for i in range(20):
+        #repeat_local(nReps = 100,
+                     ##k_int = 0.1,
+                     #gamma0 = 5.,
+                     #gammaInf = 2.,
+                    #dirBase = "local/"+str(i)+"/",
+                    #enablePlotExp= False)
+        #experiment_plots(dirBase = "local/"+str(i)+"/")
+    #plot_tendencias(dirBase = "local/")
+    #return
+    
+    ##  Experimentos locales
+    for i in range(20):
+        experiment_local(nReps = 100,
+                        pFlat = False,
+                        dTras = 0.1*(i+1),
+                        dRot = (np.pi/20.)*(i+1),
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+        experiment_plots(dirBase = "local/"+str(i)+"/")
+    plot_tendencias(dirBase = "local/")
+    return
+    
+    ##  Experimentos con posiciones iniciales y/o referencias aleatorias
     
     k_int = 0.
     intMatSel = 2

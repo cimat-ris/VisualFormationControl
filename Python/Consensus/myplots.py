@@ -48,6 +48,7 @@ def plot_descriptors(descriptors_array,
                      camera_iMsize,
                      s_ref,
                     colors,
+                    pred,
                     name="time_plot", 
                     label="Variable"):
     
@@ -76,13 +77,18 @@ def plot_descriptors(descriptors_array,
                 color=colors[i])
         ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i])
         #print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
+        
+        #   Hip = predicted endpoints
+        ax.plot(pred[2*i],pred[2*i+1],
+                'x',color=colors[i])
     
     
     symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
                mlines.Line2D([0],[0],marker='o',color='k'),
                mlines.Line2D([0],[0],marker='^',color='k'),
+               mlines.Line2D([0],[0],marker='x',color='k'),
                mlines.Line2D([0],[0],linestyle='-',color='k')]
-    labels = ["Start","End","reference","trayectory"]
+    labels = ["Start","End","reference","Predicted","trayectory"]
     fig.legend(symbols,labels, loc=1)
     
     plt.tight_layout()

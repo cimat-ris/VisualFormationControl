@@ -32,6 +32,8 @@ import camera as cm
 import controller as ctr
 import myplots as mp
 
+#   Interfacing 
+import sys
 
 #case 1
 #SceneP=[[-0.5],
@@ -671,7 +673,7 @@ def experiment(directory = "0",
     print("Simulation final data")
     
     #print(error_p)
-    ret_err = norm(error_p,axis=1)
+    ret_err = norm(error_p,axis=1)/n_points
     for j in range(n_agents):
         print(error[j,:])
         print("|Error_"+str(j)+"|= "+str(ret_err[j]))
@@ -815,11 +817,19 @@ def experiment(directory = "0",
     plt.close()
     
     #   Descriptores x agente
+    pred = np.zeros((n_agents,2*n_points))
+    for i in range(n_agents):
+        pred[i,:] = agents[i].s_ref.T.reshape(2*n_points) - desc_arr[i,:,0]
+    avrE = pred.mean(axis = 0)
+    for i in range(n_agents):
+        pred[i,:] = desc_arr[i,:,0] + ( pred[i,:] - avrE)
+    
     for i in range(n_agents):
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
                             colors,
+                            pred[i,:],
                             name = directory+"/Image_Features_"+str(i),
                             label = "Image Features")
     
@@ -1758,22 +1768,13 @@ def plot_error_stats(nReps = 100,
 
 
 
-################################################################################
-################################################################################
-#
-#   M   A   I   N
-#
-################################################################################
-################################################################################
-
-
 def plot_tendencias(nReps = 20,
                     dirBase = ""):
     
     n_agents = 4
     colors = (randint(0,255,3*3)/255.0).reshape((3,3))
     
-    ref = np.arange(nReps)
+    ref = np.arange(nReps)+1
     count_mask = np.zeros(nReps)
     
     cons_err_max = np.zeros(nReps)
@@ -1787,6 +1788,10 @@ def plot_tendencias(nReps = 20,
     rErr_err_max = np.zeros(nReps)
     rErr_err_avr = np.zeros(nReps)
     rErr_err_min = np.zeros(nReps)
+    
+    data_cons = []
+    data_tErr = []
+    data_rErr = []
     
     for k in range(nReps):
         
@@ -1811,14 +1816,17 @@ def plot_tendencias(nReps = 20,
         
         count_mask[k] = mask.sum()
         
+        data_cons.append(var_arr)
         cons_err_max[k] = var_arr.max()
         cons_err_avr[k] = var_arr.mean()
         cons_err_min[k] = var_arr.min()
         
+        data_tErr.append(var_arr_2)
         tErr_err_max[k] = var_arr_2.max()
         tErr_err_avr[k] = var_arr_2.mean()
         tErr_err_min[k] = var_arr_2.min()
         
+        data_rErr.append(var_arr_3)
         rErr_err_max[k] = var_arr_3.max()
         rErr_err_avr[k] = var_arr_3.mean()
         rErr_err_min[k] = var_arr_3.min()
@@ -1835,8 +1843,9 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,cons_err_max, 
             color = colors[2],
             label= "Máximo")
+    ax.boxplot(data_cons)
     
-    fig.legend( loc=1)
+    fig.legend( loc=2)
     ax.set_xlabel("Paso")
     ax.set_ylabel("Error de consenso")
     #plt.xlim((-0.1,1.1))
@@ -1864,6 +1873,7 @@ def plot_tendencias(nReps = 20,
     #   Errores de traslación
     fig, ax = plt.subplots()
     fig.suptitle("Errores de traslación final por paso")
+    ax.plot([1,nReps],[0.1,0.1],'k--',alpha = 0.5, label = "Umbral")
     ax.plot(ref,tErr_err_min, 
             color = colors[0],
             label= "Mínimo")
@@ -1873,12 +1883,13 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,tErr_err_max, 
             color = colors[2],
             label= "Máximo")
+    ax.boxplot(data_tErr)
     
-    fig.legend( loc=1)
+    fig.legend( loc=2)
     ax.set_xlabel("Paso")
     ax.set_ylabel("Error de traslación")
     #plt.xlim((-0.1,1.1))
-    #plt.ylim((-0.1,3.1))
+    plt.ylim((-0.1,1.1))
     plt.tight_layout()
     plt.savefig(dirBase+'Traslación.pdf',bbox_inches='tight')
     #plt.show()
@@ -1887,6 +1898,7 @@ def plot_tendencias(nReps = 20,
     #   Errores de rotación
     fig, ax = plt.subplots()
     fig.suptitle("Errores de rotación final por paso")
+    ax.plot([1,nReps],[0.1,0.1],'k--',alpha = 0.5, label = "Umbral")
     ax.plot(ref,rErr_err_min, 
             color = colors[0],
             label= "Mínimo")
@@ -1896,19 +1908,27 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,rErr_err_max, 
             color = colors[2],
             label= "Máximo")
+    ax.boxplot(data_rErr)
     
-    fig.legend( loc=1)
+    fig.legend( loc=2)
     ax.set_xlabel("Paso")
     ax.set_ylabel("Error de rotación")
     #plt.xlim((-0.1,1.1))
-    #plt.ylim((-0.1,3.1))
+    plt.ylim((-0.1,3.2))
     plt.tight_layout()
     plt.savefig(dirBase+'Rotación.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
         
+################################################################################
+################################################################################
+#
+#   M   A   I   N
+#
+################################################################################
+################################################################################
 
-def main():
+def main(selector):
     
     
     
@@ -1936,11 +1956,11 @@ def main():
     ##n = 91
     ##n=37
     #   97, 89
-    #n= 76
+    #n= 56
     #experiment(directory=str(n),
                 #t_end = 100,
-                #gammaInf = 2.,
-                #gamma0 = 5.,
+                ##gammaInf = 2.,
+                ##gamma0 = 5.,
                 ##set_derivative = True,
                 ##tanhLimit = True,
                 ##k_int = 0.1,
@@ -1948,16 +1968,16 @@ def main():
     #view3D(str(n))
     #return
     
-    experiment(directory="local/0/53",
-                t_end = 200,
-                #gammaInf = 2.,
-                #gamma0 = 5.,
-                #set_derivative = True,
-                #tanhLimit = True,
-                k_int = 0.1,
-                repeat = True)
-    view3D("local/0/53")
-    return
+    #experiment(directory="local/0/53",
+                #t_end = 200,
+                ##gammaInf = 2.,
+                ##gamma0 = 5.,
+                ##set_derivative = True,
+                ##tanhLimit = True,
+                #k_int = 0.1,
+                #repeat = True)
+    #view3D("local/0/53")
+    #return
     
     #   Revisando casos de falla con ganancia adaptativa conn FOV simple
     #for i in [15, 19, 21, 43, 46, 58, 62, 63, 73, 76, 89, 98]:
@@ -2057,16 +2077,16 @@ def main():
     
     
     ##  Repetición de xperimentos locales
-    #for i in range(20):
-        #repeat_local(nReps = 100,
-                     ##k_int = 0.1,
+    for i in range(20):
+        repeat_local(nReps = 100,
+                     k_int = 0.1,
                      #gamma0 = 5.,
                      #gammaInf = 2.,
-                    #dirBase = "local/"+str(i)+"/",
-                    #enablePlotExp= False)
-        #experiment_plots(dirBase = "local/"+str(i)+"/")
-    #plot_tendencias(dirBase = "local/")
-    #return
+                    dirBase = "local/"+str(i)+"/",
+                    enablePlotExp= False)
+        experiment_plots(dirBase = "local/"+str(i)+"/")
+    plot_tendencias(dirBase = "local/")
+    return
     
     ##  Experimentos locales
     for i in range(20):
@@ -2297,4 +2317,6 @@ def main():
     
 
 if __name__ ==  "__main__":
-    main()
+    
+    
+    main(sys.argv[1])

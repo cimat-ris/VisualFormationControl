@@ -70,6 +70,13 @@ SceneP=[[-0.5, -0.5, 0.5,  0.5],
 #[-0.5, 0.5, 0.5, -0.5],
 #[0, 0.2, 0.3, -0.1]]
 
+def write2log(text):
+    try:
+        with open('log.txt','a') as logH:
+            logH.write(text)
+    except IOError:
+        print("Logfile Error. OUT")
+
 def circle(n_agents,
            r= 1,
            T = np.zeros(3),
@@ -540,45 +547,47 @@ def experiment(directory = "0",
     state_err = error_state(pd,agents)
     
     #   Print simulation data:
-    print("------------------BEGIN-----------------")
-    print("Laplacian matrix: ")
-    print(L)
-    print(A_ds)
+    logText = "------------------BEGIN-----------------"
+    logText += '\n' +"Laplacian matrix: "
+    logText += '\n' +str(L)
+    logText += '\n' +str(A_ds)
     if set_consensoRef:
-        print("Reference states")
-        print(pd)
+        logText += '\n' +"Reference states"
+        logText += '\n' +str(pd)
     else:
-        print("No reference states")
-    print("Initial states")
-    print(p0)
-    print("Scene points")
-    print(P[:3,:])
-    print("Number of points = "+str(n_points))
-    print("Number of agents = "+str(n_agents))
+        logText += '\n' +"No reference states"
+    logText += '\n' +"Initial states"
+    logText += '\n' +str(p0)
+    logText += '\n' +"Scene points"
+    logText += '\n' +str(P[:3,:])
+    logText += '\n' +"Number of points = "+str(n_points)
+    logText += '\n' +"Number of agents = "+str(n_agents)
     if zOffset != 0.0:
-        print("Z offset for starting conditions = "+str(zOffset))
-    print("Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]")
-    print("\t Control lambda = "+str(lamb))
+        logText += '\n' +"Z offset for starting conditions = "+str(zOffset)
+    logText += '\n' +"Time range = ["+str(t)+", "+str(dt)+", "+str(t_end)+"]"
+    logText += '\n' +"\t Control lambda = "+str(lamb)
     if k_int != 0.:
-        print("\t Control Integral gain = "+str(k_int))
+        logText += '\n' +"\t Control Integral gain = "+str(k_int)
     if set_derivative:
-        print("\t Derivative component enabled")
+        logText += '\n' +"\t Derivative component enabled"
     if not gamma0 is None:
-        print("\t Adaptative gain: ["+str(gamma0)+", "+ str(gammaInf)+"]")
+        logText += '\n' +"\t Adaptative gain: ["+str(gamma0)+", "+ str(gammaInf)+"]"
     if tanhLimit:
-        print("Hyperbolic tangent limit enabled")
-    print("Depth estimation = "+depthOp_dict[depthOp])
+        logText += '\n' +"Hyperbolic tangent limit enabled"
+    logText += '\n' +"Depth estimation = "+depthOp_dict[depthOp]
     if depthOp == 4:
-        print("\t Estimated depth set at : "+str(Z_set))
-    print("Interaction matrix = "+case_interactionM_dict[case_interactionM])
-    print("Control selection = "+control_type_dict[control_type])
-    print("Controllable case = "+case_controlable_dict[gdl])
-    print("Directory = ", directory)
+        logText += '\n' +"\t Estimated depth set at : "+str(Z_set)
+    logText += '\n' +"Interaction matrix = "+case_interactionM_dict[case_interactionM]
+    logText += '\n' +"Control selection = "+control_type_dict[control_type]
+    logText += '\n' +"Controllable case = "+case_controlable_dict[gdl]
+    logText += '\n' +"Directory = "+str( directory)
+    
+    write2log(logText+'\n')
+    
     
     #   LOOP
     for i in range(steps):
         
-        #print("loop",i, end="\r")
         
         #   Error:
         
@@ -669,21 +678,23 @@ def experiment(directory = "0",
     
     ##  Final data
     
-    print("----------------------")
-    print("Simulation final data")
+    logText = "----------------------"
+    logText += '\n' +"Simulation final data"
     
-    #print(error_p)
+    #logText += '\n' +(error_p)
     ret_err = norm(error_p,axis=1)/n_points
     for j in range(n_agents):
-        print(error[j,:])
-        print("|Error_"+str(j)+"|= "+str(ret_err[j]))
+        logText += '\n' +str(error[j,:])
+        logText += '\n' +"|Error_"+str(j)+"|= "+str(ret_err[j])
     for j in range(n_agents):
-        print("X_"+str(j)+" = "+str(agents[j].camera.p))
+        logText += '\n' +"X_"+str(j)+" = "+str(agents[j].camera.p)
     for j in range(n_agents):
-        print("V_"+str(j)+" = "+str(U_array[j,:,-1]))
+        logText += '\n' +"V_"+str(j)+" = "+str(U_array[j,:,-1])
     
-    print("Mean inital heights = ",np.mean(p0[2,:]))
-    print("Mean camera heights = ",np.mean(np.r_[p0[2,:],pd[2,:]]))
+    logText += '\n' +"Mean inital heights = "+str(np.mean(p0[2,:]))
+    logText += '\n' +"Mean camera heights = " +str(np.mean(np.r_[p0[2,:],pd[2,:]]))
+    
+    write2log(logText+'\n')
     
     ##  Trim data if needed
     if FOVflag:
@@ -715,19 +726,18 @@ def experiment(directory = "0",
     else:
         state_err +=  error_state_equal(new_agents,directory+"/3D_error")
     
-    print(err_array[:,:,0])
-    print(err_array[:,:,0].max())
+    logText = str(err_array[:,:,0])
+    logText += '\n' +str(err_array[:,:,0].max())
     
-    print("State error = "+str(state_err))
+    logText += '\n' +"State error = "+str(state_err)
     if FOVflag:
-        print("WARNING : Cammera plane hit scene points: ", depthFlags)
+        logText += '\n' +"WARNING : Cammera plane hit scene points: "+str( depthFlags)
     if (pos_arr[:,2,:] < 0.).any():
-        print("WARNING : Possible plane colition to ground")
-    print("-------------------END------------------")
-    print()
-    #print(err_array)
-    #print(U_array)
-    #print(pos_arr)
+        logText += '\n' +"WARNING : Possible plane colition to ground"
+    logText += '\n' +"-------------------END------------------"
+    
+    write2log(logText+'\n'+'\n')
+    
     # Colors setup
     n_colors = max(n_agents,2*n_points)
     colors = randint(0,255,3*n_colors)/255.0
@@ -944,10 +954,12 @@ def experiment_repeat(nReps = 1,
     
     intMatSelDict = {1:"Real",
                      2:"Constant depth"}
-    print("test series, Base Directory = ",dirBase)
-    print("Test series, Interaction Matrix = ", intMatSelDict[intMatSel])
-    print("Test series, Integral gain = ", k_int)
-        
+    logText = "test series, Base Directory = "+str(dirBase)
+    logText += '\n' +"Test series, Interaction Matrix = "
+    logText += str( intMatSelDict[intMatSel])
+    logText += '\n' +"Test series, Integral gain = " + str(k_int)
+    write2log(logText+'\n')
+    
     for k in range(nReps):
         if intMatSel  == 1:
             ret = experiment(directory=dirBase+str(k),
@@ -1007,9 +1019,10 @@ def experiment_all_random(nReps = 100,
                       3:"Circular, fixed",
                       4:"Circular, plus a perturbation"}
     
-    print("Test series, References = ", conditionsDict[conditions])
-    print("Test series, pFlat = ", pFlat)
-    print("Test series, nP = ", nP)
+    logText = "Test series, References = "+str( conditionsDict[conditions])
+    logText += '\n' +"Test series, pFlat = "+str( pFlat)
+    logText += '\n' +"Test series, nP = "+str( nP)
+    write2log(logText+'\n')
     
     for k in range(nReps):
         FOVflag = True
@@ -1115,7 +1128,7 @@ def experiment_all_random(nReps = 100,
             ##   END Referencias con perturbación
                 
             
-            print("CASE ",k)
+            write2log("CASE "+str(k)+'\n')
             ret = experiment(directory=dirBase+str(k),
                     #k_int = 0.1,
                         pd = pd,
@@ -1167,7 +1180,7 @@ def repeat_local(nReps = 100,
     Misscount = 0
     
     for k in range(nReps):
-        print("CASE ",k)
+        write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(k),
                     k_int = k_int,
                     gamma0 = gamma0,
@@ -1222,12 +1235,13 @@ def experiment_local(nReps = 100,
     tRange = [-dTras, dTras]
     rotRange = [-dRot,dRot]
     
-    print("Local testing")
-    print("Test series, pFlat = ", pFlat)
-    print("Testing ranges:")
-    print("\t Traslation delta / 2 = ",tRange)
-    print("\t Rotation delta / 2 = ",rotRange)
-    print("Local test directory = ",dirBase)
+    logText = "Local testing"
+    logText += '\n' +"Test series, pFlat = "+ str( pFlat)
+    logText += '\n' +"Testing ranges:"
+    logText += '\n' +"\t Traslation delta / 2 = "+ str(tRange)
+    logText += '\n' +"\t Rotation delta / 2 = "+ str(rotRange)
+    logText += '\n' +"Local test directory = "+ str(dirBase)
+    write2log(logText + '\n')
     
     for k in range(nReps):
         FOVflag = True
@@ -1284,7 +1298,7 @@ def experiment_local(nReps = 100,
             
             
             
-            print("CASE ",k)
+            write2log("CASE "+str(k)+'\n')
             ret = experiment(directory=dirBase+str(k),
                         k_int = k_int,
                         gamma0 = gamma0,
@@ -1337,7 +1351,10 @@ def experiment_plots(dirBase = ""):
     if npzfile.__contains__('mask'):
         
         mask = npzfile['mask']
-        print("Simulations that failed = ",Misscount+mask.sum()," / ", nReps+Misscount)
+        logText = "Simulations that failed = "
+        logText += str(Misscount+mask.sum()) 
+        logText += " / "+ str(nReps+Misscount)
+        write2log(logText + '\n')
         
         etsup = np.where((var_arr_2 > var_arr_et) &
                         (mask == 0.))[0]
@@ -1350,7 +1367,7 @@ def experiment_plots(dirBase = ""):
         
         
         #   Masking
-        print("Failed repeats = ", np.where(mask == 1))
+        write2log("Failed repeats = "+str( np.where(mask == 1)))
         if (np.count_nonzero(mask == 1.) == mask.shape[0]):
             print("Simulations : No data to process")
             return
@@ -1361,7 +1378,10 @@ def experiment_plots(dirBase = ""):
         var_arr_er = var_arr_er[mask==0.]
         
     else:
-        print("Simulations that failed = ",Misscount," / ", nReps+Misscount)
+        logText = "Simulations that failed = "
+        logText += str(Misscount)
+        logtest += " / " + str( nReps+Misscount)
+        write2log(logText + '\n')
         
         etsup = np.where((var_arr_2 > var_arr_et))[0]
         ersup = np.where((var_arr_3 > var_arr_er))[0]
@@ -1370,15 +1390,17 @@ def experiment_plots(dirBase = ""):
         
         
     np.set_printoptions(linewidth=np.inf)
-    print("Simulations that increased et = ", etsup.shape[0], " / ", nReps)
-    print(etsup)
-    print("Simulations that increased er = ", ersup.shape[0], " / ", nReps)
-    print(ersup)
-    print("Simulations that increased both err = ", esup.shape[0], " / ", nReps)
-    print(esup)
+    logText = '\n' +"Simulations that increased et = "+ str( etsup.shape[0])+  " / "+ str( nReps)
+    logText += '\n' +str(etsup)
+    logText += '\n' +"Simulations that increased er = "+ str( ersup.shape[0])+  " / "+ str( nReps)
+    logText += '\n' +str(ersup)
+    logText += '\n' +"Simulations that increased both err = "+ str( esup.shape[0])+  " / "+ str( nReps)
+    logText += '\n' +str(esup)
+    write2log(logText + '\n')
+    
     nReps = var_arr.shape[1]
     ref_arr = np.arange(nReps)
-    #print(var_arr)
+    
     #   Plot data
     
     colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
@@ -1806,7 +1828,9 @@ def plot_tendencias(nReps = 20,
         Misscount = npzfile['Misscount']
         mask = npzfile['mask']
         
-        print("Masks for step ",k,"=",np.where(mask == 1.)[0])
+        logText = "Masks for step " + str(k)
+        logText += "=" +str(np.where(mask == 1.)[0])
+        write2log(logText + '\n')
         
         var_arr = var_arr[mask==0.]
         var_arr_2 = var_arr_2[mask==0.]
@@ -1930,7 +1954,9 @@ def plot_tendencias(nReps = 20,
 
 def main(selector):
     
-    
+    #   reset Log
+    with open("log.txt",'r+') as file:
+        file.truncate(0)
     
     #   Comparaciones de errores finales bajo condiciones de inicio
     ##experiment_plots(dirBase = "circ_4/")
@@ -1952,11 +1978,11 @@ def main(selector):
     #return
     
     ##   REPEAT
-    ##n = 0
-    ##n = 91
-    ##n=37
-    #   97, 89
-    #n= 56
+    #n = 0
+    ###n = 91
+    ###n=37
+    ##   97, 89
+    ##n= 56
     #experiment(directory=str(n),
                 #t_end = 100,
                 ##gammaInf = 2.,
@@ -1965,7 +1991,7 @@ def main(selector):
                 ##tanhLimit = True,
                 ##k_int = 0.1,
                 #repeat = True)
-    #view3D(str(n))
+    ##view3D(str(n))
     #return
     
     #experiment(directory="local/0/53",
@@ -2077,14 +2103,14 @@ def main(selector):
     
     
     ##  Repetición de xperimentos locales
-    for i in range(20):
-        repeat_local(nReps = 100,
-                     k_int = 0.1,
-                     #gamma0 = 5.,
-                     #gammaInf = 2.,
-                    dirBase = "local/"+str(i)+"/",
-                    enablePlotExp= False)
-        experiment_plots(dirBase = "local/"+str(i)+"/")
+    #for i in range(20):
+        #repeat_local(nReps = 100,
+                     #k_int = 0.1,
+                     ##gamma0 = 5.,
+                     ##gammaInf = 2.,
+                    #dirBase = "local/"+str(i)+"/",
+                    #enablePlotExp= False)
+        #experiment_plots(dirBase = "local/"+str(i)+"/")
     plot_tendencias(dirBase = "local/")
     return
     

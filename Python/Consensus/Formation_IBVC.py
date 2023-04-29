@@ -374,6 +374,7 @@ def error_state_equal(  agents, name = None):
 def experiment(directory = "0",
                lamb = 1.0,
                k_int = 0,
+               int_res = None,
                depthOp=1,
                Z_set = 1.0,
                gdl = 1,
@@ -568,6 +569,8 @@ def experiment(directory = "0",
     logText += '\n' +"\t Control lambda = "+str(lamb)
     if k_int != 0.:
         logText += '\n' +"\t Control Integral gain = "+str(k_int)
+        if not int_res is None:
+            logText += '\n' +"\t Control Integral refreshing time = "+str(int_res)
     if set_derivative:
         logText += '\n' +"\t Derivative component enabled"
     if not gamma0 is None:
@@ -584,6 +587,14 @@ def experiment(directory = "0",
     
     write2log(logText+'\n')
     
+    
+    if int_res is None:
+        int_milestone = t_end+2*dt
+    else:
+        int_milestone = t +int_res
+        if int_res <= dt:
+            print("Err: reset integral time lower than time delta in simulation")
+            return None
     
     #   LOOP
     for i in range(steps):
@@ -615,6 +626,10 @@ def experiment(directory = "0",
             H = ctr.get_Homographies(agents)
         #   Get control
         for j in range(n_agents):
+            
+            #   Integral reset if needed
+            if t > int_milestone:
+                agents[j].reset_int()
             
             #   save data 
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
@@ -665,10 +680,13 @@ def experiment(directory = "0",
             
             U_array[j,:,i] = U
             agents[j].update(U,dt,P, Z)
-            
+        
+        if t > int_milestone:
+            int_milestone += int_res
         
         #   Update
         t += dt
+        
         if control_type ==2:
             gamma = A_ds @ gamma #/ 10.0
         
@@ -938,6 +956,7 @@ def experiment(directory = "0",
 def experiment_repeat(nReps = 1,
                       dirBase = "",
                       k_int = 0,
+                      int_res = None,
                       gamma0 = None,
                        gammaInf = None,
                       intMatSel = 1,
@@ -964,6 +983,7 @@ def experiment_repeat(nReps = 1,
         if intMatSel  == 1:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
+                            int_res = int_res,
                             gamma0 = gamma0,
                                 gammaInf = gammaInf,
                                 t_end = 100,
@@ -972,6 +992,7 @@ def experiment_repeat(nReps = 1,
         if intMatSel  == 2:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
+                            int_res = int_res,
                                 gamma0 = gamma0,
                                 gammaInf = gammaInf,
                                 depthOp = 4, Z_set = 1.,
@@ -1166,6 +1187,7 @@ def repeat_local(nReps = 100,
                     dTras = 0.1,
                     dRot = 0.3,
                     k_int = 0.,
+                    int_res = None,
                     gamma0 = None,
                     gammaInf = None,
                     enablePlotExp = True):
@@ -1183,6 +1205,7 @@ def repeat_local(nReps = 100,
         write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(k),
                     k_int = k_int,
+                    int_res = int_res,
                     gamma0 = gamma0,
                     gammaInf = gammaInf,
                     #set_derivative = True,
@@ -1958,6 +1981,31 @@ def main(selector):
     with open("log.txt",'r+') as file:
         file.truncate(0)
     
+    if selector =='0':
+        for i in range(20):
+            repeat_local(nReps = 100,
+                            k_int = 0.1,
+                            int_res = 10,
+                            #gamma0 = 5.,
+                            #gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    if selector =='1':
+        for i in range(20):
+            repeat_local(nReps = 100,
+                            k_int = 0.1,
+                            gamma0 = 5.,
+                            gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    return
+    
     #   Comparaciones de errores finales bajo condiciones de inicio
     ##experiment_plots(dirBase = "circ_4/")
     #plot_error_stats(nReps = 100, dirBase = "circ_4/")
@@ -2103,14 +2151,14 @@ def main(selector):
     
     
     ##  Repetición de xperimentos locales
-    #for i in range(20):
-        #repeat_local(nReps = 100,
-                     #k_int = 0.1,
-                     ##gamma0 = 5.,
-                     ##gammaInf = 2.,
-                    #dirBase = "local/"+str(i)+"/",
-                    #enablePlotExp= False)
-        #experiment_plots(dirBase = "local/"+str(i)+"/")
+    for i in range(20):
+        repeat_local(nReps = 100,
+                     k_int = 0.1,
+                     #gamma0 = 5.,
+                     #gammaInf = 2.,
+                    dirBase = "local/"+str(i)+"/",
+                    enablePlotExp= False)
+        experiment_plots(dirBase = "local/"+str(i)+"/")
     plot_tendencias(dirBase = "local/")
     return
     

@@ -364,7 +364,18 @@ class agent:
         self.error = self.k * self.error_p -  self.dot_s_current_n
         #if any (self.error_p < .5):
         #if True:
-        self.error += self.k_int * self.error_int  
+        gamma = 1.
+        if self.gammaAdapt:
+            gamma =  np.linalg.norm(self.error_int  )
+            gamma =  -5. * gamma
+            gamma =  gamma / (self.gamma0 - self.gammaInf)
+            gamma =  np.exp(gamma)
+            gamma =  gamma * (self.gamma0 - self.gammaInf) 
+            gamma += self.gammaInf
+        self.error += self.k_int * gamma * self.error_int  
+    
+    def reset_int(self):
+        self.error_int[:] =  0.0
         
     def count_points_in_FOV(self,P):
         

@@ -491,7 +491,8 @@ def experiment(directory = "0",
     for i in range(n_agents):
         cam = cm.camera()
         agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,
-                                k_int = k_int,
+                                k_int = 0.,
+                                #k_int = k_int,
                                 gamma0 = gamma0,
                                 gammaInf = gammaInf,
                                 set_consensoRef = set_consensoRef,
@@ -536,7 +537,7 @@ def experiment(directory = "0",
     U_array = np.zeros((n_agents,6,steps))
     desc_arr = np.zeros((n_agents,2*n_points,steps))
     pos_arr = np.zeros((n_agents,6,steps))
-    svdProy_p = np.zeros((n_agents,2*n_points,steps))
+    #svdProy_p = np.zeros((n_agents,2*n_points,steps))
     svdProy = np.zeros((n_agents,2*n_points,steps))
     if gdl == 1:
         s_store = np.zeros((n_agents,6,steps))
@@ -603,19 +604,20 @@ def experiment(directory = "0",
         #   Error:
         
         error = np.zeros((n_agents,2*n_points))
-        error_p = np.zeros((n_agents,2*n_points))
+        #error_p = np.zeros((n_agents,2*n_points))
         for j in range(n_agents):
             error[j,:] = agents[j].error
-            error_p[j,:] = agents[j].error_p
+            #error_p[j,:] = agents[j].error_p
         error = L @ error
         if set_derivative:
             for j in range(n_agents):
                 error[j,:] = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
-        error_p = L @ error_p
+        #error_p = L @ error_p
         
         #   save data
         #print(error)
-        err_array[:,:,i] = error_p
+        #err_array[:,:,i] = error_p
+        err_array[:,:,i] = error
         if set_consensoRef:
             [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
         else:
@@ -628,7 +630,13 @@ def experiment(directory = "0",
         for j in range(n_agents):
             
             #   Integral reset if needed
-            if t > int_milestone:
+            #if t > int_milestone:
+                #agents[j].reset_int()
+                
+            if norm(error[j,:])/n_points < 0.2:
+                agents[j].k_int = k_int
+            else:
+                agents[j].k_int = 0.
                 agents[j].reset_int()
             
             #   save data 
@@ -671,7 +679,7 @@ def experiment(directory = "0",
             
             #   Save error proyection in SVD:
             svdProy[j,:,i] = vh@error[j,:]/norm(error[j,:])
-            svdProy_p[j,:,i] = vh@error_p[j,:]/norm(error_p[j,:])
+            #svdProy_p[j,:,i] = vh@error_p[j,:]/norm(error_p[j,:])
             
             if U is None:
                 print("Invalid U control")
@@ -700,7 +708,8 @@ def experiment(directory = "0",
     logText += '\n' +"Simulation final data"
     
     #logText += '\n' +(error_p)
-    ret_err = norm(error_p,axis=1)/n_points
+    #ret_err = norm(error_p,axis=1)/n_points
+    ret_err = norm(error,axis=1)/n_points
     for j in range(n_agents):
         logText += '\n' +str(error[j,:])
         logText += '\n' +"|Error_"+str(j)+"|= "+str(ret_err[j])
@@ -725,7 +734,7 @@ def experiment(directory = "0",
         U_array = U_array[:,:,:trim] 
         desc_arr = desc_arr[:,:,:trim]
         pos_arr = pos_arr[:,:,:trim]
-        svdProy_p = svdProy_p[:,:,:trim]
+        #svdProy_p = svdProy_p[:,:,:trim]
         svdProy = svdProy[:,:,:trim]
         s_store = s_store[:,:,:trim]
     
@@ -879,6 +888,20 @@ def experiment(directory = "0",
                     name = directory+"/Features_Error_"+str(i),
                     label = "Features Error")
     
+    #   Errores x agentes
+    refplot = None
+    if k_int != 0.:
+        refplot = 0.2
+    
+    tmp = norm(err_array,axis = 0) / n_agents
+    mp.plot_time(t_array,
+                tmp,
+                colors,
+                ref = refplot,
+                ylimits = [-1,1],
+                name = directory+"/Norm_Feature_Error_"+str(i),
+                label = "Features Error")
+    
     #   Velocidaes x agente
     for i in range(n_agents):
         mp.plot_time(t_array,
@@ -915,14 +938,14 @@ def experiment(directory = "0",
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
     #   Proyección del error proporcional en los vectores principales 
-    for i in range(n_agents):
-        mp.plot_time(t_array,
-                    svdProy_p[i,:,:],
-                    colors,
-                    name = directory+"/Proy_eP_VH_"+str(i),
-                    label = "Proy($e_p$) en $V^h$ ",
-                    labels = ["0","1","2","3","4","5","6","7"])
-                    #limits = [[t_array[0],t_array[-1]],[0,20]])
+    #for i in range(n_agents):
+        #mp.plot_time(t_array,
+                    #svdProy_p[i,:,:],
+                    #colors,
+                    #name = directory+"/Proy_eP_VH_"+str(i),
+                    #label = "Proy($e_p$) en $V^h$ ",
+                    #labels = ["0","1","2","3","4","5","6","7"])
+                    ##limits = [[t_array[0],t_array[-1]],[0,20]])
     
     #   Valores propios
     for i in range(n_agents):
@@ -1403,7 +1426,7 @@ def experiment_plots(dirBase = ""):
     else:
         logText = "Simulations that failed = "
         logText += str(Misscount)
-        logtest += " / " + str( nReps+Misscount)
+        logText += " / " + str( nReps+Misscount)
         write2log(logText + '\n')
         
         etsup = np.where((var_arr_2 > var_arr_et))[0]
@@ -1975,14 +1998,80 @@ def plot_tendencias(nReps = 20,
 ################################################################################
 ################################################################################
 
-def main(selector):
+def main(arg):
+    
+    selector = arg[1]
     
     #   reset Log
-    with open("log.txt",'r+') as file:
-        file.truncate(0)
+    try:
+        with open("log.txt",'w') as file:
+            file.write("Log file INIT")
+    except IOError:
+        print("Logfile Error. OUT")
+        return
+    #with open("log.txt",'r+') as file:
+        #file.truncate(0)
+    
+    if selector == 'r':
+        experiment(directory=arg[2],
+                    t_end = 66,
+                    gammaInf = 2.,
+                    gamma0 = 5.,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    k_int = 0.1,
+                    repeat = True)
+        view3D(arg[2])
+        return
+    if selector == 'v':
+        view3D(arg[2])
+        return
+    
+    if selector =='A':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            repeat_local(nReps = 100,
+                            #k_int = 0.1,
+                            #int_res = 10,
+                            #gamma0 = 5.,
+                            #gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
     
     if selector =='0':
         for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            repeat_local(nReps = 100,
+                            k_int = 0.1,
+                            #int_res = 10,
+                            #gamma0 = 5.,
+                            #gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    if selector =='1':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            repeat_local(nReps = 100,
+                            #k_int = 0.1,
+                            gamma0 = 5.,
+                            gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+        
+    if selector =='2':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
             repeat_local(nReps = 100,
                             k_int = 0.1,
                             int_res = 10,
@@ -1993,8 +2082,10 @@ def main(selector):
             experiment_plots(dirBase = "local/"+str(i)+"/")
         plot_tendencias(dirBase = "local/")
     
-    if selector =='1':
+    if selector =='3':
         for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
             repeat_local(nReps = 100,
                             k_int = 0.1,
                             gamma0 = 5.,
@@ -2393,4 +2484,4 @@ def main(selector):
 if __name__ ==  "__main__":
     
     
-    main(sys.argv[1])
+    main(sys.argv)

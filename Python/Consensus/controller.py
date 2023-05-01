@@ -68,34 +68,34 @@ def Inv_Moore_Penrose(L):
         return None
     return inv(A) @ L.T
 
-def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
+#def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
     
-    if control_sel ==1:
-        Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        #Ls = Inv_Moore_Penrose(Ls) 
-        Ls = np.linalg.pinv(Ls) 
-        #Ls = np.linalg.inv(Ls) 
-    elif control_sel ==2:
-        Ls = inv_Ls_set
-    elif control_sel ==3:
-        Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        #Ls = Inv_Moore_Penrose(Ls) 
-        Ls = np.linalg.pinv(Ls) 
-        Ls = 0.5*( Ls +inv_Ls_set)
-    if Ls is None:
-            print("Invalid Ls matrix")
-            return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
-    u, s, vh  = np.linalg.svd(Ls)
-    if gdl == 2:
-        Ls = np.insert(Ls, 3, 0., axis = 0)
-        Ls = np.insert(Ls, 4, 0., axis = 0)
-        #_comp = np.zeros((2,Ls.shape[1]))
-        #Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
-    if gdl == 3:
-        np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
-    U = (Ls @ error) / deg
+    #if control_sel ==1:
+        #Ls = Interaction_Matrix(s_current_n,Z,gdl)
+        ##Ls = Inv_Moore_Penrose(Ls) 
+        #Ls = np.linalg.pinv(Ls) 
+        ##Ls = np.linalg.inv(Ls) 
+    #elif control_sel ==2:
+        #Ls = inv_Ls_set
+    #elif control_sel ==3:
+        #Ls = Interaction_Matrix(s_current_n,Z,gdl)
+        ##Ls = Inv_Moore_Penrose(Ls) 
+        #Ls = np.linalg.pinv(Ls) 
+        #Ls = 0.5*( Ls +inv_Ls_set)
+    #if Ls is None:
+            #print("Invalid Ls matrix")
+            #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
+    #u, s, vh  = np.linalg.svd(Ls)
+    #if gdl == 2:
+        #Ls = np.insert(Ls, 3, 0., axis = 0)
+        #Ls = np.insert(Ls, 4, 0., axis = 0)
+        ##_comp = np.zeros((2,Ls.shape[1]))
+        ##Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
+    #if gdl == 3:
+        #np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
+    #U = (Ls @ error) / deg
     
-    return  U.reshape(6), u, s, vh
+    #return  U.reshape(6), u, s, vh
 
 #   Calcula el control basado en posición
 #   Supone:
@@ -255,24 +255,24 @@ class agent:
             #   IBVC
         if sel == 1:
             #return  -lamb* IBVC(args["control_sel"],
-            U, u, s, vh =  IBVC(args["control_sel"],
+            U, u, s, vh =  self.IBVC(args["control_sel"],
                                args["error"],
-                               self.s_current_n,
+                               #self.s_current_n,
                                Z,
                                args["deg"],
-                               self.inv_Ls_set,
+                               #self.inv_Ls_set,
                                args["gdl"])
-            gamma = 1.
-            if self.gammaAdapt:
-                gamma =  np.linalg.norm(args["error"])
-                gamma =  -5. * gamma
-                gamma =  gamma / (self.gamma0 - self.gammaInf)
-                gamma =  np.exp(gamma)
-                gamma =  gamma * (self.gamma0 - self.gammaInf) 
-                gamma += self.gammaInf
-                #print(gamma)
+            #gamma = 1.
+            #if self.gammaAdapt:
+                #gamma =  np.linalg.norm(args["error"])
+                #gamma =  -5. * gamma
+                #gamma =  gamma / (self.gamma0 - self.gammaInf)
+                #gamma =  np.exp(gamma)
+                #gamma =  gamma * (self.gamma0 - self.gammaInf) 
+                #gamma += self.gammaInf
+                ##print(gamma)
             #print(s)
-            return -lamb * gamma * U,u, s, vh
+            return -lamb *  U,u, s, vh
         elif sel == 2:
             return  -lamb* Homography(args["H"],
                                      args["delta_pref"],
@@ -351,28 +351,87 @@ class agent:
         if self.set_derivative:
             self.dot_s_current_n = (self.s_current_n - tmp)/dt
             self.dot_s_current_n = self.dot_s_current_n.T.reshape(2*self.n_points)
-        self.error_int += self.error_p*dt
+        #self.error_int += self.error_p*dt
         
         if self.set_consensoRef:
-            self.error_p =  self.s_current_n - self.s_ref_n
+            #self.error_p =  self.s_current_n - self.s_ref_n
+            self.error =  self.s_current_n - self.s_ref_n
         else:
-            self.error_p =  self.s_current_n
+            #self.error_p =  self.s_current_n
+            self.error =  self.s_current_n
         
         #print(self.error)
-        self.error_p = self.error_p.T.reshape(2*self.n_points)
+        #self.error_p = self.error_p.T.reshape(2*self.n_points)
+        self.error = self.error.T.reshape(2*self.n_points)
         #print(self.error)
-        self.error = self.k * self.error_p -  self.dot_s_current_n
+        #self.error = self.k * self.error_p -  self.dot_s_current_n
         #if any (self.error_p < .5):
         #if True:
+        #gamma = 1.
+        #if self.gammaAdapt:
+            #gamma =  np.linalg.norm(self.error_int  )
+            #gamma =  -5. * gamma
+            #gamma =  gamma / (self.gamma0 - self.gammaInf)
+            #gamma =  np.exp(gamma)
+            #gamma =  gamma * (self.gamma0 - self.gammaInf) 
+            #gamma += self.gammaInf
+        #self.error += self.k_int * gamma * self.error_int  
+    
+    def IBVC(self,control_sel, error,Z,deg,gdl):
+        
+        if control_sel ==1:
+            Ls = Interaction_Matrix(self.s_current_n,Z,gdl)
+            #Ls = Inv_Moore_Penrose(Ls) 
+            Ls = np.linalg.pinv(Ls) 
+            #Ls = np.linalg.inv(Ls) 
+        elif control_sel ==2:
+            Ls = self.inv_Ls_set
+        elif control_sel ==3:
+            Ls = Interaction_Matrix(self.s_current_n,Z,gdl)
+            #Ls = Inv_Moore_Penrose(Ls) 
+            Ls = np.linalg.pinv(Ls) 
+            Ls = 0.5*( Ls + self.inv_Ls_set)
+        if Ls is None:
+                print("Invalid Ls matrix")
+                return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
+        u, s, vh  = np.linalg.svd(Ls)
+        if gdl == 2:
+            Ls = np.insert(Ls, 3, 0., axis = 0)
+            Ls = np.insert(Ls, 4, 0., axis = 0)
+            #_comp = np.zeros((2,Ls.shape[1]))
+            #Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
+        if gdl == 3:
+            np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
+        
         gamma = 1.
         if self.gammaAdapt:
-            gamma =  np.linalg.norm(self.error_int  )
+            gamma =  np.linalg.norm(error )
             gamma =  -5. * gamma
             gamma =  gamma / (self.gamma0 - self.gammaInf)
             gamma =  np.exp(gamma)
             gamma =  gamma * (self.gamma0 - self.gammaInf) 
             gamma += self.gammaInf
-        self.error += self.k_int * gamma * self.error_int  
+        
+        _error = self.k * gamma * error
+        
+        if self.k_int != 0.:
+            
+            gamma = 1.
+            if self.gammaAdapt:
+                gamma =  np.linalg.norm(self.error_int )
+                gamma =  -5. * gamma
+                gamma =  gamma / (self.gamma0 - self.gammaInf)
+                gamma =  np.exp(gamma)
+                gamma =  gamma * (self.gamma0 - self.gammaInf) 
+                gamma += self.gammaInf
+            
+            _error += self.k_int * gamma * self.error_int
+            #   TODO: dejar dt definible
+            self.error_int += 0.05 * error
+        
+        U = (Ls @ _error) / deg
+        
+        return  U.reshape(6), u, s, vh
     
     def reset_int(self):
         self.error_int[:] =  0.0

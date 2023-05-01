@@ -16,9 +16,10 @@ def plot_time(t_array,
               colors,
               name="time_plot", 
               label="Variable",
-              labels = None,
+              labels = [],
               xlimits = None,
-              ylimits = None):
+              ylimits = None,
+              ref = None):
     
     n = var_array.shape[0]
     
@@ -29,7 +30,13 @@ def plot_time(t_array,
     for i in range(n):
         ax.plot(t_array,var_array[i,:] , color=colors[i])
         symbols.append(mpatches.Patch(color=colors[i]))
-    if not(labels is None):
+        
+    if not ref is None:
+        ax.plot([t_array[0],t_array[-1]],[ref,ref], 
+                'k--', alpha = 0.5)
+        symbols.append(mpatches.Patch(color='k'))
+        labels.append("Integral treshold")
+    if len(labels) != 0:
         fig.legend(symbols,labels, loc=2)
     if not(xlimits is None):
         plt.xlim((xlimits[0],xlimits[1]))

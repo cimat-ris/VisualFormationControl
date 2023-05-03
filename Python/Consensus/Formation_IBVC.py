@@ -709,6 +709,7 @@ def experiment(directory = "0",
     
     #logText += '\n' +(error_p)
     #ret_err = norm(error_p,axis=1)/n_points
+    print( norm(err_array[:,:,0],axis = 1)/n_points)
     ret_err = norm(error,axis=1)/n_points
     for j in range(n_agents):
         logText += '\n' +str(error[j,:])
@@ -2011,6 +2012,60 @@ def main(arg):
         return
     #with open("log.txt",'r+') as file:
         #file.truncate(0)
+    
+    P = np.array([[1.,1.,-1.,-1.],
+                  [1.,-1.,-1.,1.],
+                  [0.,0.,0.,0]])
+    pd = circle(4,1,T=np.array([0.,0.,2.]))
+    
+    #   Escalando 
+    p0 = pd.copy()
+    
+    #   escalando
+    #p0[:3,:] *= 2.
+    
+    #   Traslación en Z
+    #p0[2,:] += 1
+    
+    #   Traslación en XY
+    #p0[:2,:] += np.array([[1.],[1.]])
+    
+    #   rotación en yaw
+    
+    #testAng =  np.pi
+    #R = cm.rot(testAng,'z') 
+    
+    #for i in range(4):
+        #_R = cm.rot(p0[5,i],'z') 
+        #_R = _R @ cm.rot(p0[4,i],'y')
+        #_R = _R @ cm.rot(p0[3,i],'x')
+        
+        #_R = R @ _R
+        #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    #p0[:3,:] = R @ p0[:3,:]
+    
+    #   rotación en yaw
+    
+    testAng =  np.pi/4
+    R = cm.rot(testAng,'y') 
+    
+    for i in range(4):
+        _R = cm.rot(p0[5,i],'z') 
+        _R = _R @ cm.rot(p0[4,i],'y')
+        _R = _R @ cm.rot(p0[3,i],'x')
+        
+        _R = R @ _R
+        [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    p0[:3,:] = R @ p0[:3,:]
+    
+    experiment(directory="counterex",
+                    t_end = 200,
+                    pd = pd,
+                    p0 = p0,
+                    P = P)
+    
+    return
+    
     
     if selector == 'r':
         experiment(directory=arg[2],

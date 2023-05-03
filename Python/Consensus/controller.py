@@ -442,7 +442,7 @@ class agent:
         Z = Z[2,:]
         
         #   BEGIN Only front ckeck
-        #return np.count_nonzero(Z > 0.)
+        return np.count_nonzero(Z > 0.)
         #   END Only front check
         
         a = abs(self.s_current_n[0,:]) < self.FOVxlim 

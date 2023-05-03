@@ -70,9 +70,12 @@ SceneP=[[-0.5, -0.5, 0.5,  0.5],
 #[-0.5, 0.5, 0.5, -0.5],
 #[0, 0.2, 0.3, -0.1]]
 
+logFile = ""
+
 def write2log(text):
+    global logFile
     try:
-        with open('log.txt','a') as logH:
+        with open(logFile,'a') as logH:
             logH.write(text)
     except IOError:
         print("Logfile Error. OUT")
@@ -487,12 +490,16 @@ def experiment(directory = "0",
     A_ds=np.eye(n_agents)-alpha*L
     
     #   Agents array
+    k_int_start = 1.
+    if int_res is None:
+        k_int_start = k_int
+    else:
+        k_int_start = 0.
     agents = []
     for i in range(n_agents):
         cam = cm.camera()
         agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P,
-                                k_int = 0.,
-                                #k_int = k_int,
+                                k_int = k_int_start,
                                 gamma0 = gamma0,
                                 gammaInf = gammaInf,
                                 set_consensoRef = set_consensoRef,
@@ -571,7 +578,7 @@ def experiment(directory = "0",
     if k_int != 0.:
         logText += '\n' +"\t Control Integral gain = "+str(k_int)
         if not int_res is None:
-            logText += '\n' +"\t Control Integral refreshing time = "+str(int_res)
+            logText += '\n' +"\t Control Integral refreshing treshold = "+str(int_res)
     if set_derivative:
         logText += '\n' +"\t Derivative component enabled"
     if not gamma0 is None:
@@ -589,13 +596,13 @@ def experiment(directory = "0",
     write2log(logText+'\n')
     
     
-    if int_res is None:
-        int_milestone = t_end+2*dt
-    else:
-        int_milestone = t +int_res
-        if int_res <= dt:
-            print("Err: reset integral time lower than time delta in simulation")
-            return None
+    #if int_res is None:
+        #int_milestone = t_end+2*dt
+    #else:
+        #int_milestone = t +int_res
+        #if int_res <= dt:
+            #print("Err: reset integral time lower than time delta in simulation")
+            #return None
     
     #   LOOP
     for i in range(steps):
@@ -632,12 +639,13 @@ def experiment(directory = "0",
             #   Integral reset if needed
             #if t > int_milestone:
                 #agents[j].reset_int()
-                
-            if norm(error[j,:])/n_points < 0.2:
-                agents[j].k_int = k_int
-            else:
-                agents[j].k_int = 0.
-                agents[j].reset_int()
+            
+            if not int_res is None:
+                if norm(error[j,:])/n_points < int_res:
+                    agents[j].k_int = k_int
+                else:
+                    agents[j].k_int = 0.
+                    agents[j].reset_int()
             
             #   save data 
             desc_arr[j,:,i] = agents[j].s_current.T.reshape(2*n_points)
@@ -689,8 +697,8 @@ def experiment(directory = "0",
             U_array[j,:,i] = U
             agents[j].update(U,dt,P, Z)
         
-        if t > int_milestone:
-            int_milestone += int_res
+        #if t > int_milestone:
+            #int_milestone += int_res
         
         #   Update
         t += dt
@@ -854,6 +862,7 @@ def experiment(directory = "0",
     plt.close()
     
     #   Descriptores x agente
+    #       Predicted endpoints
     pred = np.zeros((n_agents,2*n_points))
     for i in range(n_agents):
         pred[i,:] = agents[i].s_ref.T.reshape(2*n_points) - desc_arr[i,:,0]
@@ -889,17 +898,13 @@ def experiment(directory = "0",
                     label = "Features Error")
     
     #   Errores x agentes
-    refplot = None
-    if k_int != 0.:
-        refplot = 0.2
-    
-    tmp = norm(err_array,axis = 0) / n_agents
+    tmp = norm(err_array,axis = 1) / n_agents
     mp.plot_time(t_array,
                 tmp,
                 colors,
-                ref = refplot,
+                ref = int_res,
                 ylimits = [-1,1],
-                name = directory+"/Norm_Feature_Error_"+str(i),
+                name = directory+"/Norm_Feature_Error",
                 label = "Features Error")
     
     #   Velocidaes x agente
@@ -2000,11 +2005,12 @@ def plot_tendencias(nReps = 20,
 
 def main(arg):
     
-    selector = arg[1]
-    
     #   reset Log
+    global logFile
+    logFile = arg[1]
+    
     try:
-        with open("log.txt",'w') as file:
+        with open(logFile,'w') as file:
             file.write("Log file INIT")
     except IOError:
         print("Logfile Error. OUT")
@@ -2012,22 +2018,104 @@ def main(arg):
     #with open("log.txt",'r+') as file:
         #file.truncate(0)
     
+    #   Contrajemplos
+    P = np.array([[1.,1.,-1.,-1.],
+                  [1.,-1.,-1.,1.],
+                  [0.,0.,0.,0]])
+    pd = circle(4,1,T=np.array([0.,0.,2.]))
+    
+    #   Escalando 
+    p0 = pd.copy()
+    
+    #   escalando
+    #p0[:3,:] *= 2.
+    #p0[:2,:] *= 2.
+    
+    #   Traslación en Z
+    #p0[2,:] += 1
+    
+    #   Traslación en XY
+    #p0[:2,:] += np.array([[1.],[1.]])
+    
+    #   rotación en yaw
+    
+    #testAng =  np.pi
+    #R = cm.rot(testAng,'z') 
+    
+    #for i in range(4):
+        #_R = cm.rot(p0[5,i],'z') 
+        #_R = _R @ cm.rot(p0[4,i],'y')
+        #_R = _R @ cm.rot(p0[3,i],'x')
+        
+        #_R = R @ _R
+        #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    #p0[:3,:] = R @ p0[:3,:]
+    
+    #   rotación en pitch (esta es la que falla a pesar de iniciar en formación)
+    
+    testAng =  np.pi/4
+    R = cm.rot(testAng,'y') 
+    
+    for i in range(4):
+        _R = cm.rot(p0[5,i],'z') 
+        _R = _R @ cm.rot(p0[4,i],'y')
+        _R = _R @ cm.rot(p0[3,i],'x')
+        
+        _R = R @ _R
+        [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    p0[:3,:] = R @ p0[:3,:]
+    
+    
+    
+    #   rotación en pitch en el centroide
+    
+    #testAng =  np.pi/4
+    #R = cm.rot(testAng,'y') 
+    
+    #for i in range(4):
+        #_R = cm.rot(p0[5,i],'z') 
+        #_R = _R @ cm.rot(p0[4,i],'y')
+        #_R = _R @ cm.rot(p0[3,i],'x')
+        
+        #_R = R @ _R
+        #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    #centroide = p0[:3,:].sum(axis = 1)/4.
+    #centroide = centroide.reshape((3,1))
+    #p0[:3,:] = R @ (p0[:3,:]-centroide)
+    #p0[:3,:] = (p0[:3,:]+centroide)
+    
+    experiment(directory="counterex",
+                    t_end = 200,
+                    k_int = 0.1,
+                    gamma0 = 5,
+                    gammaInf = 2,
+                    pd = pd,
+                    p0 = p0,
+                    P = P)
+    view3D("counterex")
+    return
+    
+    #   Arg parser and log INIT
+    selector = arg[2]
+    
+    #   Desktop
     if selector == 'r':
-        experiment(directory=arg[2],
-                    t_end = 66,
-                    gammaInf = 2.,
-                    gamma0 = 5.,
+        experiment(directory=arg[3],
+                    t_end = 100,
+                    #gammaInf = 2.,
+                    #gamma0 = 5.,
                     #set_derivative = True,
                     #tanhLimit = True,
-                    k_int = 0.1,
+                    #k_int = 0.1,
+                    #int_res = 0.2,
                     repeat = True)
-        view3D(arg[2])
+        view3D(arg[3])
         return
     if selector == 'v':
-        view3D(arg[2])
+        view3D(arg[3])
         return
     
-    if selector =='A':
+    if selector =='Simple':
         for i in range(20):
             logText = "Repetition = "+str(i)+'\n'
             write2log(logText)
@@ -2074,7 +2162,7 @@ def main(arg):
             write2log(logText)
             repeat_local(nReps = 100,
                             k_int = 0.1,
-                            int_res = 10,
+                            int_res = 0.2,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
                         dirBase = "local/"+str(i)+"/",
@@ -2095,6 +2183,21 @@ def main(arg):
             experiment_plots(dirBase = "local/"+str(i)+"/")
         plot_tendencias(dirBase = "local/")
     
+    if selector =='4':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            repeat_local(nReps = 100,
+                            k_int = 0.1,
+                            int_res= 0.2,
+                            gamma0 = 5.,
+                            gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    #   Cluster TODO
     return
     
     #   Comparaciones de errores finales bajo condiciones de inicio

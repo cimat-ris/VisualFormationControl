@@ -719,8 +719,9 @@ def experiment(directory = "0",
     #ret_err = norm(error_p,axis=1)/n_points
     ret_err = norm(error,axis=1)/n_points
     for j in range(n_agents):
-        logText += '\n' +str(error[j,:])
         logText += '\n' +"|Error_"+str(j)+"|= "+str(ret_err[j])
+        logText += '\n \t' +"Error_"+str(j)
+        logText += '\n' +str(error[j,:])
     for j in range(n_agents):
         logText += '\n' +"X_"+str(j)+" = "+str(agents[j].camera.p)
     for j in range(n_agents):
@@ -761,7 +762,8 @@ def experiment(directory = "0",
     else:
         state_err +=  error_state_equal(new_agents,directory+"/3D_error")
     
-    logText = str(err_array[:,:,0])
+    logText = 'Errores de consenso iniciales\n'
+    logText += str(err_array[:,:,0])
     logText += '\n' +str(err_array[:,:,0].max())
     
     logText += '\n' +"State error = "+str(state_err)
@@ -2024,7 +2026,7 @@ def main(arg):
                   [0.,0.,0.,0]])
     pd = circle(4,1,T=np.array([0.,0.,2.]))
     
-    #   Escalando 
+    ##   Escalando 
     p0 = pd.copy()
     
     #   escalando
@@ -2036,6 +2038,20 @@ def main(arg):
     
     #   Traslación en XY
     #p0[:2,:] += np.array([[1.],[1.]])
+    
+    ##   Comprobando escalamiento desde un punto arbitrario en el plano z = 0
+    #p0[:2,:] += np.array([[1.],[1.]])
+    #p0[:3,:] *= 2.
+    #p0[:2,:] -= np.array([[1.],[1.]])
+    
+    #   Comprobando la composición de transformaciones A x B 
+    #p0[:2,:] += np.array([[1.],[1.]])
+    #p0[:3,:] *= 2.
+    
+    #   Comprobando la composición de transformaciones B  x A
+    #p0[:3,:] *= 2.
+    #p0[:2,:] += np.array([[1.],[1.]])
+
     
     #   rotación en yaw
     
@@ -2084,11 +2100,29 @@ def main(arg):
     #p0[:3,:] = R @ (p0[:3,:]-centroide)
     #p0[:3,:] = (p0[:3,:]+centroide)
     
+    #   rotación en pitch en un eje XZ
+    
+    #testAng =  np.pi/4
+    #R = cm.rot(testAng,'y') 
+    
+    #for i in range(4):
+        #_R = cm.rot(p0[5,i],'z') 
+        #_R = _R @ cm.rot(p0[4,i],'y')
+        #_R = _R @ cm.rot(p0[3,i],'x')
+        
+        #_R = R @ _R
+        #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    #offset = np.array([1.,0.,0.])
+    #offset = offset.reshape((3,1))
+    #p0[:3,:] = R @ (p0[:3,:]-offset)
+    #p0[:3,:] = (p0[:3,:]+offset)
+    
     experiment(directory="counterex",
-                    t_end = 200,
+                    t_end = 100,
                     k_int = 0.1,
                     gamma0 = 5,
                     gammaInf = 2,
+                    int_res = 0.2,
                     pd = pd,
                     p0 = p0,
                     P = P)

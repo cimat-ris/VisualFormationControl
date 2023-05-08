@@ -439,6 +439,8 @@ def experiment(directory = "0",
         #   BEGIN TEST over P
         
         #P[2,:] = 0.
+        #p0[2,:] += 2.
+        #pd[2,:] += 1.
         #P[:,1] = np.array([2.5,-1,-0.23240457,1])
         #P = np.c_[P,np.array([-0.9,0.5,-0.1,1]).reshape((4,1))]
         #n_points += 1
@@ -616,15 +618,22 @@ def experiment(directory = "0",
             error[j,:] = agents[j].error
             #error_p[j,:] = agents[j].error_p
         error = L @ error
-        if set_derivative:
-            for j in range(n_agents):
-                error[j,:] = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
-        #error_p = L @ error_p
+        #if set_derivative:
+            #for j in range(n_agents):
+                #error[j,:] = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
+        ##error_p = L @ error_p
         
         #   save data
         #print(error)
         #err_array[:,:,i] = error_p
-        err_array[:,:,i] = error
+        err_array[:,:,i] = error.copy()
+        if set_derivative:
+            for Li in range(n_agents):
+                for Lj in range(n_agents):
+                    if Li != Lj:
+                        error[Li,:] -= L[Li,Lj]*agents[Lj].dot_s_current_n
+        
+        
         if set_consensoRef:
             [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
         else:
@@ -718,10 +727,12 @@ def experiment(directory = "0",
     #logText += '\n' +(error_p)
     #ret_err = norm(error_p,axis=1)/n_points
     ret_err = norm(error,axis=1)/n_points
+    #ret_err = norm(err_array[:,:,-1],axis=1)/n_points
     for j in range(n_agents):
         logText += '\n' +"|Error_"+str(j)+"|= "+str(ret_err[j])
         logText += '\n \t' +"Error_"+str(j)
         logText += '\n' +str(error[j,:])
+        #logText += '\n' +str(err_array[j,:,-1])
     for j in range(n_agents):
         logText += '\n' +"X_"+str(j)+" = "+str(agents[j].camera.p)
     for j in range(n_agents):
@@ -1300,6 +1311,20 @@ def experiment_local(nReps = 100,
         FOVflag = True
         
         pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
+        
+        #   BEGIN experimentos con rotaciones
+        #testAng =  np.pi/8
+        #R = cm.rot(testAng,'y') 
+        
+        #for i in range(4):
+            #_R = cm.rot(pd[5,i],'z') 
+            #_R = _R @ cm.rot(pd[4,i],'y')
+            #_R = _R @ cm.rot(pd[3,i],'x')
+            
+            #_R = R @ _R
+            #[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+        #pd[:3,:] = R @ pd[:3,:]
+        #   END
         while FOVflag:
             #   Points
             # Range
@@ -1307,7 +1332,7 @@ def experiment_local(nReps = 100,
             PyRange = [-2,2]
             PzRange = [-1,0]
             
-            nP = random.randint(4,11)
+            nP = random.randint(5,11)
             #nP = 4
             #nP = 10
             P = np.random.rand(3,nP)
@@ -1316,6 +1341,9 @@ def experiment_local(nReps = 100,
             P[2,:] = PzRange[0]+ P[2,:]*(PzRange[1]-PzRange[0])
             if pFlat :
                 P[2,:] = 0.
+                #   BEGIN experimentos con rotaciones
+                P = R @ P 
+                #   END
             Ph = np.r_[P,np.ones((1,nP))]
             
             #   Cameras
@@ -1335,6 +1363,17 @@ def experiment_local(nReps = 100,
                 tmp = np.random.rand(6)
                 #tmp = pd[:,iSel[i]] + offset + tmp*dRange
                 tmp = pd[:,i] + offset + tmp*dRange
+                
+                #   BEGIN experimentos de rotaciones
+                #tmp[3] = np.pi
+                #tmp[4] = 0.
+                #_R = cm.rot(tmp[5],'z') 
+                #_R = _R @ cm.rot(tmp[4],'y')
+                #_R = _R @ cm.rot(tmp[3],'x')
+                
+                #_R = R @ _R
+                #[tmp[3], tmp[4], tmp[5]] = ctr.get_angles(_R)
+                #   END
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
                 
@@ -1342,6 +1381,18 @@ def experiment_local(nReps = 100,
                     tmp = np.random.rand(6)
                     #tmp = pd[:,iSel[i]] + offset + tmp*dRange
                     tmp = pd[:,i] + offset + tmp*dRange
+                    
+                    #   BEGIN experimentos de rotaciones
+                    #tmp[3] = np.pi
+                    #tmp[4] = 0.
+                    #_R = cm.rot(tmp[5],'z') 
+                    #_R = _R @ cm.rot(tmp[4],'y')
+                    #_R = _R @ cm.rot(tmp[3],'x')
+                    
+                    #_R = R @ _R
+                    #[tmp[3], tmp[4], tmp[5]] = ctr.get_angles(_R)
+                    #   END
+                    
                     cam = cm.camera()
                     agent = ctr.agent(cam, tmp, tmp,P)
                 
@@ -1382,7 +1433,7 @@ def experiment_local(nReps = 100,
             var_arr_3 = var_arr_3,
             var_arr_et = var_arr_et,
             var_arr_er = var_arr_er,
-            mask = np.zeros(nReps),
+            #mask = np.zeros(nReps),
             Misscount = Misscount)
     
 def experiment_plots(dirBase = ""):
@@ -1420,7 +1471,7 @@ def experiment_plots(dirBase = ""):
         
         
         #   Masking
-        write2log("Failed repeats = "+str( np.where(mask == 1)))
+        write2log("Failed repeats = "+str( np.where(mask == 1)[0]))
         if (np.count_nonzero(mask == 1.) == mask.shape[0]):
             print("Simulations : No data to process")
             return
@@ -1472,24 +1523,24 @@ def experiment_plots(dirBase = ""):
     #plt.show()
     plt.close()
     
-    ##   Kernel density consensus
-    fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso (Densidad por Kernels)")
-    #plt.ylim([-2.,2.])
+    ###   Kernel density consensus
+    #fig, ax = plt.subplots()
+    #fig.suptitle("Error de consenso (Densidad por Kernels)")
+    ##plt.ylim([-2.,2.])
     
-    var_arr = norm(var_arr,axis = 0)/n_agents
-    density = gaussian_kde(var_arr)
-    dh = var_arr.max() - var_arr.min()
-    xs = np.linspace(var_arr.min()-dh*0.1,var_arr.max()+dh*0.1,200)
-    density.covariance_factor = lambda : .25
-    density._compute_covariance()
-    plt.plot(xs,density(xs),color=colors[0])
-    plt.scatter(var_arr,np.zeros(nReps),
-                marker = "|", alpha = 0.5,color=colors[0])
-    plt.tight_layout()
-    plt.savefig(dirBase+'Consensus error_Kernel_density.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
+    #var_arr = norm(var_arr,axis = 0)/n_agents
+    #density = gaussian_kde(var_arr)
+    #dh = var_arr.max() - var_arr.min()
+    #xs = np.linspace(var_arr.min()-dh*0.1,var_arr.max()+dh*0.1,200)
+    #density.covariance_factor = lambda : .25
+    #density._compute_covariance()
+    #plt.plot(xs,density(xs),color=colors[0])
+    #plt.scatter(var_arr,np.zeros(nReps),
+                #marker = "|", alpha = 0.5,color=colors[0])
+    #plt.tight_layout()
+    #plt.savefig(dirBase+'Consensus error_Kernel_density.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
     
     ##  Histogram consensus
     fig, ax = plt.subplots()
@@ -1550,39 +1601,39 @@ def experiment_plots(dirBase = ""):
     
     
     
-    #   Kernel plots formation error
+    ##   Kernel plots formation error
     
-    fig, ax = plt.subplots()
-    fig.suptitle("Errores de traslación")
-    density = gaussian_kde(var_arr_2)
-    dh = var_arr_2.max() - var_arr_2.min()
-    xs = np.linspace(var_arr_2.min()-dh*0.1,var_arr_2.max()+dh*0.1,200)
-    density.covariance_factor = lambda : .25
-    density._compute_covariance()
-    plt.plot(xs,density(xs),color=colors[0])
-    plt.scatter(var_arr_2,np.zeros(nReps),
-                marker = "|", alpha = 0.5,color=colors[0])
+    #fig, ax = plt.subplots()
+    #fig.suptitle("Errores de traslación")
+    #density = gaussian_kde(var_arr_2)
+    #dh = var_arr_2.max() - var_arr_2.min()
+    #xs = np.linspace(var_arr_2.min()-dh*0.1,var_arr_2.max()+dh*0.1,200)
+    #density.covariance_factor = lambda : .25
+    #density._compute_covariance()
+    #plt.plot(xs,density(xs),color=colors[0])
+    #plt.scatter(var_arr_2,np.zeros(nReps),
+                #marker = "|", alpha = 0.5,color=colors[0])
     
-    plt.tight_layout()
-    plt.savefig(dirBase+'Formation error_Kernel_desity_T.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
+    #plt.tight_layout()
+    #plt.savefig(dirBase+'Formation error_Kernel_desity_T.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
     
-    fig, ax = plt.subplots()
-    fig.suptitle("Errores de rotación")
-    density = gaussian_kde(var_arr_3)
-    dh = var_arr_3.max() - var_arr_3.min()
-    xs = np.linspace(var_arr_3.min()-dh*0.1,var_arr_3.max()+dh*0.1,200)
-    density.covariance_factor = lambda : .25
-    density._compute_covariance()
-    plt.plot(xs,density(xs),color=colors[1])
-    plt.scatter(var_arr_3,np.zeros(nReps),
-                marker = "|", alpha = 0.5,color=colors[1])
+    #fig, ax = plt.subplots()
+    #fig.suptitle("Errores de rotación")
+    #density = gaussian_kde(var_arr_3)
+    #dh = var_arr_3.max() - var_arr_3.min()
+    #xs = np.linspace(var_arr_3.min()-dh*0.1,var_arr_3.max()+dh*0.1,200)
+    #density.covariance_factor = lambda : .25
+    #density._compute_covariance()
+    #plt.plot(xs,density(xs),color=colors[1])
+    #plt.scatter(var_arr_3,np.zeros(nReps),
+                #marker = "|", alpha = 0.5,color=colors[1])
     
-    plt.tight_layout()
-    plt.savefig(dirBase+'Formation error_Kernel_desity_R.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
+    #plt.tight_layout()
+    #plt.savefig(dirBase+'Formation error_Kernel_desity_R.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
     
     ##  Heatmap
     h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
@@ -2023,10 +2074,14 @@ def main(arg):
     #   Contrajemplos
     P = np.array([[1.,1.,-1.,-1.],
                   [1.,-1.,-1.,1.],
-                  [0.,0.,0.,0]])
+                  [0.,0.,0.,0.]])
+    #P = np.array([[1.,1.,-1.,-1.,0.5],
+                  #[1.,-1.,-1.,1.,0.1],
+                  #[0.,0.,0.,0,0.5]])
+    #P *= 0.75
     pd = circle(4,1,T=np.array([0.,0.,2.]))
     
-    ##   Escalando 
+    ####   Escalando 
     p0 = pd.copy()
     
     #   escalando
@@ -2069,17 +2124,31 @@ def main(arg):
     
     #   rotación en pitch (esta es la que falla a pesar de iniciar en formación)
     
-    testAng =  np.pi/4
+    #testAng =  np.pi/4
+    #R = cm.rot(testAng,'y') 
+    
+    #for i in range(4):
+        #_R = cm.rot(p0[5,i],'z') 
+        #_R = _R @ cm.rot(p0[4,i],'y')
+        #_R = _R @ cm.rot(p0[3,i],'x')
+        
+        #_R = R @ _R
+        #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+    #p0[:3,:] = R @ p0[:3,:]
+    
+    
+    #   rotando la referencia
+    testAng =  -np.pi/4
     R = cm.rot(testAng,'y') 
     
     for i in range(4):
-        _R = cm.rot(p0[5,i],'z') 
-        _R = _R @ cm.rot(p0[4,i],'y')
-        _R = _R @ cm.rot(p0[3,i],'x')
+        _R = cm.rot(pd[5,i],'z') 
+        _R = _R @ cm.rot(pd[4,i],'y')
+        _R = _R @ cm.rot(pd[3,i],'x')
         
         _R = R @ _R
-        [p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
-    p0[:3,:] = R @ p0[:3,:]
+        [pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+    pd[:3,:] = R @ pd[:3,:]
     
     
     
@@ -2117,122 +2186,143 @@ def main(arg):
     #p0[:3,:] = R @ (p0[:3,:]-offset)
     #p0[:3,:] = (p0[:3,:]+offset)
     
+    #   paralelizando la referencia
+    
+    #for i in range(4):
+        #_R = cm.rot(pd[5,i],'z') 
+        #_R = _R @ cm.rot(pd[4,i],'y')
+        #_R = _R @ cm.rot(pd[3,i],'x')
+        
+        #_R = R @ _R
+        #[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+    #offset = np.array([1.,0.,0.])
+    #offset = offset.reshape((3,1))
+    #pd[:3,:] = R @ (pd[:3,:]-offset)
+    #pd[:3,:] = (pd[:3,:]+offset)
+    
+    #   rotando puntos de imagen
+    #testAng =  np.pi/4
+    #R = cm.rot(testAng,'y') 
+    #P = R @ P
+    
     experiment(directory="counterex",
                     t_end = 100,
-                    k_int = 0.1,
-                    gamma0 = 5,
-                    gammaInf = 2,
-                    int_res = 0.2,
+                    #k_int = 0.1,
+                    lamb = 3.,
+                    #gamma0 = 5,
+                    #gammaInf = 2,
+                    #int_res = 0.2,
+                    #set_derivative = True,
                     pd = pd,
                     p0 = p0,
                     P = P)
     view3D("counterex")
     return
     
-    #   Arg parser and log INIT
-    selector = arg[2]
+    ##   Arg parser and log INIT
+    #selector = arg[2]
     
-    #   Desktop
-    if selector == 'r':
-        experiment(directory=arg[3],
-                    t_end = 100,
-                    #gammaInf = 2.,
-                    #gamma0 = 5.,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #k_int = 0.1,
-                    #int_res = 0.2,
-                    repeat = True)
-        view3D(arg[3])
-        return
-    if selector == 'v':
-        view3D(arg[3])
-        return
+    ##   Desktop
+    #if selector == 'r':
+        #experiment(directory=arg[3],
+                    #t_end = 100,
+                    ##gammaInf = 2.,
+                    ##gamma0 = 5.,
+                    ##set_derivative = True,
+                    ##tanhLimit = True,
+                    ##k_int = 0.1,
+                    ##int_res = 0.2,
+                    #repeat = True)
+        #view3D(arg[3])
+        #return
+    #if selector == 'v':
+        #view3D(arg[3])
+        #return
     
-    if selector =='Simple':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            repeat_local(nReps = 100,
+    #if selector =='Simple':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #repeat_local(nReps = 100,
+                            ##k_int = 0.1,
+                            ##int_res = 10,
+                            ##gamma0 = 5.,
+                            ##gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
+    
+    #if selector =='0':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #repeat_local(nReps = 100,
                             #k_int = 0.1,
-                            #int_res = 10,
+                            ##int_res = 10,
+                            ##gamma0 = 5.,
+                            ##gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
+    
+    #if selector =='1':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #repeat_local(nReps = 100,
+                            ##k_int = 0.1,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
-    
-    if selector =='0':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            repeat_local(nReps = 100,
-                            k_int = 0.1,
-                            #int_res = 10,
-                            #gamma0 = 5.,
-                            #gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
-    
-    if selector =='1':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            repeat_local(nReps = 100,
-                            #k_int = 0.1,
-                            gamma0 = 5.,
-                            gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
         
-    if selector =='2':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            repeat_local(nReps = 100,
-                            k_int = 0.1,
-                            int_res = 0.2,
+    #if selector =='2':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #repeat_local(nReps = 100,
+                            #k_int = 0.1,
+                            #int_res = 0.2,
+                            ##gamma0 = 5.,
+                            ##gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
+    
+    #if selector =='3':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #repeat_local(nReps = 100,
+                            #k_int = 0.1,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
     
-    if selector =='3':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            repeat_local(nReps = 100,
-                            k_int = 0.1,
-                            gamma0 = 5.,
-                            gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
+    #if selector =='4':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #repeat_local(nReps = 100,
+                            #k_int = 0.1,
+                            #int_res= 0.2,
+                            #gamma0 = 5.,
+                            #gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
     
-    if selector =='4':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            repeat_local(nReps = 100,
-                            k_int = 0.1,
-                            int_res= 0.2,
-                            gamma0 = 5.,
-                            gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
-    
-    #   Cluster TODO
-    return
+    ##   Cluster TODO
+    #return
     
     #   Comparaciones de errores finales bajo condiciones de inicio
     ##experiment_plots(dirBase = "circ_4/")
@@ -2379,21 +2469,48 @@ def main(arg):
     
     
     ##  Repetición de xperimentos locales
-    for i in range(20):
-        repeat_local(nReps = 100,
-                     k_int = 0.1,
-                     #gamma0 = 5.,
-                     #gammaInf = 2.,
-                    dirBase = "local/"+str(i)+"/",
-                    enablePlotExp= False)
-        experiment_plots(dirBase = "local/"+str(i)+"/")
-    plot_tendencias(dirBase = "local/")
-    return
+    #for i in range(20):
+        #repeat_local(nReps = 100,
+                     #k_int = 0.1,
+                     ##gamma0 = 5.,
+                     ##gammaInf = 2.,
+                    #dirBase = "local/"+str(i)+"/",
+                    #enablePlotExp= False)
+        #experiment_plots(dirBase = "local/"+str(i)+"/")
+    #plot_tendencias(dirBase = "local/")
+    #return
     
+    name = "72"
+    experiment(directory=name,
+                    t_end = 200,
+                    #lamb = 3.,
+                    gammaInf = 2.,
+                    gamma0 = 5.,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #k_int = 0.1,
+                    #int_res = 0.2,
+                    repeat = True)
+    view3D(name)
+    return
+    experiment_local(nReps = 100,
+                        pFlat = True,
+                        #pFlat = False,
+                        #k_int = 0.1,
+                        #gamma0 = 5.,
+                        #gammaInf = 2.,
+                        #dTras = 1,
+                        dTras = 2,
+                        dRot = np.pi,
+                        #dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+    experiment_plots()#dirBase = "local/"+str(i)+"/")
+    return
     ##  Experimentos locales
     for i in range(20):
-        experiment_local(nReps = 100,
-                        pFlat = False,
+        experiment_local(nReps = 10,
+                        pFlat = True,
+                        #pFlat = False,
                         dTras = 0.1*(i+1),
                         dRot = (np.pi/20.)*(i+1),
                         dirBase = "local/"+str(i)+"/",

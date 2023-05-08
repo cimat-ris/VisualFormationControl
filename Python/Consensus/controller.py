@@ -58,45 +58,12 @@ def get_angles(R):
     return [roll, pitch, yaw]
 
 def Inv_Moore_Penrose(L):
-    #if L.shape[1] ==6:
-        #return inv(L)
-    #return inv(L)
     A = L.T@L
-    #if np.linalg.det(A) < 1.0e-18:
-        #return None
     if np.linalg.det(A) == 0:
         return None
     return inv(A) @ L.T
 
-#def IBVC(control_sel, error, s_current_n,Z,deg,inv_Ls_set,gdl):
-    
-    #if control_sel ==1:
-        #Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        ##Ls = Inv_Moore_Penrose(Ls) 
-        #Ls = np.linalg.pinv(Ls) 
-        ##Ls = np.linalg.inv(Ls) 
-    #elif control_sel ==2:
-        #Ls = inv_Ls_set
-    #elif control_sel ==3:
-        #Ls = Interaction_Matrix(s_current_n,Z,gdl)
-        ##Ls = Inv_Moore_Penrose(Ls) 
-        #Ls = np.linalg.pinv(Ls) 
-        #Ls = 0.5*( Ls +inv_Ls_set)
-    #if Ls is None:
-            #print("Invalid Ls matrix")
-            #return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
-    #u, s, vh  = np.linalg.svd(Ls)
-    #if gdl == 2:
-        #Ls = np.insert(Ls, 3, 0., axis = 0)
-        #Ls = np.insert(Ls, 4, 0., axis = 0)
-        ##_comp = np.zeros((2,Ls.shape[1]))
-        ##Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
-    #if gdl == 3:
-        #np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
-    #U = (Ls @ error) / deg
-    
-    #return  U.reshape(6), u, s, vh
-
+#   TODO: Adaptar Montijano
 #   Calcula el control basado en posición
 #   Supone:
 #       camara 1 = actual, 2 = referencia
@@ -200,7 +167,6 @@ class agent:
                  set_consensoRef = True ):
         
         self.n_points = points.shape[1]
-        #self.deg = deg
         
         self.k = k
         self.k_int = k_int
@@ -245,6 +211,14 @@ class agent:
         self.Ls_set = None
         self.inv_Ls_set = None
         
+        #   Plot data
+        self.u_inv = np.eye(6)
+        self.s_inv = np.zeros(6)
+        self.vh_inv = np.eye(self.n_points*2)
+        self.vh = np.eye(6)
+        self.s = np.zeros(6)
+        self.u = np.eye(self.n_points*2)
+        
         
     def get_control(self, sel,lamb, Z,args  ):
         
@@ -254,25 +228,14 @@ class agent:
         
             #   IBVC
         if sel == 1:
-            #return  -lamb* IBVC(args["control_sel"],
-            U, u, s, vh =  self.IBVC(args["control_sel"],
+            U =  self.IBVC(args["control_sel"],
                                args["error"],
                                #self.s_current_n,
                                Z,
                                args["deg"],
-                               #self.inv_Ls_set,
-                               args["gdl"])
-            #gamma = 1.
-            #if self.gammaAdapt:
-                #gamma =  np.linalg.norm(args["error"])
-                #gamma =  -5. * gamma
-                #gamma =  gamma / (self.gamma0 - self.gammaInf)
-                #gamma =  np.exp(gamma)
-                #gamma =  gamma * (self.gamma0 - self.gammaInf) 
-                #gamma += self.gammaInf
-                ##print(gamma)
-            #print(s)
-            return -lamb *  U,u, s, vh
+                               args["gdl"],
+                               args["dt"])
+            return -lamb *  U
         elif sel == 2:
             return  -lamb* Homography(args["H"],
                                      args["delta_pref"],
@@ -285,7 +248,7 @@ class agent:
                     args["realR"],
                     args["realT"])
             #print(s)
-            return -lamb * U,None, None, None
+            return -lamb * U
     
     def set_interactionMat(self,Z,gdl):
         self.Ls_set = Interaction_Matrix(self.s_ref_n,Z,gdl)
@@ -295,10 +258,6 @@ class agent:
     def update(self,U,dt, points,Z):
         
         #   TODO: reconfigurar con momtijano
-        #p = np.r_[self.camera.p.T ,
-                  #self.camera.roll,
-                  #self.camera.pitch,
-                  #self.camera.yaw]
         p = self.camera.p.T.copy()
         
         #   BEGIN local
@@ -308,30 +267,10 @@ class agent:
         
         #   END GLOBAL
         #   BEGIN With global
-        #_U = U.copy()
-        #_U[:3] =  self.camera.R @ U[:3]
-        #_U[3:] =  self.camera.R @ U[3:]
-        #print("Rv = ",_U[:3])
-        #print("t x R = " , np.cross(p[:3],_U[3:]))
-        #print("vg = ",_U[:3]+ np.cross(p[:3],_U[3:]))
-        #print("wg = ",_U[3:])
-        
-        #p[:3] += dt* (_U[:3]- np.cross(p[:3],_U[3:]))
-        #p[3:] += dt* _U[3:]
-        ##p[:3] += dt* _U[:3]
-        
-        #   END GLOBAL
-        #   BEGIN With global + dR R
         _U = U.copy()
         _U[:3] =  self.camera.R @ U[:3]
         _U[3:] =  self.camera.R @ U[3:]
-        #print("Rv = ",_U[:3])
-        #print("t x R = " , np.cross(p[:3],_U[3:]))
-        #print("vg = ",_U[:3]+ np.cross(p[:3],_U[3:]))
-        #print("wg = ",_U[3:])
         
-        #p[:3] += dt* (_U[:3]- np.cross(p[:3],_U[3:]))
-        #p[:3] += dt* (_U[:3]+ np.cross(p[:3],_U[3:]))
         p[:3] += dt* _U[:3]
         
         _R = cm.rot(dt*U[5],'z') 
@@ -351,55 +290,38 @@ class agent:
         if self.set_derivative:
             self.dot_s_current_n = (self.s_current_n - tmp)/dt
             self.dot_s_current_n = self.dot_s_current_n.T.reshape(2*self.n_points)
-        #self.error_int += self.error_p*dt
         
         if self.set_consensoRef:
-            #self.error_p =  self.s_current_n - self.s_ref_n
             self.error =  self.s_current_n - self.s_ref_n
         else:
-            #self.error_p =  self.s_current_n
             self.error =  self.s_current_n
         
-        #print(self.error)
-        #self.error_p = self.error_p.T.reshape(2*self.n_points)
         self.error = self.error.T.reshape(2*self.n_points)
-        #print(self.error)
-        #self.error = self.k * self.error_p -  self.dot_s_current_n
-        #if any (self.error_p < .5):
-        #if True:
-        #gamma = 1.
-        #if self.gammaAdapt:
-            #gamma =  np.linalg.norm(self.error_int  )
-            #gamma =  -5. * gamma
-            #gamma =  gamma / (self.gamma0 - self.gammaInf)
-            #gamma =  np.exp(gamma)
-            #gamma =  gamma * (self.gamma0 - self.gammaInf) 
-            #gamma += self.gammaInf
-        #self.error += self.k_int * gamma * self.error_int  
-    
-    def IBVC(self,control_sel, error,Z,deg,gdl):
+        
+    def IBVC(self,control_sel, error,Z,deg,gdl,dt):
         
         if control_sel ==1:
             Ls = Interaction_Matrix(self.s_current_n,Z,gdl)
+            self.u, self.s, self.vh  = np.linalg.svd(Ls)
             #Ls = Inv_Moore_Penrose(Ls) 
             Ls = np.linalg.pinv(Ls) 
-            #Ls = np.linalg.inv(Ls) 
         elif control_sel ==2:
             Ls = self.inv_Ls_set
         elif control_sel ==3:
             Ls = Interaction_Matrix(self.s_current_n,Z,gdl)
+            self.u, self.s, self.vh  = np.linalg.svd(Ls)
             #Ls = Inv_Moore_Penrose(Ls) 
             Ls = np.linalg.pinv(Ls) 
             Ls = 0.5*( Ls + self.inv_Ls_set)
         if Ls is None:
                 print("Invalid Ls matrix")
                 return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])
-        u, s, vh  = np.linalg.svd(Ls)
+        
+        self.u_inv, self.s_inv, self.vh_inv  = np.linalg.svd(Ls)
+        
         if gdl == 2:
             Ls = np.insert(Ls, 3, 0., axis = 0)
             Ls = np.insert(Ls, 4, 0., axis = 0)
-            #_comp = np.zeros((2,Ls.shape[1]))
-            #Ls = np.r_[Ls[:3],_comp,Ls[3].reshape((1,Ls.shape[1]))]
         if gdl == 3:
             np.insert(Ls, 3, [[0.],[0.],[0.]], axis = 0)
         
@@ -426,12 +348,12 @@ class agent:
                 gamma += self.gammaInf
             
             _error += self.k_int * gamma * self.error_int
-            #   TODO: dejar dt definible
-            self.error_int += 0.05 * error
+            
+            self.error_int += dt * error
         
         U = (Ls @ _error) / deg
         
-        return  U.reshape(6), u, s, vh
+        return  U.reshape(6)
     
     def reset_int(self):
         self.error_int[:] =  0.0

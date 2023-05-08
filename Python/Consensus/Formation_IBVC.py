@@ -548,12 +548,13 @@ def experiment(directory = "0",
     pos_arr = np.zeros((n_agents,6,steps))
     #svdProy_p = np.zeros((n_agents,2*n_points,steps))
     svdProy = np.zeros((n_agents,2*n_points,steps))
+    s_store = np.zeros((n_agents,6,steps))
     if gdl == 1:
-        s_store = np.zeros((n_agents,6,steps))
+        sinv_store = np.zeros((n_agents,6,steps))
     elif gdl == 2:
-        s_store = np.zeros((n_agents,4,steps))
+        sinv_store = np.zeros((n_agents,4,steps))
     elif gdl == 3:
-        s_store = np.zeros((n_agents,3,steps))
+        sinv_store = np.zeros((n_agents,3,steps))
     FOVflag = False
     state_err = error_state(pd,agents)
     
@@ -670,7 +671,8 @@ def experiment(directory = "0",
                 args = {"deg":G.deg[j] , 
                         "control_sel":case_interactionM,
                         "error": error[j,:],
-                        "gdl":gdl}
+                        "gdl":gdl,
+                        "dt":dt}
             elif control_type == 2:
                 args = {"H" : H[j,:,:,:],
                         "delta_pref" : delta_pref[j,:,:,:],
@@ -681,8 +683,9 @@ def experiment(directory = "0",
                 return None
             
             #s = None
-            U,u, s, vh  = agents[j].get_control(control_type,lamb,Z,args)
-            s_store[j,:,i] = s
+            U  = agents[j].get_control(control_type,lamb,Z,args)
+            sinv_store[j,:,i] = agents[j].s_inv
+            s_store[j,:,i] = agents[j].s
             if tanhLimit:
                 U = np.tanh(U)
             
@@ -695,8 +698,7 @@ def experiment(directory = "0",
                 break
             
             #   Save error proyection in SVD:
-            svdProy[j,:,i] = vh@error[j,:]/norm(error[j,:])
-            #svdProy_p[j,:,i] = vh@error_p[j,:]/norm(error_p[j,:])
+            svdProy[j,:,i] = agents[j].vh_inv@error[j,:]/norm(error[j,:])
             
             if U is None:
                 print("Invalid U control")
@@ -757,6 +759,7 @@ def experiment(directory = "0",
         #svdProy_p = svdProy_p[:,:,:trim]
         svdProy = svdProy[:,:,:trim]
         s_store = s_store[:,:,:trim]
+        sinv_store = sinv_store[:,:,:trim]
     
     ####   Plot
     
@@ -889,6 +892,7 @@ def experiment(directory = "0",
                             agents[i].s_ref,
                             colors,
                             pred[i,:],
+                            #enableLims = False,
                             name = directory+"/Image_Features_"+str(i),
                             label = "Image Features")
     
@@ -945,10 +949,20 @@ def experiment(directory = "0",
                     label = "Angulos",
                     labels = ["Roll","Pitch","yaw"])
     
-    #   Valores propios
+    #   Valores propios normal
     for i in range(n_agents):
         mp.plot_time(t_array,
                     s_store[i,:,:],
+                    colors,
+                    ylimits = [.0,4.1],
+                    name = directory+"/ValoresPR_"+str(i),
+                    label = "Valores propios (SVD)",
+                    labels = ["0","1","2","3","4","5"])
+    
+    #   Valores propios inversa
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    sinv_store[i,:,:],
                     colors,
                     name = directory+"/ValoresP_"+str(i),
                     label = "Valores propios (SVD)",
@@ -965,7 +979,7 @@ def experiment(directory = "0",
                     #labels = ["0","1","2","3","4","5","6","7"])
                     ##limits = [[t_array[0],t_array[-1]],[0,20]])
     
-    #   Valores propios
+    #   Proyección de error sobre vectores propios
     for i in range(n_agents):
         mp.plot_time(t_array,
                     svdProy[i,:,:],
@@ -2072,17 +2086,17 @@ def main(arg):
         #file.truncate(0)
     
     #   Contrajemplos
-    P = np.array([[1.,1.,-1.,-1.],
-                  [1.,-1.,-1.,1.],
-                  [0.,0.,0.,0.]])
+    #P = np.array([[1.,1.,-1.,-1.],
+                  #[1.,-1.,-1.,1.],
+                  #[0.,0.,0.,0.]])
     #P = np.array([[1.,1.,-1.,-1.,0.5],
                   #[1.,-1.,-1.,1.,0.1],
                   #[0.,0.,0.,0,0.5]])
     #P *= 0.75
-    pd = circle(4,1,T=np.array([0.,0.,2.]))
+    #pd = circle(4,1,T=np.array([0.,0.,2.]))
     
     ####   Escalando 
-    p0 = pd.copy()
+    #p0 = pd.copy()
     
     #   escalando
     #p0[:3,:] *= 2.
@@ -2138,17 +2152,17 @@ def main(arg):
     
     
     #   rotando la referencia
-    testAng =  -np.pi/4
-    R = cm.rot(testAng,'y') 
+    #testAng =  -np.pi/4
+    #R = cm.rot(testAng,'y') 
     
-    for i in range(4):
-        _R = cm.rot(pd[5,i],'z') 
-        _R = _R @ cm.rot(pd[4,i],'y')
-        _R = _R @ cm.rot(pd[3,i],'x')
+    #for i in range(4):
+        #_R = cm.rot(pd[5,i],'z') 
+        #_R = _R @ cm.rot(pd[4,i],'y')
+        #_R = _R @ cm.rot(pd[3,i],'x')
         
-        _R = R @ _R
-        [pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
-    pd[:3,:] = R @ pd[:3,:]
+        #_R = R @ _R
+        #[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+    #pd[:3,:] = R @ pd[:3,:]
     
     
     
@@ -2205,19 +2219,19 @@ def main(arg):
     #R = cm.rot(testAng,'y') 
     #P = R @ P
     
-    experiment(directory="counterex",
-                    t_end = 100,
-                    #k_int = 0.1,
-                    lamb = 3.,
-                    #gamma0 = 5,
-                    #gammaInf = 2,
-                    #int_res = 0.2,
-                    #set_derivative = True,
-                    pd = pd,
-                    p0 = p0,
-                    P = P)
-    view3D("counterex")
-    return
+    #experiment(directory="counterex",
+                    #t_end = 100,
+                    ##k_int = 0.1,
+                    #lamb = 3.,
+                    ##gamma0 = 5,
+                    ##gammaInf = 2,
+                    ##int_res = 0.2,
+                    ##set_derivative = True,
+                    #pd = pd,
+                    #p0 = p0,
+                    #P = P)
+    #view3D("counterex")
+    #return
     
     ##   Arg parser and log INIT
     #selector = arg[2]
@@ -2482,10 +2496,10 @@ def main(arg):
     
     name = "72"
     experiment(directory=name,
-                    t_end = 200,
+                    t_end = 100,
                     #lamb = 3.,
-                    gammaInf = 2.,
-                    gamma0 = 5.,
+                    #gammaInf = 2.,
+                    #gamma0 = 5.,
                     #set_derivative = True,
                     #tanhLimit = True,
                     #k_int = 0.1,

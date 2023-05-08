@@ -56,6 +56,7 @@ def plot_descriptors(descriptors_array,
                      s_ref,
                     colors,
                     pred,
+                    enableLims = True,
                     name="time_plot", 
                     label="Variable"):
     
@@ -64,8 +65,9 @@ def plot_descriptors(descriptors_array,
     n = int(n)
     fig, ax = plt.subplots()
     fig.suptitle(label)
-    plt.xlim([0,camera_iMsize[0]])
-    plt.ylim([0,camera_iMsize[1]])
+    if enableLims:
+        plt.xlim([0,camera_iMsize[0]])
+        plt.ylim([0,camera_iMsize[1]])
     
     ax.plot([camera_iMsize[0]/2,camera_iMsize[0]/2],
             [0,camera_iMsize[0]],

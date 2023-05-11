@@ -42,9 +42,6 @@ class camera:
         self.angsmax=30
         self.Ldown=180*pi/180
         self.p = np.zeros((6,1))
-        #self.roll = 0.0
-        #self.pitch = 0.0
-        #self.yaw = 0.0
         self.T = np.eye(4)
         self.K = np.array( [[self.foco/self.rho[0],       0.0, self.pPrinc[0]],
                             [      0.0, self.foco/self.rho[1], self.pPrinc[1]],
@@ -54,17 +51,9 @@ class camera:
        #print("--- begin pose")
        #print(p)
        self.p = p.copy()
-       #self.p = p[0:3]
-       #self.roll = p[3]
-       #self.pitch = p[4]
-       #self.yaw = p[5]
-       #self.R = rot(self.yaw,'z') 
-       #self.R = self.R @ rot(self.pitch,'y')
-       #self.R = self.R @ rot(self.roll,'x')
        self.R = rot(self.p[5],'z') 
        self.R = self.R @ rot(self.p[4],'y')
        self.R = self.R @ rot(self.p[3],'x')
-       #print(self.R)
        tmp = np.c_[ self.R, self.p[:3] ]
        #print(tmp)
        self.T = np.r_[ tmp, [[0.0,0.0,0.0,1.0]] ]
@@ -86,7 +75,6 @@ class camera:
         #print(res)
         res = self.P @ res
         #print(res)
-        #res = res[0:3,:]
         res = res/res[2,:]
         res = res[0:2,:]
         #print(res)
@@ -118,49 +106,28 @@ class camera:
                         [ 2,-2, -2, 2,   3,   3, 2, 2 ],
                         [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
         CAMup[0:3,:] = scale * CAMup[0:3,:] 
-        #Ri2w    = np.dot(Rotations.rotox(pi), self.R)
-        #trasl   = self.t.reshape(3, -1)
-        CAMupTRASF = self.T @ CAMup # Ri2w.dot(CAMup) + trasl;
+        CAMupTRASF = self.T @ CAMup
         CAMdwn=np.array([[-1,-1,  1, 1, 1.5,-1.5,-1, 1  ],
                         [ -1,-1, -1,-1,-1.5,-1.5,-1,-1 ],
                         [  2,-2, -2, 2,   3,   3, 2, 2 ],
                         [ 1, 1,  1, 1, 1  , 1 , 1, 1  ]])
         CAMdwn[0:3,:] = scale * CAMdwn[0:3,:] 
-        CAMdwnTRASF     = self.T @ CAMdwn #Ri2w.dot( CAMdwn ) + trasl
-        CAMupTRASFm     = CAMupTRASF.copy()
-        CAMdwnTRASFm    = CAMdwnTRASF.copy()
-        ax.plot(CAMupTRASFm[0,:],
-                CAMupTRASFm[1,:],
-                CAMupTRASFm[2,:],
+        CAMdwnTRASF     = self.T @ CAMdwn 
+        
+        ax.plot(CAMupTRASF[0,:],
+                CAMupTRASF[1,:],
+                CAMupTRASF[2,:],
                 c=color,ls=linestyle)
-        ax.plot(CAMdwnTRASFm[0,:],
-                CAMdwnTRASFm[1,:],
-                CAMdwnTRASFm[2,:],
+        ax.plot(CAMdwnTRASF[0,:],
+                CAMdwnTRASF[1,:],
+                CAMdwnTRASF[2,:],
                 c=color,ls=linestyle)
-        ax.plot([CAMupTRASFm[0,0],CAMdwnTRASFm[0,0]],
-                [CAMupTRASFm[1,0],CAMdwnTRASFm[1,0]],
-                [CAMupTRASFm[2,0],CAMdwnTRASFm[2,0]],
-                c=color,ls=linestyle)
-        ax.plot([CAMupTRASFm[0,1],CAMdwnTRASFm[0,1]],
-                [CAMupTRASFm[1,1],CAMdwnTRASFm[1,1]],
-                [CAMupTRASFm[2,1],CAMdwnTRASFm[2,1]],
-                c=color,ls=linestyle)
-        ax.plot([CAMupTRASFm[0,2],CAMdwnTRASFm[0,2]],
-                [CAMupTRASFm[1,2],CAMdwnTRASFm[1,2]],
-                [CAMupTRASFm[2,2],CAMdwnTRASFm[2,2]],
-                c=color,ls=linestyle)
-        ax.plot([CAMupTRASFm[0,3],CAMdwnTRASFm[0,3]],
-                [CAMupTRASFm[1,3],CAMdwnTRASFm[1,3]],
-                [CAMupTRASFm[2,3],CAMdwnTRASFm[2,3]],
-                c=color,ls=linestyle)
-        ax.plot([CAMupTRASFm[0,4],CAMdwnTRASFm[0,4]],
-                [CAMupTRASFm[1,4],CAMdwnTRASFm[1,4]],
-                [CAMupTRASFm[2,4],CAMdwnTRASFm[2,4]],
-                c=color,ls=linestyle)
-        ax.plot([CAMupTRASFm[0,5],CAMdwnTRASFm[0,5]],
-                [CAMupTRASFm[1,5],CAMdwnTRASFm[1,5]],
-                [CAMupTRASFm[2,5],CAMdwnTRASFm[2,5]],
-                c=color,ls=linestyle)
+        for i in range(6):
+            ax.plot([CAMupTRASF[0,i],CAMdwnTRASF[0,i]],
+                    [CAMupTRASF[1,i],CAMdwnTRASF[1,i]],
+                    [CAMupTRASF[2,i],CAMdwnTRASF[2,i]],
+                    c=color,ls=linestyle)
+            
         
         scale *= 10.0
         
@@ -194,6 +161,4 @@ class camera:
         ax.add_artist(a1)
         ax.add_artist(a2)
         ax.add_artist(a3)
-        #ax.text(Xc1[0,0], Xc1[1,0], Xc1[2,0], (r'$X_{cam}$'))
-        #ax.text(Yc1[0,0], Yc1[1,0], Yc1[2,0], (r'$Y_{cam}$'))
-        #ax.text(Zc1[0,0], Zc1[1,0], Zc1[2,0], (r'$Z_{cam}$'))
+        

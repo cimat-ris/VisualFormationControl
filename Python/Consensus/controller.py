@@ -161,8 +161,12 @@ class agent:
                  points,
                  k = 1,
                  k_int = 0,
+                 intGamma0 = None,
+                 intGammaInf = None,
+                 intGammaSteep = 5.,
                  gamma0 = None,
                  gammaInf = None,
+                 gammaSteep = 5.,
                  set_derivative = True,
                  set_consensoRef = True ):
         
@@ -196,6 +200,7 @@ class agent:
         self.error_int = np.zeros(self.error.shape)
         
         self.gammaAdapt = False
+        self.gammaSteep = gammaSteep
         if (not gamma0 is None) or (not gammaInf is None):
             self.gammaAdapt = True
             
@@ -207,6 +212,20 @@ class agent:
                 self.gammaInf = 1.
             else:
                 self.gammaInf = gammaInf
+        
+        self.intGammaAdapt = False
+        self.intGammaSteep = intGammaSteep
+        if (not intGamma0 is None) or (not intGammaInf is None):
+            self.intGammaAdapt = True
+            
+            if intGamma0 is None:
+                self.intGamma0 = 2.
+            else:
+                self.intGamma0 = intGamma0
+            if intGammaInf is None:
+                self.intGammaInf = 1.
+            else:
+                self.intGammaInf = intGammaInf
         
         self.Ls_set = None
         self.inv_Ls_set = None
@@ -328,7 +347,7 @@ class agent:
         gamma = 1.
         if self.gammaAdapt:
             gamma =  np.linalg.norm(error )
-            gamma =  -5. * gamma
+            gamma =  -self.gammaSteep  * gamma
             gamma =  gamma / (self.gamma0 - self.gammaInf)
             gamma =  np.exp(gamma)
             gamma =  gamma * (self.gamma0 - self.gammaInf) 
@@ -338,16 +357,16 @@ class agent:
         
         if self.k_int != 0.:
             
-            gamma = 1.
-            if self.gammaAdapt:
-                gamma =  np.linalg.norm(self.error_int )
-                gamma =  -5. * gamma
-                gamma =  gamma / (self.gamma0 - self.gammaInf)
-                gamma =  np.exp(gamma)
-                gamma =  gamma * (self.gamma0 - self.gammaInf) 
-                gamma += self.gammaInf
+            intGamma = 1.
+            if self.intGammaAdapt:
+                intGamma =  np.linalg.norm(self.error_int )
+                intGamma =  -self.intGammaSteep * intGamma
+                intGamma =  intGamma / (self.intGamma0 - self.intGammaInf)
+                intGamma =  np.exp(intGamma)
+                intGamma =  intGamma * (self.intGamma0 - self.intGammaInf) 
+                intGamma += self.intGammaInf
             
-            _error += self.k_int * gamma * self.error_int
+            _error += self.k_int * intGamma * self.error_int
             
             self.error_int += dt * error
         

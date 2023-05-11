@@ -436,11 +436,13 @@ def experiment(directory = "0",
         pd = npzfile["pd"]
         adjMat = npzfile["adjMat"]
         
-        #   BEGIN TEST over P
+        #   BEGIN TEST
         
         #P[2,:] = 0.
-        #p0[2,:] += 2.
+        #p0[2,:] += 1.
         #pd[2,:] += 1.
+        #pd[2,0] += 1.
+        #pd[2,2] += 1.
         #P[:,1] = np.array([2.5,-1,-0.23240457,1])
         #P = np.c_[P,np.array([-0.9,0.5,-0.1,1]).reshape((4,1))]
         #n_points += 1
@@ -599,13 +601,7 @@ def experiment(directory = "0",
     write2log(logText+'\n')
     
     
-    #if int_res is None:
-        #int_milestone = t_end+2*dt
-    #else:
-        #int_milestone = t +int_res
-        #if int_res <= dt:
-            #print("Err: reset integral time lower than time delta in simulation")
-            #return None
+    
     
     #   LOOP
     for i in range(steps):
@@ -614,19 +610,13 @@ def experiment(directory = "0",
         #   Error:
         
         error = np.zeros((n_agents,2*n_points))
-        #error_p = np.zeros((n_agents,2*n_points))
+        
         for j in range(n_agents):
             error[j,:] = agents[j].error
-            #error_p[j,:] = agents[j].error_p
+        
         error = L @ error
-        #if set_derivative:
-            #for j in range(n_agents):
-                #error[j,:] = error[j,:]+G.deg[j]*agents[j].dot_s_current_n
-        ##error_p = L @ error_p
         
         #   save data
-        #print(error)
-        #err_array[:,:,i] = error_p
         err_array[:,:,i] = error.copy()
         if set_derivative:
             for Li in range(n_agents):
@@ -634,6 +624,8 @@ def experiment(directory = "0",
                     if Li != Lj:
                         error[Li,:] -= L[Li,Lj]*agents[Lj].dot_s_current_n
         
+        #   Leader 2 ref
+        #error[0,:] = agents[0].error
         
         if set_consensoRef:
             [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
@@ -646,9 +638,6 @@ def experiment(directory = "0",
         #   Get control
         for j in range(n_agents):
             
-            #   Integral reset if needed
-            #if t > int_milestone:
-                #agents[j].reset_int()
             
             if not int_res is None:
                 if norm(error[j,:])/n_points < int_res:
@@ -682,7 +671,6 @@ def experiment(directory = "0",
                 print("invalid control selection")
                 return None
             
-            #s = None
             U  = agents[j].get_control(control_type,lamb,Z,args)
             sinv_store[j,:,i] = agents[j].s_inv
             s_store[j,:,i] = agents[j].s
@@ -697,6 +685,10 @@ def experiment(directory = "0",
                 FOVflag = True
                 break
             
+            #   Perturbaciones en U
+            #U[1] -= 0.1*(np.sin(t/5))*min(norm(error[j,:]),1.)
+            #U[5] -= 0.1
+            
             #   Save error proyection in SVD:
             svdProy[j,:,i] = agents[j].vh_inv@error[j,:]/norm(error[j,:])
             
@@ -707,9 +699,6 @@ def experiment(directory = "0",
             
             U_array[j,:,i] = U
             agents[j].update(U,dt,P, Z)
-        
-        #if t > int_milestone:
-            #int_milestone += int_res
         
         #   Update
         t += dt
@@ -726,7 +715,6 @@ def experiment(directory = "0",
     logText = "----------------------"
     logText += '\n' +"Simulation final data"
     
-    #logText += '\n' +(error_p)
     #ret_err = norm(error_p,axis=1)/n_points
     ret_err = norm(error,axis=1)/n_points
     #ret_err = norm(err_array[:,:,-1],axis=1)/n_points
@@ -756,7 +744,6 @@ def experiment(directory = "0",
         U_array = U_array[:,:,:trim] 
         desc_arr = desc_arr[:,:,:trim]
         pos_arr = pos_arr[:,:,:trim]
-        #svdProy_p = svdProy_p[:,:,:trim]
         svdProy = svdProy[:,:,:trim]
         s_store = s_store[:,:,:trim]
         sinv_store = sinv_store[:,:,:trim]
@@ -859,9 +846,7 @@ def experiment(directory = "0",
     width = x_max - x_min
     height = y_max - y_min
     depth = z_max - z_min
-    sqrfact = max(width,
-                        height,
-                        depth)
+    sqrfact = max(width,height,depth)
     
     x_min -= (sqrfact - width )/2
     x_max += (sqrfact - width )/2
@@ -969,24 +954,19 @@ def experiment(directory = "0",
                     labels = ["0","1","2","3","4","5"])
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
-    #   Proyección del error proporcional en los vectores principales 
-    #for i in range(n_agents):
-        #mp.plot_time(t_array,
-                    #svdProy_p[i,:,:],
-                    #colors,
-                    #name = directory+"/Proy_eP_VH_"+str(i),
-                    #label = "Proy($e_p$) en $V^h$ ",
-                    #labels = ["0","1","2","3","4","5","6","7"])
-                    ##limits = [[t_array[0],t_array[-1]],[0,20]])
+    
     
     #   Proyección de error sobre vectores propios
+    #labels = [str(i) for i in range(2*n_points)]
+    labels =  ["0","1","2","3","4","5"]
     for i in range(n_agents):
         mp.plot_time(t_array,
-                    svdProy[i,:,:],
+                    #svdProy[i,:,:],
+                    svdProy[i,:6,:],
                     colors,
                     name = directory+"/Proy_et_VH_"+str(i),
                     label = "Proy($e$) en $V^h$ ",
-                    labels = ["0","1","2","3","4","5","6","7"])
+                    labels = labels)
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
     return [ret_err, state_err, FOVflag]
@@ -1035,6 +1015,7 @@ def experiment_repeat(nReps = 1,
     write2log(logText+'\n')
     
     for k in range(nReps):
+        write2log("CASE "+str(k)+'\n')
         if intMatSel  == 1:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
@@ -1062,7 +1043,7 @@ def experiment_repeat(nReps = 1,
         
         if FOVflag:
             mask[k] = 1
-            Misscount += 1
+            #Misscount += 1
     
     np.savez(dirBase+'data.npz',
             n_agents = n_agents,
@@ -1233,62 +1214,10 @@ def experiment_all_random(nReps = 100,
             var_arr_3 = var_arr_3,
             var_arr_et = var_arr_et,
             var_arr_er = var_arr_er,
-            mask = np.zeros(nReps),
+            #mask = np.zeros(nReps),
             Misscount = Misscount)
     
-def repeat_local(nReps = 100, 
-                    pFlat = False,
-                    dirBase = "",
-                    dTras = 0.1,
-                    dRot = 0.3,
-                    k_int = 0.,
-                    int_res = None,
-                    gamma0 = None,
-                    gammaInf = None,
-                    enablePlotExp = True):
-    
-    n_agents = 4
-    var_arr = np.zeros((n_agents,nReps))
-    var_arr_2 = np.zeros(nReps)
-    var_arr_3 = np.zeros(nReps)
-    var_arr_et = np.zeros(nReps)
-    var_arr_er = np.zeros(nReps)
-    mask = np.zeros(nReps)
-    Misscount = 0
-    
-    for k in range(nReps):
-        write2log("CASE "+str(k)+'\n')
-        ret = experiment(directory=dirBase+str(k),
-                    k_int = k_int,
-                    int_res = int_res,
-                    gamma0 = gamma0,
-                    gammaInf = gammaInf,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #depthOp = 4, Z_set = 1.,
-                    t_end = 100,
-                    repeat = True,
-                    enablePlot = enablePlotExp)
-        #print(ret)
-        [var_arr[:,k], errors, FOVflag] = ret
-        var_arr_et[k] = errors[0]
-        var_arr_er[k] = errors[1]
-        var_arr_2[k] = errors[2]
-        var_arr_3[k] = errors[3]
-        if FOVflag:
-            mask[k] = 1
-            Misscount += 1
-            
-        #   Save data
-    np.savez(dirBase+'data.npz',
-             n_agents = n_agents,
-            var_arr = var_arr,
-            var_arr_2 = var_arr_2,
-            var_arr_3 = var_arr_3,
-            var_arr_et = var_arr_et,
-            var_arr_er = var_arr_er,
-            mask = mask,
-            Misscount = Misscount)
+
     
 def experiment_local(nReps = 100, 
                     pFlat = False,
@@ -1296,8 +1225,12 @@ def experiment_local(nReps = 100,
                     dTras = 0.1,
                     dRot = 0.3,
                     k_int = 0.,
+                    intGamma0 = None,
+                    intGammaInf = None,
+                    intGammaSteep = 5.,
                     gamma0 = None,
                     gammaInf = None,
+                    GammaSteep = 5.,
                     enablePlotExp = True):
     
     n_agents = 4
@@ -1421,6 +1354,10 @@ def experiment_local(nReps = 100,
                         k_int = k_int,
                         gamma0 = gamma0,
                         gammaInf = gammaInf,
+                        gammaSteep = gammaSteep ,
+                        intGamma0 = intGamma0,
+                        intGammaInf = intGammaInf,
+                        intGammaSteep = intGammaSteep ,
                         pd = pd,
                         p0 = p0,
                         P = P,
@@ -2082,28 +2019,27 @@ def main(arg):
     except IOError:
         print("Logfile Error. OUT")
         return
-    #with open("log.txt",'r+') as file:
-        #file.truncate(0)
     
-    #   Contrajemplos
-    #P = np.array([[1.,1.,-1.,-1.],
-                  #[1.,-1.,-1.,1.],
-                  #[0.,0.,0.,0.]])
-    #P = np.array([[1.,1.,-1.,-1.,0.5],
-                  #[1.,-1.,-1.,1.,0.1],
-                  #[0.,0.,0.,0,0.5]])
-    #P *= 0.75
-    #pd = circle(4,1,T=np.array([0.,0.,2.]))
+    
+    #   BEGIN   Contrajemplos
+    P = np.array([[1.,1.,-1.,-1.],
+                  [1.,-1.,-1.,1.],
+                  [0.,0.,0.,0.]])
+    ##P = np.array([[1.,1.,-1.,-1.,0.5],
+                  ##[1.,-1.,-1.,1.,0.1],
+                  ##[0.,0.,0.,0,0.5]])
+    P *= 0.75
+    pd = circle(4,1,T=np.array([0.,0.,2.]))
     
     ####   Escalando 
-    #p0 = pd.copy()
+    p0 = pd.copy()
     
     #   escalando
     #p0[:3,:] *= 2.
     #p0[:2,:] *= 2.
     
     #   Traslación en Z
-    #p0[2,:] += 1
+    p0[2,:] += 1
     
     #   Traslación en XY
     #p0[:2,:] += np.array([[1.],[1.]])
@@ -2219,19 +2155,23 @@ def main(arg):
     #R = cm.rot(testAng,'y') 
     #P = R @ P
     
-    #experiment(directory="counterex",
-                    #t_end = 100,
-                    ##k_int = 0.1,
+    experiment(directory="counterex",
+                    t_end = 100,
+                    k_int = 0.1,
                     #lamb = 3.,
-                    ##gamma0 = 5,
-                    ##gammaInf = 2,
+                    gamma0 = 5,
+                    gammaInf = 2,
                     ##int_res = 0.2,
-                    ##set_derivative = True,
-                    #pd = pd,
-                    #p0 = p0,
-                    #P = P)
-    #view3D("counterex")
-    #return
+                    #set_derivative = True,
+                    #depthOp = 4, Z_set = 1.,
+                    pd = pd,
+                    p0 = p0,
+                    P = P)
+    view3D("counterex")
+    return
+    
+    #   END Contrajemplos
+    #   BEGIN UI [r | v | Simple | 0-4]
     
     ##   Arg parser and log INIT
     #selector = arg[2]
@@ -2257,7 +2197,7 @@ def main(arg):
         #for i in range(20):
             #logText = "Repetition = "+str(i)+'\n'
             #write2log(logText)
-            #repeat_local(nReps = 100,
+            #experiment_repeat(nReps = 100,
                             ##k_int = 0.1,
                             ##int_res = 10,
                             ##gamma0 = 5.,
@@ -2271,7 +2211,7 @@ def main(arg):
         #for i in range(20):
             #logText = "Repetition = "+str(i)+'\n'
             #write2log(logText)
-            #repeat_local(nReps = 100,
+            #experiment_repeat(nReps = 100,
                             #k_int = 0.1,
                             ##int_res = 10,
                             ##gamma0 = 5.,
@@ -2285,7 +2225,7 @@ def main(arg):
         #for i in range(20):
             #logText = "Repetition = "+str(i)+'\n'
             #write2log(logText)
-            #repeat_local(nReps = 100,
+            #experiment_repeat(nReps = 100,
                             ##k_int = 0.1,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
@@ -2298,7 +2238,7 @@ def main(arg):
         #for i in range(20):
             #logText = "Repetition = "+str(i)+'\n'
             #write2log(logText)
-            #repeat_local(nReps = 100,
+            #experiment_repeat(nReps = 100,
                             #k_int = 0.1,
                             #int_res = 0.2,
                             ##gamma0 = 5.,
@@ -2312,7 +2252,7 @@ def main(arg):
         #for i in range(20):
             #logText = "Repetition = "+str(i)+'\n'
             #write2log(logText)
-            #repeat_local(nReps = 100,
+            #experiment_repeat(nReps = 100,
                             #k_int = 0.1,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
@@ -2325,7 +2265,7 @@ def main(arg):
         #for i in range(20):
             #logText = "Repetition = "+str(i)+'\n'
             #write2log(logText)
-            #repeat_local(nReps = 100,
+            #experiment_repeat(nReps = 100,
                             #k_int = 0.1,
                             #int_res= 0.2,
                             #gamma0 = 5.,
@@ -2335,29 +2275,78 @@ def main(arg):
             #experiment_plots(dirBase = "local/"+str(i)+"/")
         #plot_tendencias(dirBase = "local/")
     
-    ##   Cluster TODO
     #return
     
-    #   Comparaciones de errores finales bajo condiciones de inicio
-    ##experiment_plots(dirBase = "circ_4/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_4/")
-    ##experiment_plots(dirBase = "circ_flat_4/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_flat_4/")
-    ##experiment_plots(dirBase = "rand_4/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_4/")
-    ##experiment_plots(dirBase = "rand_flat_4/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_flat_4/")
-    ##experiment_plots(dirBase = "circ_10/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_10/")
-    ##experiment_plots(dirBase = "circ_flat_10/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_flat_10/")
-    ##experiment_plots(dirBase = "rand_10/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_10/")
-    ##experiment_plots(dirBase = "rand_flat_10/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_flat_10/")
-    #return
+    #   END UI
     
-    ##   REPEAT
+    
+    #   BEGIN CLUSTER
+    
+    #   Configs
+    job = arg[3]
+    
+    #   TODO: counts
+    #nThreads = 8
+    #nReps = 20
+    
+    ##   limits
+    #thReps = int(nReps/nThreads)
+    #init = (job-1)*thReps
+    #end = init + thReps
+    #if end > nReps:
+        #end = nReps
+    
+    root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
+    
+    Names = ["gamma_1_3/",
+             "gamma_1_5/",
+             "gamma_2_3/",
+             "gamma_2_5/"]
+    
+    intGamma0 = [0.1]*2+[0.2]*2
+    intGammaInf = [0.05]*4
+    intGammaSteep = [3,5]*2
+    
+    j = job % 4
+    init = 0
+    end = 0
+    if job < 4:
+        init = 0
+        end = 10
+    else:
+        init = 10
+        end = 20
+    
+    #   process
+    name = Names[j]
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
+    for i in range(init, end):
+        logText = "Repetition = "+str(i)+'\n'
+        write2log(logText)
+        experiment_local(nReps = 50,
+                        gamma0 = 5.,
+                        gammaInf = 2.,
+                        intGamma0 = intGamma0[j],
+                        intGammaInf = intGammaInf[j],
+                        intGammaSteep = intGammaSteep[j] ,
+                        pFlat = False,
+                        dTras = 0.1*(i+1),
+                        dRot = (np.pi/20.)*(i+1),
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+        #experiment_plots(dirBase = root + name+str(i)+"/")
+    #plot_tendencias(dirBase = root + name)
+    
+    return
+    #   Plot part
+    for name in Names:
+        plot_tendencias(dirBase = root + name)
+        
+    
+    #   END Cluster
+    
+    #   BEGIN simgular repeats
     #n = 0
     ###n = 91
     ###n=37
@@ -2482,9 +2471,29 @@ def main(arg):
     #return 
     
     
+    #name = "11"
+    #name = "72"
+    #experiment(directory=name,
+                    #t_end =200,
+                    #lamb = 3.,
+                    ##gammaInf = 2.,
+                    ##gamma0 = 5.,
+                    ##set_derivative = True,
+                    ##depthOp = 4, Z_set = 0.1,
+                    ##tanhLimit = True,
+                    ##k_int = 0.1,
+                    ##int_res = 0.2,
+                    #repeat = True)
+    #view3D(name)
+    #return
+    
+    #   END Singular repeats
+    #   BEGIN Batch local
+    
+    
     ##  Repetición de xperimentos locales
     #for i in range(20):
-        #repeat_local(nReps = 100,
+        #experiment_repeat(nReps = 100,
                      #k_int = 0.1,
                      ##gamma0 = 5.,
                      ##gammaInf = 2.,
@@ -2494,166 +2503,156 @@ def main(arg):
     #plot_tendencias(dirBase = "local/")
     #return
     
-    name = "72"
-    experiment(directory=name,
-                    t_end = 100,
-                    #lamb = 3.,
-                    #gammaInf = 2.,
-                    #gamma0 = 5.,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #k_int = 0.1,
-                    #int_res = 0.2,
-                    repeat = True)
-    view3D(name)
-    return
-    experiment_local(nReps = 100,
-                        pFlat = True,
-                        #pFlat = False,
-                        #k_int = 0.1,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.,
-                        #dTras = 1,
-                        dTras = 2,
-                        dRot = np.pi,
+    #experiment_local(nReps = 100,
+                        #pFlat = True,
+                        ##pFlat = False,
+                        ##k_int = 0.1,
+                        ##gamma0 = 5.,
+                        ##gammaInf = 2.,
+                        ##dTras = 1,
+                        #dTras = 2,
+                        #dRot = np.pi,
+                        ##dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+    #experiment_plots()#dirBase = "local/"+str(i)+"/")
+    #return
+    ###  Experimentos locales
+    #for i in range(20):
+        #experiment_local(nReps = 10,
+                        #pFlat = True,
+                        ##pFlat = False,
+                        #dTras = 0.1*(i+1),
+                        #dRot = (np.pi/20.)*(i+1),
                         #dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-    experiment_plots()#dirBase = "local/"+str(i)+"/")
-    return
-    ##  Experimentos locales
-    for i in range(20):
-        experiment_local(nReps = 10,
-                        pFlat = True,
-                        #pFlat = False,
-                        dTras = 0.1*(i+1),
-                        dRot = (np.pi/20.)*(i+1),
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-        experiment_plots(dirBase = "local/"+str(i)+"/")
-    plot_tendencias(dirBase = "local/")
-    return
+                        #enablePlotExp= False)
+        #experiment_plots(dirBase = "local/"+str(i)+"/")
+    #plot_tendencias(dirBase = "local/")
+    #return
+    
+    #   END Batch local
+    #   BEGIN Batch random
     
     ##  Experimentos con posiciones iniciales y/o referencias aleatorias
     
-    k_int = 0.
-    intMatSel = 2
+    ##k_int = 0.
+    ##intMatSel = 2
     
-    #   Experimento con puntos planos, 10 puntos, all random
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 1,
-                          #pFlat = True,
-                          #dirBase = "rand_flat_10/",
-                          #nP = 10,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "rand_flat_10/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "rand_flat_10/")
-    
-    
-    ##   Experimento con puntos planos, 4 puntos, all random
+    ##   Experimento con puntos planos, 10 puntos, all random
     ##experiment_all_random(nReps = 100, 
                           ##conditions = 1,
                           ##pFlat = True,
-                          ##dirBase = "rand_flat_4/",
+                          ##dirBase = "rand_flat_10/",
+                          ##nP = 10,
+                          ##enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "rand_flat_10/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "rand_flat_10/")
+    
+    
+    ###   Experimento con puntos planos, 4 puntos, all random
+    ###experiment_all_random(nReps = 100, 
+                          ###conditions = 1,
+                          ###pFlat = True,
+                          ###dirBase = "rand_flat_4/",
+                          ###nP = 4,
+                          ###enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "rand_flat_4/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "rand_flat_4/")
+    
+    
+    ##   Experimento con  10 puntos, all random
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 1,
+                          ##dirBase = "rand_10/",
+                          ##nP = 10,
+                          ##enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "rand_10/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "rand_10/")
+    
+    
+    ##   Experimento con  4 puntos, all random
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 1,
+                          ##dirBase = "rand_4/",
                           ##nP = 4,
                           ##enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "rand_flat_4/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "rand_flat_4/")
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "rand_4/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "rand_4/")
+    
+    ##   Experimento con  10 puntos, circle
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 3,
+                          ##dirBase = "circ_10/",
+                          ##nP = 10,
+                          ##enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "circ_10/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "circ_10/")
     
     
-    #   Experimento con  10 puntos, all random
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 1,
-                          #dirBase = "rand_10/",
-                          #nP = 10,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "rand_10/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "rand_10/")
+    ##   Experimento con  4 puntos, circle
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 3,
+                          ##dirBase = "circ_4/",
+                          ##nP = 4,
+                          ##enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "circ_4/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "circ_4/")
     
     
-    #   Experimento con  4 puntos, all random
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 1,
-                          #dirBase = "rand_4/",
-                          #nP = 4,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "rand_4/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "rand_4/")
-    
-    #   Experimento con  10 puntos, circle
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 3,
-                          #dirBase = "circ_10/",
-                          #nP = 10,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "circ_10/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "circ_10/")
+    ##   Experimento con  10 puntos planos, circle
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 3,
+                          ##pFlat = True,
+                          ##dirBase = "circ_flat_10/",
+                          ##nP = 10,
+                          ##enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "circ_flat_10/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "circ_flat_10/")
     
     
-    #   Experimento con  4 puntos, circle
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 3,
-                          #dirBase = "circ_4/",
-                          #nP = 4,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "circ_4/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "circ_4/")
+    ##   Experimento con  4 puntos planos, circle
+    ##experiment_all_random(nReps = 100, 
+                          ##conditions = 3,
+                          ##pFlat = True,
+                          ##dirBase = "circ_flat_4/",
+                          ##nP = 4,
+                          ##enablePlotExp= False)
+    #experiment_repeat(nReps = 100,
+                      #dirBase = "circ_flat_4/",
+                      #k_int = k_int ,
+                      #intMatSel = intMatSel,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = "circ_flat_4/")
     
     
-    #   Experimento con  10 puntos planos, circle
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 3,
-                          #pFlat = True,
-                          #dirBase = "circ_flat_10/",
-                          #nP = 10,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "circ_flat_10/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "circ_flat_10/")
-    
-    
-    #   Experimento con  4 puntos planos, circle
-    #experiment_all_random(nReps = 100, 
-                          #conditions = 3,
-                          #pFlat = True,
-                          #dirBase = "circ_flat_4/",
-                          #nP = 4,
-                          #enablePlotExp= False)
-    experiment_repeat(nReps = 100,
-                      dirBase = "circ_flat_4/",
-                      k_int = k_int ,
-                      intMatSel = intMatSel,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = "circ_flat_4/")
-    
-    
-    return
+    #return
     
     #   Experimento exhaustivo de posiciones y referencias random
     #experiment_all_random(nReps = 100, 
@@ -2667,6 +2666,30 @@ def main(arg):
     #experiment_plots(dirBase = "rand_flat_10/")
     
     #return
+    
+    #   Comparaciones de errores finales bajo condiciones de inicio
+    ##experiment_plots(dirBase = "circ_4/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_4/")
+    ##experiment_plots(dirBase = "circ_flat_4/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_flat_4/")
+    ##experiment_plots(dirBase = "rand_4/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_4/")
+    ##experiment_plots(dirBase = "rand_flat_4/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_flat_4/")
+    ##experiment_plots(dirBase = "circ_10/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_10/")
+    ##experiment_plots(dirBase = "circ_flat_10/")
+    #plot_error_stats(nReps = 100, dirBase = "circ_flat_10/")
+    ##experiment_plots(dirBase = "rand_10/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_10/")
+    ##experiment_plots(dirBase = "rand_flat_10/")
+    #plot_error_stats(nReps = 100, dirBase = "rand_flat_10/")
+    
+    #return
+    #   END Batch random
+    
+    
+    #   BEGIN Experimento singular
     
     #   Pruebas con rotación del mundo CASO DE FALLA
     
@@ -2745,7 +2768,7 @@ def main(arg):
     #print(ret)
     #view3D('2')
     #return
-    
+    #   END Experimento singular
     
     
 

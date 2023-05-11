@@ -2022,24 +2022,24 @@ def main(arg):
     
     
     #   BEGIN   Contrajemplos
-    P = np.array([[1.,1.,-1.,-1.],
-                  [1.,-1.,-1.,1.],
-                  [0.,0.,0.,0.]])
+    #P = np.array([[1.,1.,-1.,-1.],
+                  #[1.,-1.,-1.,1.],
+                  #[0.,0.,0.,0.]])
     ##P = np.array([[1.,1.,-1.,-1.,0.5],
                   ##[1.,-1.,-1.,1.,0.1],
                   ##[0.,0.,0.,0,0.5]])
-    P *= 0.75
-    pd = circle(4,1,T=np.array([0.,0.,2.]))
+    #P *= 0.75
+    #pd = circle(4,1,T=np.array([0.,0.,2.]))
     
     ####   Escalando 
-    p0 = pd.copy()
+    #p0 = pd.copy()
     
     #   escalando
     #p0[:3,:] *= 2.
     #p0[:2,:] *= 2.
     
     #   Traslación en Z
-    p0[2,:] += 1
+    #p0[2,:] += 1
     
     #   Traslación en XY
     #p0[:2,:] += np.array([[1.],[1.]])
@@ -2155,20 +2155,20 @@ def main(arg):
     #R = cm.rot(testAng,'y') 
     #P = R @ P
     
-    experiment(directory="counterex",
-                    t_end = 100,
-                    k_int = 0.1,
-                    #lamb = 3.,
-                    gamma0 = 5,
-                    gammaInf = 2,
-                    ##int_res = 0.2,
-                    #set_derivative = True,
-                    #depthOp = 4, Z_set = 1.,
-                    pd = pd,
-                    p0 = p0,
-                    P = P)
-    view3D("counterex")
-    return
+    #experiment(directory="counterex",
+                    #t_end = 100,
+                    #k_int = 0.1,
+                    ##lamb = 3.,
+                    #gamma0 = 5,
+                    #gammaInf = 2,
+                    ###int_res = 0.2,
+                    ##set_derivative = True,
+                    ##depthOp = 4, Z_set = 1.,
+                    #pd = pd,
+                    #p0 = p0,
+                    #P = P)
+    #view3D("counterex")
+    #return
     
     #   END Contrajemplos
     #   BEGIN UI [r | v | Simple | 0-4]

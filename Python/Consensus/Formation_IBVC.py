@@ -2335,7 +2335,7 @@ def main(arg):
                         dRot = (np.pi/20.)*(i+1),
                         dirBase = root + name+str(i)+"/",
                         enablePlotExp= False)
-        #experiment_plots(dirBase = root + name+str(i)+"/")
+        experiment_plots(dirBase = root + name+str(i)+"/")
     #plot_tendencias(dirBase = root + name)
     
     return

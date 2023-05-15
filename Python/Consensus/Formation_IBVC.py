@@ -1968,7 +1968,7 @@ def plot_tendencias(nReps = 20,
     ax.set_xlabel("Set")
     ax.set_ylabel("Traslation error")
     #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.1,1.1))
+    plt.ylim((-0.1,0.11))
     plt.tight_layout()
     plt.savefig(dirBase+'Traslation.pdf',bbox_inches='tight')
     #plt.show()

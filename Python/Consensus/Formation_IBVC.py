@@ -511,7 +511,7 @@ def experiment(directory = "0",
     
     #   Check initial params 
     for i in range(n_agents):
-        if agents[i].count_points_in_FOV(P) != n_points:
+        if agents[i].count_points_in_FOV(P, enableMargin = False) != n_points:
             print("invalid configuration")
             return None
     
@@ -678,7 +678,7 @@ def experiment(directory = "0",
                 U = np.tanh(U)
             
             #   Detección de choque del plano de cámara y los puntos de escena
-            if agents[j].count_points_in_FOV(P) != n_points:
+            if agents[j].count_points_in_FOV(P, enableMargin=False) != n_points:
                 if depthFlags[j] == 0. :
                     depthFlags[j] = i
                 U =  np.array([0.,0.,0.,0.,0.,0.])
@@ -1695,7 +1695,7 @@ def plot_error_stats(nReps = 100,
     
     ##  Scatter err T, Ce
     fig, ax = plt.subplots()
-    fig.suptitle("Consensus error evolution fvs each final traslation error")
+    fig.suptitle("Consensus error evolution for each final traslation error")
     ax.scatter(var_arr_2,arr_err, 
             marker = "*", alpha = 0.5,color = colors[0],
             label= "Initial")
@@ -1720,7 +1720,7 @@ def plot_error_stats(nReps = 100,
     
     ##  Scatter err R, Ce
     fig, ax = plt.subplots()
-    fig.suptitle("Consensus error evolution fvs each final rotation error")
+    fig.suptitle("Consensus error evolution for each final rotation error")
     ax.scatter(var_arr_3,arr_err, 
             marker = "*", alpha = 0.5,color = colors[0],
             label= "Initial")
@@ -2283,65 +2283,65 @@ def main(arg):
     #   BEGIN CLUSTER
     
     #   Configs
-    job = arg[3]
+    #job = arg[3]
     
-    #   TODO: counts
-    #nThreads = 8
-    #nReps = 20
+    ##   TODO: counts
+    ##nThreads = 8
+    ##nReps = 20
     
-    ##   limits
-    #thReps = int(nReps/nThreads)
-    #init = (job-1)*thReps
-    #end = init + thReps
-    #if end > nReps:
-        #end = nReps
+    ###   limits
+    ##thReps = int(nReps/nThreads)
+    ##init = (job-1)*thReps
+    ##end = init + thReps
+    ##if end > nReps:
+        ##end = nReps
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
     
-    Names = ["gamma_1_3/",
-             "gamma_1_5/",
-             "gamma_2_3/",
-             "gamma_2_5/"]
+    #Names = ["gamma_1_3/",
+             #"gamma_1_5/",
+             #"gamma_2_3/",
+             #"gamma_2_5/"]
     
-    intGamma0 = [0.1]*2+[0.2]*2
-    intGammaInf = [0.05]*4
-    intGammaSteep = [3,5]*2
+    #intGamma0 = [0.1]*2+[0.2]*2
+    #intGammaInf = [0.05]*4
+    #intGammaSteep = [3,5]*2
     
-    j = job % 4
-    init = 0
-    end = 0
-    if job < 4:
-        init = 0
-        end = 10
-    else:
-        init = 10
-        end = 20
+    #j = job % 4
+    #init = 0
+    #end = 0
+    #if job < 4:
+        #init = 0
+        #end = 10
+    #else:
+        #init = 10
+        #end = 20
     
-    #   process
-    name = Names[j]
-    logText = "Set = "+root + name+'\n'
-    write2log(logText)
-    for i in range(init, end):
-        logText = "Repetition = "+str(i)+'\n'
-        write2log(logText)
-        experiment_local(nReps = 50,
-                        gamma0 = 5.,
-                        gammaInf = 2.,
-                        intGamma0 = intGamma0[j],
-                        intGammaInf = intGammaInf[j],
-                        intGammaSteep = intGammaSteep[j] ,
-                        pFlat = False,
-                        dTras = 0.1*(i+1),
-                        dRot = (np.pi/20.)*(i+1),
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-        experiment_plots(dirBase = root + name+str(i)+"/")
-    #plot_tendencias(dirBase = root + name)
+    ##   process
+    #name = Names[j]
+    #logText = "Set = "+root + name+'\n'
+    #write2log(logText)
+    #for i in range(init, end):
+        #logText = "Repetition = "+str(i)+'\n'
+        #write2log(logText)
+        #experiment_local(nReps = 50,
+                        #gamma0 = 5.,
+                        #gammaInf = 2.,
+                        #intGamma0 = intGamma0[j],
+                        #intGammaInf = intGammaInf[j],
+                        #intGammaSteep = intGammaSteep[j] ,
+                        #pFlat = False,
+                        #dTras = 0.1*(i+1),
+                        #dRot = (np.pi/20.)*(i+1),
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+        #experiment_plots(dirBase = root + name+str(i)+"/")
+    ##plot_tendencias(dirBase = root + name)
     
-    return
-    #   Plot part
-    for name in Names:
-        plot_tendencias(dirBase = root + name)
+    #return
+    ##   Plot part
+    #for name in Names:
+        #plot_tendencias(dirBase = root + name)
         
     
     #   END Cluster
@@ -2530,6 +2530,19 @@ def main(arg):
     #return
     
     #   END Batch local
+    
+    #   BEGIN repeat folder experiments
+    
+    name = "pNFlat_P04DOF_Int/"
+    experiment_repeat(nReps = 100,
+                      dirBase = name,
+                      k_int = 0.1 ,
+                        enablePlotExp = False)
+    experiment_plots(dirBase = name)
+    return 
+
+    #   END repeat folder experiments
+    
     #   BEGIN Batch random
     
     ##  Experimentos con posiciones iniciales y/o referencias aleatorias

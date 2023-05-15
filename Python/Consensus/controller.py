@@ -377,13 +377,14 @@ class agent:
     def reset_int(self):
         self.error_int[:] =  0.0
         
-    def count_points_in_FOV(self,P):
+    def count_points_in_FOV(self,P, enableMargin = True):
         
         Z = self.camera.Preal @ P
         Z = Z[2,:]
         
         #   BEGIN Only front ckeck
-        return np.count_nonzero(Z > 0.)
+        if not enableMargin:
+            return np.count_nonzero(Z > 0.)
         #   END Only front check
         
         a = abs(self.s_current_n[0,:]) < self.FOVxlim 

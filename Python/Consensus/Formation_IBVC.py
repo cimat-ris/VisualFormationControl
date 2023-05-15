@@ -1230,7 +1230,7 @@ def experiment_local(nReps = 100,
                     intGammaSteep = 5.,
                     gamma0 = None,
                     gammaInf = None,
-                    GammaSteep = 5.,
+                    gammaSteep = 5.,
                     enablePlotExp = True):
     
     n_agents = 4
@@ -2283,65 +2283,65 @@ def main(arg):
     #   BEGIN CLUSTER
     
     #   Configs
-    #job = arg[3]
+    job = arg[2]
     
     ##   TODO: counts
-    ##nThreads = 8
-    ##nReps = 20
+    #nThreads = 8
+    #nReps = 20
     
-    ###   limits
-    ##thReps = int(nReps/nThreads)
-    ##init = (job-1)*thReps
-    ##end = init + thReps
-    ##if end > nReps:
-        ##end = nReps
+    ##   limits
+    #thReps = int(nReps/nThreads)
+    #init = (job-1)*thReps
+    #end = init + thReps
+    #if end > nReps:
+        #end = nReps
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
+    root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
     
-    #Names = ["gamma_1_3/",
-             #"gamma_1_5/",
-             #"gamma_2_3/",
-             #"gamma_2_5/"]
+    Names = ["gamma_1_3/",
+             "gamma_1_5/",
+             "gamma_2_3/",
+             "gamma_2_5/"]
     
-    #intGamma0 = [0.1]*2+[0.2]*2
-    #intGammaInf = [0.05]*4
-    #intGammaSteep = [3,5]*2
+    intGamma0 = [0.1]*2+[0.2]*2
+    intGammaInf = [0.05]*4
+    intGammaSteep = [3,5]*2
     
-    #j = job % 4
-    #init = 0
-    #end = 0
-    #if job < 4:
-        #init = 0
-        #end = 10
-    #else:
-        #init = 10
-        #end = 20
+    j = job % 4
+    init = 0
+    end = 0
+    if job < 4:
+        init = 0
+        end = 10
+    else:
+        init = 10
+        end = 20
     
-    ##   process
-    #name = Names[j]
-    #logText = "Set = "+root + name+'\n'
-    #write2log(logText)
-    #for i in range(init, end):
-        #logText = "Repetition = "+str(i)+'\n'
-        #write2log(logText)
-        #experiment_local(nReps = 50,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.,
-                        #intGamma0 = intGamma0[j],
-                        #intGammaInf = intGammaInf[j],
-                        #intGammaSteep = intGammaSteep[j] ,
-                        #pFlat = False,
-                        #dTras = 0.1*(i+1),
-                        #dRot = (np.pi/20.)*(i+1),
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-        #experiment_plots(dirBase = root + name+str(i)+"/")
-    ##plot_tendencias(dirBase = root + name)
+    #   process
+    name = Names[j]
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
+    for i in range(init, end):
+        logText = "Repetition = "+str(i)+'\n'
+        write2log(logText)
+        experiment_local(nReps = 50,
+                        gamma0 = 5.,
+                        gammaInf = 2.,
+                        intGamma0 = intGamma0[j],
+                        intGammaInf = intGammaInf[j],
+                        intGammaSteep = intGammaSteep[j] ,
+                        pFlat = False,
+                        dTras = 0.1*(i+1),
+                        dRot = (np.pi/20.)*(i+1),
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+        experiment_plots(dirBase = root + name+str(i)+"/")
+    #plot_tendencias(dirBase = root + name)
     
-    #return
-    ##   Plot part
-    #for name in Names:
-        #plot_tendencias(dirBase = root + name)
+    return
+    #   Plot part
+    for name in Names:
+        plot_tendencias(dirBase = root + name)
         
     
     #   END Cluster

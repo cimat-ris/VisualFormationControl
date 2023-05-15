@@ -916,7 +916,7 @@ def experiment(directory = "0",
                     colors,
                     ylimits = [-1,1],
                     name = directory+"/Velocidades_"+str(i),
-                    label = "Velocidades",
+                    label = "Velocities",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
     
     #   Posiciones x agente
@@ -925,13 +925,13 @@ def experiment(directory = "0",
                     pos_arr[i,:3,:],
                     colors,
                     name = directory+"/Traslaciones_"+str(i),
-                    label = "Traslaciones",
+                    label = "Traslations",
                     labels = ["X","Y","Z"])
         mp.plot_time(t_array,
                     pos_arr[i,3:,:],
                     colors,
                     name = directory+"/Angulos_"+str(i),
-                    label = "Angulos",
+                    label = "Angles",
                     labels = ["Roll","Pitch","yaw"])
     
     #   Valores propios normal
@@ -941,7 +941,7 @@ def experiment(directory = "0",
                     colors,
                     ylimits = [.0,4.1],
                     name = directory+"/ValoresPR_"+str(i),
-                    label = "Valores propios (SVD)",
+                    label = "Non zero singular value magnitudes",
                     labels = ["0","1","2","3","4","5"])
     
     #   Valores propios inversa
@@ -950,7 +950,7 @@ def experiment(directory = "0",
                     sinv_store[i,:,:],
                     colors,
                     name = directory+"/ValoresP_"+str(i),
-                    label = "Valores propios (SVD)",
+                    label = "Non zero singular value magnitudes",
                     labels = ["0","1","2","3","4","5"])
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
@@ -965,7 +965,7 @@ def experiment(directory = "0",
                     svdProy[i,:6,:],
                     colors,
                     name = directory+"/Proy_et_VH_"+str(i),
-                    label = "Proy($e$) en $V^h$ ",
+                    label = "Proy($e$) over $V^h$ ",
                     labels = labels)
                     #limits = [[t_array[0],t_array[-1]],[0,20]])
     
@@ -1462,7 +1462,7 @@ def experiment_plots(dirBase = ""):
     
     ##      Simulation - wise consensus error
     fig, ax = plt.subplots()
-    fig.suptitle("Error de consenso por experimento")
+    fig.suptitle("Consensus error by experiment")
     #plt.ylim([-2.,2.])
     for i in range(n_agents):
         ax.scatter(ref_arr, var_arr[i,:], 
@@ -1495,7 +1495,7 @@ def experiment_plots(dirBase = ""):
     
     ##  Histogram consensus
     fig, ax = plt.subplots()
-    fig.suptitle("Histograma de error de consenso")
+    fig.suptitle("Consensus error histogram")
     counts, bins = np.histogram(var_arr)
     plt.stairs(counts, bins)
     plt.tight_layout()
@@ -1506,7 +1506,7 @@ def experiment_plots(dirBase = ""):
     
     ##  Histogram consensus Zoom
     fig, ax = plt.subplots()
-    fig.suptitle("Histograma de error de consenso (zoom)")
+    fig.suptitle("Consensus error histogram (zoom)")
     counts, bins = np.histogram(var_arr[var_arr < 0.5])
     plt.stairs(counts, bins)
     plt.tight_layout()
@@ -1518,7 +1518,7 @@ def experiment_plots(dirBase = ""):
     
     ##  Simulation - wise formation error
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado por experimento")
+    fig.suptitle("Formation state error")
     ax.scatter(ref_arr,var_arr_2, label = "Posición",
             marker = ".", alpha = 0.5,color = colors[0])
     ax.scatter(ref_arr,var_arr_3, label = "Rotación",
@@ -1531,7 +1531,7 @@ def experiment_plots(dirBase = ""):
     
     ##  Scatter err T,R
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de estado")
+    fig.suptitle("State error")
     ax.scatter(var_arr_et,var_arr_er, 
             marker = "*", alpha = 0.5,color = colors[1])
     ax.scatter(var_arr_2,var_arr_3, 
@@ -1541,8 +1541,8 @@ def experiment_plots(dirBase = ""):
                 [var_arr_er[i],var_arr_3[i]],
                 alpha = 0.5, color = colors[0],
                 linewidth = 0.5)
-    ax.set_xlabel("Error de traslación")
-    ax.set_ylabel("Error de rotación")
+    ax.set_xlabel("Traslation")
+    ax.set_ylabel("Rotation")
     plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,3.1))
     plt.tight_layout()
@@ -1589,7 +1589,7 @@ def experiment_plots(dirBase = ""):
     ##  Heatmap
     h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
     fig, ax = plt.subplots()
-    fig.suptitle("Heatmap de errores de formación")
+    fig.suptitle("End formation error heatmap")
     
     h = h.T
     ax.imshow(h)
@@ -1600,8 +1600,8 @@ def experiment_plots(dirBase = ""):
     ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x)
     ax.set_yticklabels(y)
-    ax.set_xlabel("Error de traslación")
-    ax.set_ylabel("Error de rotación")
+    ax.set_xlabel("Traslation")
+    ax.set_ylabel("Rotation")
     for i in range(len(x)):
         for j in range(len(y)):
             text = ax.text(j, i, h[i, j],
@@ -1620,7 +1620,7 @@ def experiment_plots(dirBase = ""):
     var_arr_3 = var_arr_3[var_arr_3 < 0.2]
     h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
     fig, ax = plt.subplots()
-    fig.suptitle("Heatmap de errores de formación (Zoom)")
+    fig.suptitle("End formation error heatmap (Zoom)")
     
     h = h.T
     ax.imshow(h)
@@ -1649,8 +1649,8 @@ def experiment_plots(dirBase = ""):
     fig.suptitle("Errores de estado (Zoom)")
     ax.scatter(var_arr_2,var_arr_3, 
             marker = "*", alpha = 0.5,color = colors[0])
-    ax.set_xlabel("Error de traslación")
-    ax.set_ylabel("Error de rotación")
+    ax.set_xlabel("Traslation")
+    ax.set_ylabel("Rotation")
     plt.tight_layout()
     plt.savefig(dirBase+'Formation error_Scatter_zoom.pdf',bbox_inches='tight')
     #plt.show()
@@ -1695,10 +1695,10 @@ def plot_error_stats(nReps = 100,
     
     ##  Scatter err T, Ce
     fig, ax = plt.subplots()
-    fig.suptitle("Errores traslación final vs consenso inicial")
+    fig.suptitle("Consensus error evolution fvs each final traslation error")
     ax.scatter(var_arr_2,arr_err, 
             marker = "*", alpha = 0.5,color = colors[0],
-            label= "Inicial")
+            label= "Initial")
     ax.scatter(var_arr_2,var_arr, 
             marker = "*", alpha = 0.5,color = colors[1],
             label= "Final")
@@ -1709,21 +1709,21 @@ def plot_error_stats(nReps = 100,
                 linewidth = 0.5)
     
     fig.legend( loc=1)
-    ax.set_xlabel("Error de traslación final")
-    ax.set_ylabel("Error de consenso inicial")
+    ax.set_xlabel("Traslation error")
+    ax.set_ylabel("Consensus error")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,20))
     plt.tight_layout()
-    plt.savefig(dirBase+'Error traslacion vs consenso.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Traslation vs consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
     ##  Scatter err R, Ce
     fig, ax = plt.subplots()
-    fig.suptitle("Errores traslación final vs consenso inicial")
+    fig.suptitle("Consensus error evolution fvs each final rotation error")
     ax.scatter(var_arr_3,arr_err, 
             marker = "*", alpha = 0.5,color = colors[0],
-            label= "Inicial")
+            label= "Initial")
     ax.scatter(var_arr_3,var_arr, 
             marker = "*", alpha = 0.5,color = colors[1],
             label= "Final")
@@ -1734,62 +1734,62 @@ def plot_error_stats(nReps = 100,
                 linewidth = 0.5)
     
     fig.legend( loc=1)
-    ax.set_xlabel("Error de rotación final")
-    ax.set_ylabel("Error de consenso inicial")
+    ax.set_xlabel("Rotation error")
+    ax.set_ylabel("Consensus error")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,3.1))
     plt.tight_layout()
-    plt.savefig(dirBase+'Error rotacion vs consenso.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Rotation vs consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
     ##  Scatter err init, end
     fig, ax = plt.subplots()
-    fig.suptitle("Errores traslación inicial vs Formación final")
+    fig.suptitle("Trastation error evolution fvs each final traslation error")
     ax.scatter(var_arr_et,var_arr_2, 
             marker = "*", alpha = 0.5,color = colors[0],
-            label= "Inicial")
-    ax.scatter(var_arr_et,var_arr_3, 
+            label= "Initial")
+    ax.scatter(var_arr_et,var_arr_et, 
             marker = "*", alpha = 0.5,color = colors[1],
             label= "Final")
     for i in range(nReps):
         ax.plot([var_arr_et[i],var_arr_et[i]],
-                [var_arr_2[i],var_arr_3[i]],
+                [var_arr_2[i],var_arr_et[i]],
                 alpha = 0.5, color = colors[1],
                 linewidth = 0.5)
     
     fig.legend( loc=1)
-    ax.set_xlabel("Error de traslación final")
-    ax.set_ylabel("Error de Formación inicial")
+    ax.set_xlabel("Traslation error")
+    ax.set_ylabel("Traslation error")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,3.1))
     plt.tight_layout()
-    plt.savefig(dirBase+'Error traslación vs EF.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Traslation error evolution vs final tralation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
     ##  Scatter err end, init
     fig, ax = plt.subplots()
-    fig.suptitle("Errores traslación inicial vs Formación final")
-    ax.scatter(var_arr_er,var_arr_2, 
-            marker = "*", alpha = 0.5,color = colors[0],
-            label= "Traslacion")
+    fig.suptitle("Rotation error evolution fvs each final rotation error")
     ax.scatter(var_arr_er,var_arr_3, 
+            marker = "*", alpha = 0.5,color = colors[0],
+            label= "Traslation")
+    ax.scatter(var_arr_er,var_arr_er, 
             marker = "*", alpha = 0.5,color = colors[1],
-            label= "Rotacion")
+            label= "Rotation")
     for i in range(nReps):
         ax.plot([var_arr_er[i],var_arr_er[i]],
-                [var_arr_2[i],var_arr_3[i]],
+                [var_arr_3[i],var_arr_er[i]],
                 alpha = 0.5, color = colors[1],
                 linewidth = 0.5)
     
     fig.legend( loc=1)
-    ax.set_xlabel("Error de rotación final")
-    ax.set_ylabel("Error de Formación inicial")
+    ax.set_xlabel("Rotation error")
+    ax.set_ylabel("Rotation error")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,3.1))
     plt.tight_layout()
-    plt.savefig(dirBase+'Error rotacion vs EF.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Traslation error evolution vs final tralation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
@@ -1912,36 +1912,36 @@ def plot_tendencias(nReps = 20,
     
     #   Errores de consenso
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de consenso por paso")
+    fig.suptitle("Consensus error by repetition sets")
     ax.plot(ref,cons_err_min, 
             color = colors[0],
-            label= "Mínimo")
+            label= "Min")
     ax.plot(ref,cons_err_avr, 
             color = colors[1],
-            label= "Promedio")
+            label= "Average")
     ax.plot(ref,cons_err_max, 
             color = colors[2],
-            label= "Máximo")
+            label= "Max")
     ax.boxplot(data_cons)
     
     fig.legend( loc=2)
-    ax.set_xlabel("Paso")
-    ax.set_ylabel("Error de consenso")
+    ax.set_xlabel("Sets")
+    ax.set_ylabel("Consensus error")
     #plt.xlim((-0.1,1.1))
-    #plt.ylim((-0.1,3.1))
+    plt.ylim((-0.01,0.11))
     plt.tight_layout()
-    plt.savefig(dirBase+'Consenso.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
     #   Errores de consenso
     fig, ax = plt.subplots()
-    fig.suptitle("Cuenta de repeticiones fuera de FOV")
+    fig.suptitle("Number of FOV failed simulations")
     ax.plot(ref,count_mask, 
             color = colors[0])
     
-    ax.set_xlabel("Paso")
-    ax.set_ylabel("Cuenta de repeticiones fallidas")
+    ax.set_xlabel("Set")
+    ax.set_ylabel("Failed simulations")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,3.1))
     plt.tight_layout()
@@ -1951,51 +1951,51 @@ def plot_tendencias(nReps = 20,
     
     #   Errores de traslación
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de traslación final por paso")
+    fig.suptitle("Final traslation error by simulation set")
     ax.plot([1,nReps],[0.1,0.1],'k--',alpha = 0.5, label = "Umbral")
     ax.plot(ref,tErr_err_min, 
             color = colors[0],
-            label= "Mínimo")
+            label= "Min")
     ax.plot(ref,tErr_err_avr, 
             color = colors[1],
-            label= "Promedio")
+            label= "Average")
     ax.plot(ref,tErr_err_max, 
             color = colors[2],
-            label= "Máximo")
+            label= "Max")
     ax.boxplot(data_tErr)
     
     fig.legend( loc=2)
-    ax.set_xlabel("Paso")
-    ax.set_ylabel("Error de traslación")
+    ax.set_xlabel("Set")
+    ax.set_ylabel("Traslation error")
     #plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,1.1))
     plt.tight_layout()
-    plt.savefig(dirBase+'Traslación.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Traslation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
         
     #   Errores de rotación
     fig, ax = plt.subplots()
-    fig.suptitle("Errores de rotación final por paso")
+    fig.suptitle("Final rotation error by simulation set")
     ax.plot([1,nReps],[0.1,0.1],'k--',alpha = 0.5, label = "Umbral")
     ax.plot(ref,rErr_err_min, 
             color = colors[0],
-            label= "Mínimo")
+            label= "Min")
     ax.plot(ref,rErr_err_avr, 
             color = colors[1],
-            label= "Promedio")
+            label= "Average")
     ax.plot(ref,rErr_err_max, 
             color = colors[2],
-            label= "Máximo")
+            label= "Max")
     ax.boxplot(data_rErr)
     
     fig.legend( loc=2)
-    ax.set_xlabel("Paso")
-    ax.set_ylabel("Error de rotación")
+    ax.set_xlabel("Set")
+    ax.set_ylabel("Rotation error")
     #plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,3.2))
     plt.tight_layout()
-    plt.savefig(dirBase+'Rotación.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Rotation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
         

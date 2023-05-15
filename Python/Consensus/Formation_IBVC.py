@@ -2283,7 +2283,7 @@ def main(arg):
     #   BEGIN CLUSTER
     
     #   Configs
-    job = arg[2]
+    job = int(arg[2])
     
     ##   TODO: counts
     #nThreads = 8

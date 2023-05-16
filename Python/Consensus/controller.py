@@ -217,7 +217,7 @@ class agent:
         self.intGammaSteep = intGammaSteep
         if (not intGamma0 is None) or (not intGammaInf is None):
             self.intGammaAdapt = True
-            
+            self.k_int = 1
             if intGamma0 is None:
                 self.intGamma0 = 2.
             else:

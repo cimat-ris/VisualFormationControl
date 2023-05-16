@@ -1889,19 +1889,20 @@ def plot_tendencias(nReps = 20,
         var_arr_et = npzfile['var_arr_et']
         var_arr_er = npzfile['var_arr_er']
         Misscount = npzfile['Misscount']
-        mask = npzfile['mask']
-        
-        logText = "Masks for step " + str(k)
-        logText += "=" +str(np.where(mask == 1.)[0])
-        write2log(logText + '\n')
-        
-        var_arr = var_arr[mask==0.]
-        var_arr_2 = var_arr_2[mask==0.]
-        var_arr_3 = var_arr_3[mask==0.]
-        var_arr_et = var_arr_et[mask==0.]
-        var_arr_er = var_arr_er[mask==0.]
-        
-        count_mask[k] = mask.sum()
+        if npzfile.__contains__('mask'):
+            mask = npzfile['mask']
+            
+            logText = "Masks for step " + str(k)
+            logText += "=" +str(np.where(mask == 1.)[0])
+            write2log(logText + '\n')
+            
+            var_arr = var_arr[mask==0.]
+            var_arr_2 = var_arr_2[mask==0.]
+            var_arr_3 = var_arr_3[mask==0.]
+            var_arr_et = var_arr_et[mask==0.]
+            var_arr_er = var_arr_er[mask==0.]
+            
+            count_mask[k] = mask.sum()
         
         data_cons.append(var_arr)
         cons_err_max[k] = var_arr.max()
@@ -1976,7 +1977,7 @@ def plot_tendencias(nReps = 20,
     ax.set_xlabel("Set")
     ax.set_ylabel("Traslation error")
     #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.1,0.11))
+    plt.ylim((-0.01,0.11))
     plt.tight_layout()
     plt.savefig(dirBase+'Traslation.pdf',bbox_inches='tight')
     #plt.show()
@@ -2291,7 +2292,7 @@ def main(arg):
     #   BEGIN CLUSTER
     
     #   Configs
-    job = int(arg[2])
+    #job = int(arg[2])
     
     ##   TODO: counts
     #nThreads = 8
@@ -2311,6 +2312,13 @@ def main(arg):
              "gamma_2_3/",
              "gamma_2_5/"]
     
+    #   Plot part
+    #for name in Names:
+        #plot_tendencias(dirBase = root + name)
+        
+    #return
+    
+    #   Proc part
     intGamma0 = [0.1]*2+[0.2]*2
     intGammaInf = [0.05]*4
     intGammaSteep = [3,5]*2
@@ -2325,7 +2333,7 @@ def main(arg):
         init = 10
         end = 20
     
-    #   process
+      process
     name = Names[j]
     logText = "Set = "+root + name+'\n'
     write2log(logText)
@@ -2344,13 +2352,9 @@ def main(arg):
                         dirBase = root + name+str(i)+"/",
                         enablePlotExp= False)
         experiment_plots(dirBase = root + name+str(i)+"/")
-    #plot_tendencias(dirBase = root + name)
+    plot_tendencias(dirBase = root + name)
     
     return
-    #   Plot part
-    for name in Names:
-        plot_tendencias(dirBase = root + name)
-        
     
     #   END Cluster
     

@@ -1239,6 +1239,10 @@ def experiment_local(nReps = 100,
                     gamma0 = None,
                     gammaInf = None,
                     gammaSteep = 5.,
+                    randomInit = False,
+                    xRangeInit = [-2,2],
+                    yRangeInit = [-2,2],
+                    zRangeInit = [0,3],
                     enablePlotExp = True):
     
     n_agents = 4
@@ -1247,6 +1251,7 @@ def experiment_local(nReps = 100,
     var_arr_3 = np.zeros(nReps)
     var_arr_et = np.zeros(nReps)
     var_arr_er = np.zeros(nReps)
+    mask = np.zeros(nReps)
     Misscount = 0
     
     #   Testing ranges 
@@ -1265,123 +1270,114 @@ def experiment_local(nReps = 100,
     for k in range(nReps):
         FOVflag = True
         
+        #   Points
+        # Range
+        PxRange = [-2,2]
+        PyRange = [-2,2]
+        PzRange = [-1,0]
+        
+        nP = random.randint(4,11)
+        #nP = 4
+        #nP = 10
+        P = np.random.rand(3,nP)
+        P[0,:] = PxRange[0]+ P[0,:]*(PxRange[1]-PxRange[0])
+        P[1,:] = PyRange[0]+ P[1,:]*(PyRange[1]-PyRange[0])
+        P[2,:] = PzRange[0]+ P[2,:]*(PzRange[1]-PzRange[0])
+        if pFlat :
+            P[2,:] = 0.
+            #   BEGIN experimentos con rotaciones
+            P = R @ P 
+            #   END
+        Ph = np.r_[P,np.ones((1,nP))]
+        
+        #   Conifgs if randInt
+        offsetInit = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+        dRangeInit = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+        dRangeInit -= offset
+        
+        #   Cameras
+        
+        p0 = np.zeros((6,n_agents))
+        
+        offset = np.array([tRange[0],tRange[0],tRange[0],
+                            rotRange[0],rotRange[0],rotRange[0]])
+        dRange = np.array([tRange[1],tRange[1],tRange[1],
+                            rotRange[1],rotRange[1],rotRange[1]])
+        dRange -= offset
+        
+        #iSel = {0:0,1:3,2:2,3:1}
+        
+        #   References
         pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
         
-        #   BEGIN experimentos con rotaciones
-        #testAng =  np.pi/8
-        #R = cm.rot(testAng,'y') 
-        
-        #for i in range(4):
-            #_R = cm.rot(pd[5,i],'z') 
-            #_R = _R @ cm.rot(pd[4,i],'y')
-            #_R = _R @ cm.rot(pd[3,i],'x')
+        for i in range(n_agents):
             
-            #_R = R @ _R
-            #[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
-        #pd[:3,:] = R @ pd[:3,:]
-        #   END
-        while FOVflag:
-            #   Points
-            # Range
-            PxRange = [-2,2]
-            PyRange = [-2,2]
-            PzRange = [-1,0]
-            
-            nP = random.randint(5,11)
-            #nP = 4
-            #nP = 10
-            P = np.random.rand(3,nP)
-            P[0,:] = PxRange[0]+ P[0,:]*(PxRange[1]-PxRange[0])
-            P[1,:] = PyRange[0]+ P[1,:]*(PyRange[1]-PyRange[0])
-            P[2,:] = PzRange[0]+ P[2,:]*(PzRange[1]-PzRange[0])
-            if pFlat :
-                P[2,:] = 0.
-                #   BEGIN experimentos con rotaciones
-                P = R @ P 
-                #   END
-            Ph = np.r_[P,np.ones((1,nP))]
-            
-            #   Cameras
-            
-            p0 = np.zeros((6,n_agents))
-            
-            offset = np.array([tRange[0],tRange[0],tRange[0],
-                               rotRange[0],rotRange[0],rotRange[0]])
-            dRange = np.array([tRange[1],tRange[1],tRange[1],
-                               rotRange[1],rotRange[1],rotRange[1]])
-            dRange -= offset
-            
-            #iSel = {0:0,1:3,2:2,3:1}
-            
-            for i in range(n_agents):
-                
+            #   BEGIN Random
+            if randomInit:
                 tmp = np.random.rand(6)
-                #tmp = pd[:,iSel[i]] + offset + tmp*dRange
-                tmp = pd[:,i] + offset + tmp*dRange
-                
-                #   BEGIN experimentos de rotaciones
-                #tmp[3] = np.pi
-                #tmp[4] = 0.
-                #_R = cm.rot(tmp[5],'z') 
-                #_R = _R @ cm.rot(tmp[4],'y')
-                #_R = _R @ cm.rot(tmp[3],'x')
-                
-                #_R = R @ _R
-                #[tmp[3], tmp[4], tmp[5]] = ctr.get_angles(_R)
-                #   END
+                tmp = offsetInit + tmp*dRangeInit
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
                 
                 while agent.count_points_in_FOV(Ph) != nP or tmp[2]<0.:
                     tmp = np.random.rand(6)
-                    #tmp = pd[:,iSel[i]] + offset + tmp*dRange
-                    tmp = pd[:,i] + offset + tmp*dRange
-                    
-                    #   BEGIN experimentos de rotaciones
-                    #tmp[3] = np.pi
-                    #tmp[4] = 0.
-                    #_R = cm.rot(tmp[5],'z') 
-                    #_R = _R @ cm.rot(tmp[4],'y')
-                    #_R = _R @ cm.rot(tmp[3],'x')
-                    
-                    #_R = R @ _R
-                    #[tmp[3], tmp[4], tmp[5]] = ctr.get_angles(_R)
-                    #   END
-                    
+                    tmp = offsetInit + tmp*dRangeInit
                     cam = cm.camera()
                     agent = ctr.agent(cam, tmp, tmp,P)
                 
-                p0[:,i] = tmp.copy()
+                pd[:,i] = tmp.copy()
+            #   END radnom
+            
+            
+            #   Initial conditions
+            
+            tmp = np.random.rand(6)
+            tmp = pd[:,i] + offset + tmp*dRange
+            
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
+            
+            while agent.count_points_in_FOV(Ph) != nP or tmp[2]<0.:
+                tmp = np.random.rand(6)
+                #tmp = pd[:,iSel[i]] + offset + tmp*dRange
+                tmp = pd[:,i] + offset + tmp*dRange
                 
                 
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+            
+            p0[:,i] = tmp.copy()
             
             
-            
-            write2log("CASE "+str(k)+'\n')
-            ret = experiment(directory=dirBase+str(k),
-                        k_int = k_int,
-                        gamma0 = gamma0,
-                        gammaInf = gammaInf,
-                        gammaSteep = gammaSteep ,
-                        intGamma0 = intGamma0,
-                        intGammaInf = intGammaInf,
-                        intGammaSteep = intGammaSteep ,
-                        pd = pd,
-                        p0 = p0,
-                        P = P,
-                        #set_derivative = True,
-                        #tanhLimit = True,
-                        #depthOp = 4, Z_set = 1.,
-                        t_end = 100,
-                        enablePlot = enablePlotExp)
-            #print(ret)
-            [var_arr[:,k], errors, FOVflag] = ret
-            var_arr_et[k] = errors[0]
-            var_arr_er[k] = errors[1]
-            var_arr_2[k] = errors[2]
-            var_arr_3[k] = errors[3]
-            if FOVflag:
-                Misscount += 1
+        
+        
+        
+        write2log("CASE "+str(k)+'\n')
+        ret = experiment(directory=dirBase+str(k),
+                    k_int = k_int,
+                    gamma0 = gamma0,
+                    gammaInf = gammaInf,
+                    gammaSteep = gammaSteep ,
+                    intGamma0 = intGamma0,
+                    intGammaInf = intGammaInf,
+                    intGammaSteep = intGammaSteep ,
+                    pd = pd,
+                    p0 = p0,
+                    P = P,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set = 1.,
+                    t_end = 100,
+                    enablePlot = enablePlotExp)
+        #print(ret)
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_et[k] = errors[0]
+        var_arr_er[k] = errors[1]
+        var_arr_2[k] = errors[2]
+        var_arr_3[k] = errors[3]
+        if FOVflag:
+            mask[i] = 1
+            #Misscount += 1
         
     #   Save data
     
@@ -1392,7 +1388,7 @@ def experiment_local(nReps = 100,
             var_arr_3 = var_arr_3,
             var_arr_et = var_arr_et,
             var_arr_er = var_arr_er,
-            #mask = np.zeros(nReps),
+            mask = np.zeros(nReps),
             Misscount = Misscount)
     
 def experiment_plots(dirBase = ""):
@@ -2291,26 +2287,14 @@ def main(arg):
     
     #   BEGIN CLUSTER
     
-    #   Configs
-    #job = int(arg[2])
+    #   Local tests  
+    job = int(arg[2])
     
-    ##   TODO: counts
-    #nThreads = 8
-    #nReps = 20
-    
-    ##   limits
-    #thReps = int(nReps/nThreads)
-    #init = (job-1)*thReps
-    #end = init + thReps
-    #if end > nReps:
-        #end = nReps
-    
-    root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
-    
-    Names = ["gamma_1_3/",
-             "gamma_1_5/",
-             "gamma_2_3/",
-             "gamma_2_5/"]
+    root = "/home/est_posgrado_edgar.chavez/Consenso/W_locales/"
+    Names = ["localCirc_P/",
+             "localRand_P/",
+             "localCirc_PIG/",
+             "localRand_PIG/"]
     
     #   Plot part
     #for name in Names:
@@ -2319,42 +2303,92 @@ def main(arg):
     #return
     
     #   Proc part
-    intGamma0 = [0.1]*2+[0.2]*2
-    intGammaInf = [0.05]*4
-    intGammaSteep = [3,5]*2
+    i = job
     
-    j = job % 4
-    init = 0
-    end = 0
-    if job < 4:
-        init = 0
-        end = 10
-    else:
-        init = 10
-        end = 20
+    #  process
+    name = Names[1]
     
-      process
-    name = Names[j]
     logText = "Set = "+root + name+'\n'
     write2log(logText)
-    for i in range(init, end):
-        logText = "Repetition = "+str(i)+'\n'
-        write2log(logText)
-        experiment_local(nReps = 50,
-                        gamma0 = 5.,
-                        gammaInf = 2.,
-                        intGamma0 = intGamma0[j],
-                        intGammaInf = intGammaInf[j],
-                        intGammaSteep = intGammaSteep[j] ,
-                        pFlat = False,
-                        dTras = 0.1*(i+1),
-                        dRot = (np.pi/20.)*(i+1),
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-        experiment_plots(dirBase = root + name+str(i)+"/")
-    plot_tendencias(dirBase = root + name)
+    
+    logText = "Repetition = "+str(i)+'\n'
+    write2log(logText)
+    experiment_local(nReps = 100,
+                    randomInit = True,
+    #experiment_repeat(nReps = 100,
+                    #gamma0 = 5.,
+                    #gammaInf = 2.,
+                    #intGamma0 = 0.2,
+                    #intGammaInf = 0.05,
+                    #intGammaSteep = 5,
+                    dTras = 0.1*(i+1),
+                    dRot = (np.pi/20.)*(i+1),
+                    dirBase = root + name+str(i)+"/",
+                    enablePlotExp= False)
+    experiment_plots(dirBase = root + name+str(i)+"/")
+    
     
     return
+    
+    #   Gamma tunning 
+    #job = int(arg[2])
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
+    
+    #Names = ["gamma_3_5/"]
+    ##Names = ["gamma_1_3/",
+             ##"gamma_1_5/",
+             ##"gamma_2_3/",
+             ##"gamma_2_5/"]
+    
+    ##   Plot part
+    #for name in Names:
+        #plot_tendencias(dirBase = root + name)
+        
+    #return
+    
+    ##   Proc part
+    #intGamma0 = [0.3]
+    #intGammaInf = [0.05]
+    #intGammaSteep = [5]
+    ##intGamma0 = [0.1]*2+[0.2]*2
+    ##intGammaInf = [0.05]*4
+    ##intGammaSteep = [3,5]*2
+    
+    ##j = job % 4
+    ##init = 0
+    ##end = 0
+    ##if job < 4:
+        ##init = 0
+        ##end = 10
+    ##else:
+        ##init = 10
+        ##end = 20
+    
+    #j = 0
+    #init = job * 4
+    #end =  init + 4
+    ##  process
+    #name = Names[j]
+    #logText = "Set = "+root + name+'\n'
+    #write2log(logText)
+    #for i in range(init, end):
+        #logText = "Repetition = "+str(i)+'\n'
+        #write2log(logText)
+        #experiment_local(nReps = 50,
+                        #gamma0 = 5.,
+                        #gammaInf = 2.,
+                        #intGamma0 = intGamma0[j],
+                        #intGammaInf = intGammaInf[j],
+                        #intGammaSteep = intGammaSteep[j] ,
+                        #pFlat = False,
+                        #dTras = 0.1*(i+1),
+                        #dRot = (np.pi/20.)*(i+1),
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+        #experiment_plots(dirBase = root + name+str(i)+"/")
+    
+    #return
     
     #   END Cluster
     

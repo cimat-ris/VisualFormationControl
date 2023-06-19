@@ -1000,8 +1000,12 @@ def experiment_repeat(nReps = 1,
                       dirBase = "",
                       k_int = 0,
                       int_res = None,
-                      gamma0 = None,
-                       gammaInf = None,
+                      intGamma0 = None,
+                        intGammaInf = None,
+                        intGammaSteep = 5.,
+                        gamma0 = None,
+                        gammaInf = None,
+                        gammaSteep = 5.,
                       intMatSel = 1,
                       enablePlotExp = True):
     
@@ -1037,8 +1041,12 @@ def experiment_repeat(nReps = 1,
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
                             int_res = int_res,
-                                gamma0 = gamma0,
-                                gammaInf = gammaInf,
+                            gamma0 = gamma0,
+                            gammaInf = gammaInf,
+                            gammaSteep = gammaSteep ,
+                            intGamma0 = intGamma0,
+                            intGammaInf = intGammaInf,
+                            intGammaSteep = intGammaSteep ,
                                 depthOp = 4, Z_set = 1.,
                                 t_end = 100,
                                 enablePlot = enablePlotExp,
@@ -1068,7 +1076,7 @@ def experiment_all_random(nReps = 100,
                           conditions = 1,
                           pFlat = False,
                           dirBase = "",
-                          nP = 4,
+                          nP = None,
                           enablePlotExp = True):
     
     n_agents = 4
@@ -1098,7 +1106,8 @@ def experiment_all_random(nReps = 100,
             yRange = [-2,2]
             zRange = [-1,0]
             
-            #nP = random.randint(4,11)
+            if nP = None 
+                nP = random.randint(4,11)
             #nP = 4
             #nP = 10
             P = np.random.rand(3,nP)
@@ -1140,12 +1149,14 @@ def experiment_all_random(nReps = 100,
                 if conditions == 1:
                     tmp = np.random.rand(6)
                     tmp = offset + tmp*dRange
+                    tmp[4:] = 0.
                     cam = cm.camera()
                     agent = ctr.agent(cam, tmp, tmp,P)
                     
                     while agent.count_points_in_FOV(Ph) != nP:
                         tmp = np.random.rand(6)
                         tmp = offset + tmp*dRange
+                        tmp[4:] = 0.
                         cam = cm.camera()
                         agent = ctr.agent(cam, tmp, tmp,P)
                     
@@ -1240,9 +1251,9 @@ def experiment_local(nReps = 100,
                     gammaInf = None,
                     gammaSteep = 5.,
                     randomInit = False,
-                    xRangeInit = [-2,2],
-                    yRangeInit = [-2,2],
-                    zRangeInit = [0,3],
+                    xRange = [-2,2],
+                    yRange = [-2,2],
+                    zRange = [0,3],
                     enablePlotExp = True):
     
     n_agents = 4
@@ -1286,14 +1297,14 @@ def experiment_local(nReps = 100,
         if pFlat :
             P[2,:] = 0.
             #   BEGIN experimentos con rotaciones
-            P = R @ P 
+            #P = R @ P 
             #   END
         Ph = np.r_[P,np.ones((1,nP))]
         
         #   Conifgs if randInt
         offsetInit = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
         dRangeInit = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-        dRangeInit -= offset
+        dRangeInit -= offsetInit
         
         #   Cameras
         
@@ -2285,12 +2296,82 @@ def main(arg):
     #   END UI
     
     
-    #   BEGIN CLUSTER
+    #   BEGIN CLUSTER random
     
     #   Local tests  
     job = int(arg[2])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/W_locales/"
+    root = "/home/est_posgrado_edgar.chavez/Consenso/W_01_FrontParallel/"
+    Names = ["Circular_Coplanar/",
+             "Random_Coplanar/",
+             "Circular_NCoplanar_P/",
+             "Random_NCoplanar_P/",
+             "Circular_NCoplanar_PIG/",
+             "Random_NCoplanar_PIG/"]
+        
+    #  process
+    name = Names[job]
+    
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
+    
+    logText = "Job = "+str(job)+'\n'
+    write2log(logText)
+    if job == 0:
+        experiment_all_random(nReps = 100,
+                              pFlat = True,
+                              conditions = 3,
+                              dirBase = root + name,
+                              enablePlotExp = False)
+                              
+    if job == 1:
+        experiment_all_random(nReps = 100,
+                              conditions = 3,
+                              dirBase = root + name,
+                              enablePlotExp = False)
+    if job == 2:
+        experiment_all_random(nReps = 100,
+                              pFlat = True,
+                              conditions = 3,
+                              dirBase = root + name,
+                              enablePlotExp = False)
+                              
+    if job == 3:
+        experiment_all_random(nReps = 100,
+                              conditions = 3,
+                              dirBase = root + name,
+                              enablePlotExp = False)
+                              
+    if job == 4:
+        experiment_repeat(nReps = 100,
+                    gamma0 = 5.,
+                    gammaInf = 2.,
+                    intGamma0 = 0.2,
+                    intGammaInf = 0.05,
+                    intGammaSteep = 5,
+                    dirBase = root + name,
+                    enablePlotExp= False)
+    if job == 5:
+        experiment_repeat(nReps = 100,
+                    gamma0 = 5.,
+                    gammaInf = 2.,
+                    intGamma0 = 0.2,
+                    intGammaInf = 0.05,
+                    intGammaSteep = 5,
+                    dirBase = root + name,
+                    enablePlotExp= False)
+    experiment_plots(dirBase = root + name)
+    
+    
+    return
+    
+    #   END Cluster Random
+    #   BEGIN CLUSTER Local
+    
+    #   Local tests  
+    job = int(arg[2])
+    
+    root = "/home/est_posgrado_edgar.chavez/Consenso/W_01_locales/"
     Names = ["localCirc_P/",
              "localRand_P/",
              "localCirc_PIG/",
@@ -2306,23 +2387,23 @@ def main(arg):
     i = job
     
     #  process
-    name = Names[1]
+    name = Names[i]
     
     logText = "Set = "+root + name+'\n'
     write2log(logText)
     
     logText = "Repetition = "+str(i)+'\n'
     write2log(logText)
-    experiment_local(nReps = 100,
-                    randomInit = True,
-    #experiment_repeat(nReps = 100,
-                    #gamma0 = 5.,
-                    #gammaInf = 2.,
-                    #intGamma0 = 0.2,
-                    #intGammaInf = 0.05,
-                    #intGammaSteep = 5,
-                    dTras = 0.1*(i+1),
-                    dRot = (np.pi/20.)*(i+1),
+    #experiment_local(nReps = 100,
+                    #randomInit = True,
+    experiment_repeat(nReps = 100,
+                    gamma0 = 5.,
+                    gammaInf = 2.,
+                    intGamma0 = 0.2,
+                    intGammaInf = 0.05,
+                    intGammaSteep = 5,
+                    #dTras = 0.1*(i+1),
+                    #dRot = (np.pi/20.)*(i+1),
                     dirBase = root + name+str(i)+"/",
                     enablePlotExp= False)
     experiment_plots(dirBase = root + name+str(i)+"/")
@@ -2330,7 +2411,8 @@ def main(arg):
     
     return
     
-    #   Gamma tunning 
+    #   END Cluster local
+    #   BEGIN Gamma tunning 
     #job = int(arg[2])
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
@@ -2390,7 +2472,7 @@ def main(arg):
     
     #return
     
-    #   END Cluster
+    #   END Gamma tunning
     
     #   BEGIN simgular repeats
     #n = 0
@@ -2579,13 +2661,13 @@ def main(arg):
     
     #   BEGIN repeat folder experiments
     
-    name = "pNFlat_P04DOF_Int/"
-    experiment_repeat(nReps = 100,
-                      dirBase = name,
-                      k_int = 0.1 ,
-                        enablePlotExp = False)
-    experiment_plots(dirBase = name)
-    return 
+    #name = "pNFlat_P04DOF_Int/"
+    #experiment_repeat(nReps = 100,
+                      #dirBase = name,
+                      #k_int = 0.1 ,
+                        #enablePlotExp = False)
+    #experiment_plots(dirBase = name)
+    #return 
 
     #   END repeat folder experiments
     

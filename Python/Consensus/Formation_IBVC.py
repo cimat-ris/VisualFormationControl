@@ -1015,8 +1015,9 @@ def experiment_repeat(nReps = 1,
     var_arr_3 = np.zeros(nReps)
     var_arr_et = np.zeros(nReps)
     var_arr_er = np.zeros(nReps)
+    arr_n_points = np.zeros(nReps)
     mask = np.zeros(nReps)
-    Misscount = 0
+    #Misscount = 0
     
     intMatSelDict = {1:"Real",
                      2:"Constant depth"}
@@ -1028,6 +1029,9 @@ def experiment_repeat(nReps = 1,
     
     for k in range(nReps):
         write2log("CASE "+str(k)+'\n')
+        npzfile = np.load(dirBase+str(k)+'/data.npz')
+        P = npzfile["P"]
+        arr_n_points[k] = P.shape[1]
         if intMatSel  == 1:
             ret = experiment(directory=dirBase+str(k),
                             k_int = k_int,
@@ -1068,8 +1072,9 @@ def experiment_repeat(nReps = 1,
             var_arr_3 = var_arr_3,
             var_arr_et = var_arr_et,
             var_arr_er = var_arr_er,
-            mask = mask,
-            Misscount = Misscount)
+            arr_n_points = arr_n_points,
+            mask = mask)
+            #Misscount = Misscount)
     
     
 def experiment_all_random(nReps = 100, 
@@ -1085,7 +1090,8 @@ def experiment_all_random(nReps = 100,
     var_arr_3 = np.zeros(nReps)
     var_arr_et = np.zeros(nReps)
     var_arr_er = np.zeros(nReps)
-    Misscount = 0
+    arr_n_points = np.zeros(nReps)
+    #Misscount = 0
     
     conditionsDict = {1:"Random",
                       2:"Circular plus a rigid transformation",
@@ -1098,131 +1104,130 @@ def experiment_all_random(nReps = 100,
     write2log(logText+'\n')
     
     for k in range(nReps):
-        FOVflag = True
-        while FOVflag:
-            #   Points
-            # Range
-            xRange = [-2,2]
-            yRange = [-2,2]
-            zRange = [-1,0]
+        #   Points
+        # Range
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [-1,0]
+        
+        if nP = None 
+            nP = random.randint(4,11)
+        arr_n_points[k] = nP
+        #nP = 4
+        #nP = 10
+        P = np.random.rand(3,nP)
+        P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+        P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+        P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+        if pFlat :
+            P[2,:] = 0.
+        Ph = np.r_[P,np.ones((1,nP))]
+        
+        #   Cameras
+        # Range
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [0,3]
+        
+        p0 = np.zeros((6,n_agents))
+        pd = np.zeros((6,n_agents))
+        
+        offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+        dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+        dRange -= offset
+        for i in range(n_agents):
             
-            if nP = None 
-                nP = random.randint(4,11)
-            #nP = 4
-            #nP = 10
-            P = np.random.rand(3,nP)
-            P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-            P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-            P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
-            if pFlat :
-                P[2,:] = 0.
-            Ph = np.r_[P,np.ones((1,nP))]
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
             
-            #   Cameras
-            # Range
-            xRange = [-2,2]
-            yRange = [-2,2]
-            zRange = [0,3]
-            
-            p0 = np.zeros((6,n_agents))
-            pd = np.zeros((6,n_agents))
-            
-            offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
-            dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-            dRange -= offset
-            for i in range(n_agents):
-                
+            while agent.count_points_in_FOV(Ph) != nP :
                 tmp = np.random.rand(6)
                 tmp = offset + tmp*dRange
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
+            
+            p0[:,i] = tmp.copy()
+            
+            #   BEGIN referencias aleatorias
+            if conditions == 1:
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                tmp[4:] = 0.
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
                 
-                while agent.count_points_in_FOV(Ph) != nP :
-                    tmp = np.random.rand(6)
-                    tmp = offset + tmp*dRange
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, tmp, tmp,P)
-                
-                p0[:,i] = tmp.copy()
-                
-                #   BEGIN referencias aleatorias
-                if conditions == 1:
+                while agent.count_points_in_FOV(Ph) != nP:
                     tmp = np.random.rand(6)
                     tmp = offset + tmp*dRange
                     tmp[4:] = 0.
                     cam = cm.camera()
                     agent = ctr.agent(cam, tmp, tmp,P)
-                    
-                    while agent.count_points_in_FOV(Ph) != nP:
-                        tmp = np.random.rand(6)
-                        tmp = offset + tmp*dRange
-                        tmp[4:] = 0.
-                        cam = cm.camera()
-                        agent = ctr.agent(cam, tmp, tmp,P)
-                    
-                    pd[:,i] = tmp.copy()
-                #   END Referencias aleatorias
-            ##   BEGIN referencias fijas, + s T R 
-            #if conditions == 2:
-                #visibilityTest = False
-                ##pd = None
-                #while not visibilityTest:
-                    #T = 4*(np.random.rand(3)-np.array([.5,.5,0.]))
-                    #angs = 2*np.pi*(np.random.rand(3)-0.5)
-                    #s = 2*(np.random.rand(1)-0.5)
-                    #pd = circle(n_agents,s,T = T , angs = angs)
-                    #visibilityTest = True
-                    #for i in range(n_agents):
-                        #cam = cm.camera()
-                        #agent = ctr.agent(cam, tmp, pd[:,i],P)
-                        #visibilityTest = visibilityTest and (agent.count_points_in_FOV(Ph) == nP)
                 
-                
-            ##   END Referencias fijas s R T
-            
-            ##  BEGIN Referencias fijas
-            if conditions == 3:
-                pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
-            ##  END Referencias fijas
-            
-            ##   BEGIN referencias con perturbación
-            #if conditions == 4:
-                #pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
-                #dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
+                pd[:,i] = tmp.copy()
+            #   END Referencias aleatorias
+        ##   BEGIN referencias fijas, + s T R 
+        #if conditions == 2:
+            #visibilityTest = False
+            ##pd = None
+            #while not visibilityTest:
+                #T = 4*(np.random.rand(3)-np.array([.5,.5,0.]))
+                #angs = 2*np.pi*(np.random.rand(3)-0.5)
+                #s = 2*(np.random.rand(1)-0.5)
+                #pd = circle(n_agents,s,T = T , angs = angs)
+                #visibilityTest = True
                 #for i in range(n_agents):
+                    #cam = cm.camera()
+                    #agent = ctr.agent(cam, tmp, pd[:,i],P)
+                    #visibilityTest = visibilityTest and (agent.count_points_in_FOV(Ph) == nP)
+            
+            
+        ##   END Referencias fijas s R T
+        
+        ##  BEGIN Referencias fijas
+        if conditions == 3:
+            pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
+        ##  END Referencias fijas
+        
+        ##   BEGIN referencias con perturbación
+        #if conditions == 4:
+            #pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
+            #dRange = np.array([0.1,0.1,0.1,0.1,0.1,0.1])
+            #for i in range(n_agents):
+                #tmp = np.random.rand(6)-0.5
+                #tmp = pd[:,i] + tmp*dRange*2
+                #cam = cm.camera()
+                #agent = ctr.agent(cam, tmp, tmp,P)
+                
+                #while agent.count_points_in_FOV(Ph) != nP:
                     #tmp = np.random.rand(6)-0.5
                     #tmp = pd[:,i] + tmp*dRange*2
                     #cam = cm.camera()
                     #agent = ctr.agent(cam, tmp, tmp,P)
-                    
-                    #while agent.count_points_in_FOV(Ph) != nP:
-                        #tmp = np.random.rand(6)-0.5
-                        #tmp = pd[:,i] + tmp*dRange*2
-                        #cam = cm.camera()
-                        #agent = ctr.agent(cam, tmp, tmp,P)
-                    #pd[:,i] = tmp.copy()
-            ##   END Referencias con perturbación
-                
+                #pd[:,i] = tmp.copy()
+        ##   END Referencias con perturbación
             
-            write2log("CASE "+str(k)+'\n')
-            ret = experiment(directory=dirBase+str(k),
-                    #k_int = 0.1,
-                        pd = pd,
-                        p0 = p0,
-                        P = P,
-                        #set_derivative = True,
-                        #tanhLimit = True,
-                        #depthOp = 4, Z_set = 1.,
-                        t_end = 100,
-                        enablePlot = enablePlotExp)
-            #print(ret)
-            [var_arr[:,k], errors, FOVflag] = ret
-            var_arr_et[k] = errors[0]
-            var_arr_er[k] = errors[1]
-            var_arr_2[k] = errors[2]
-            var_arr_3[k] = errors[3]
-            if FOVflag:
-                Misscount += 1
+        
+        write2log("CASE "+str(k)+'\n')
+        ret = experiment(directory=dirBase+str(k),
+                #k_int = 0.1,
+                    pd = pd,
+                    p0 = p0,
+                    P = P,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set = 1.,
+                    t_end = 100,
+                    enablePlot = enablePlotExp)
+        #print(ret)
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_et[k] = errors[0]
+        var_arr_er[k] = errors[1]
+        var_arr_2[k] = errors[2]
+        var_arr_3[k] = errors[3]
+        if FOVflag:
+            mask[k] = 1
         
     #   Save data
     
@@ -1233,8 +1238,9 @@ def experiment_all_random(nReps = 100,
             var_arr_3 = var_arr_3,
             var_arr_et = var_arr_et,
             var_arr_er = var_arr_er,
-            #mask = np.zeros(nReps),
-            Misscount = Misscount)
+            arr_n_points = arr_n_points,
+            mask = mask)
+            #Misscount = Misscount)
     
 
     
@@ -1262,8 +1268,9 @@ def experiment_local(nReps = 100,
     var_arr_3 = np.zeros(nReps)
     var_arr_et = np.zeros(nReps)
     var_arr_er = np.zeros(nReps)
+    arr_n_points = np.zeros(nReps)
     mask = np.zeros(nReps)
-    Misscount = 0
+    #Misscount = 0
     
     #   Testing ranges 
     # Range
@@ -1288,6 +1295,7 @@ def experiment_local(nReps = 100,
         PzRange = [-1,0]
         
         nP = random.randint(4,11)
+        arr_n_points[k] = np
         #nP = 4
         #nP = 10
         P = np.random.rand(3,nP)
@@ -1387,7 +1395,7 @@ def experiment_local(nReps = 100,
         var_arr_2[k] = errors[2]
         var_arr_3[k] = errors[3]
         if FOVflag:
-            mask[i] = 1
+            mask[k] = 1
             #Misscount += 1
         
     #   Save data
@@ -1399,8 +1407,9 @@ def experiment_local(nReps = 100,
             var_arr_3 = var_arr_3,
             var_arr_et = var_arr_et,
             var_arr_er = var_arr_er,
-            mask = np.zeros(nReps),
-            Misscount = Misscount)
+            arr_n_points = arr_n_points,
+            mask = mask)
+            #Misscount = Misscount)
     
 def experiment_plots(dirBase = ""):
     
@@ -1411,52 +1420,39 @@ def experiment_plots(dirBase = ""):
     var_arr_3 = npzfile['var_arr_3']
     var_arr_et = npzfile['var_arr_et']
     var_arr_er = npzfile['var_arr_er']
-    Misscount = npzfile['Misscount']
+    arr_n_points = npzfile['arr_n_points']
+    mask = npzfile['mask']
+    #Misscount = npzfile['Misscount']
     nReps = var_arr.shape[1]
     
-    etsup = None
-    ersup = None
-    esup = None
     
-    if npzfile.__contains__('mask'):
+    logText = "Simulations that failed = "
+    logText += str(mask.sum()) 
+    logText += " / "+ str(nReps)
+    write2log(logText + '\n')
+    
+    etsup = np.where((var_arr_2 > var_arr_et) &
+                    (mask == 0.))[0]
+    ersup = np.where((var_arr_3 > var_arr_er) &
+                    (mask == 0.))[0]
+    esup = np.where((var_arr_3 > var_arr_er) &
+                    (var_arr_2 > var_arr_et) &
+                    (mask == 0.))[0]
+    
+    
+    
+    #   Masking
+    write2log("Failed repeats = "+str( np.where(mask == 1)[0]))
+    if (np.count_nonzero(mask == 1.) == mask.shape[0]):
+        print("Simulations : No data to process")
+        return
+    var_arr = var_arr[:,mask==0.]
+    var_arr_2 = var_arr_2[mask==0.]
+    var_arr_3 = var_arr_3[mask==0.]
+    var_arr_et = var_arr_et[mask==0.]
+    var_arr_er = var_arr_er[mask==0.]
         
-        mask = npzfile['mask']
-        logText = "Simulations that failed = "
-        logText += str(Misscount+mask.sum()) 
-        logText += " / "+ str(nReps+Misscount)
-        write2log(logText + '\n')
-        
-        etsup = np.where((var_arr_2 > var_arr_et) &
-                        (mask == 0.))[0]
-        ersup = np.where((var_arr_3 > var_arr_er) &
-                        (mask == 0.))[0]
-        esup = np.where((var_arr_3 > var_arr_er) &
-                        (var_arr_2 > var_arr_et) &
-                        (mask == 0.))[0]
-        
-        
-        
-        #   Masking
-        write2log("Failed repeats = "+str( np.where(mask == 1)[0]))
-        if (np.count_nonzero(mask == 1.) == mask.shape[0]):
-            print("Simulations : No data to process")
-            return
-        var_arr = var_arr[:,mask==0.]
-        var_arr_2 = var_arr_2[mask==0.]
-        var_arr_3 = var_arr_3[mask==0.]
-        var_arr_et = var_arr_et[mask==0.]
-        var_arr_er = var_arr_er[mask==0.]
-        
-    else:
-        logText = "Simulations that failed = "
-        logText += str(Misscount)
-        logText += " / " + str( nReps+Misscount)
-        write2log(logText + '\n')
-        
-        etsup = np.where((var_arr_2 > var_arr_et))[0]
-        ersup = np.where((var_arr_3 > var_arr_er))[0]
-        esup = np.where((var_arr_3 > var_arr_er) &
-                        (var_arr_2 > var_arr_et) )[0]
+    
         
         
     np.set_printoptions(linewidth=np.inf)
@@ -1672,9 +1668,10 @@ def experiment_plots(dirBase = ""):
     plt.close()
 
 
+#   Grafica las relaciones de errores inicial y final, RvsT
 def plot_error_stats(nReps = 100,
                      dirBase = ""):
-    
+    #   TODO: actualizar con masking
     arr_err = np.zeros(nReps)
     
     for k in range(nReps):
@@ -1700,8 +1697,8 @@ def plot_error_stats(nReps = 100,
     var_arr_3 = npzfile['var_arr_3']
     var_arr_et = npzfile['var_arr_et']
     var_arr_er = npzfile['var_arr_er']
-    Misscount = npzfile['Misscount']
-    #mask = npzfile['mask']
+    #Misscount = npzfile['Misscount']
+    mask = npzfile['mask']
     nReps = var_arr.shape[1]
     
     var_arr = norm(var_arr,axis = 0)/n_agents
@@ -1895,21 +1892,21 @@ def plot_tendencias(nReps = 20,
         var_arr_3 = npzfile['var_arr_3']
         var_arr_et = npzfile['var_arr_et']
         var_arr_er = npzfile['var_arr_er']
-        Misscount = npzfile['Misscount']
-        if npzfile.__contains__('mask'):
-            mask = npzfile['mask']
-            
-            logText = "Masks for step " + str(k)
-            logText += "=" +str(np.where(mask == 1.)[0])
-            write2log(logText + '\n')
-            
-            var_arr = var_arr[mask==0.]
-            var_arr_2 = var_arr_2[mask==0.]
-            var_arr_3 = var_arr_3[mask==0.]
-            var_arr_et = var_arr_et[mask==0.]
-            var_arr_er = var_arr_er[mask==0.]
-            
-            count_mask[k] = mask.sum()
+        arr_n_points = npzfile['arr_n_points']
+        #Misscount = npzfile['Misscount']
+        mask = npzfile['mask']
+        
+        logText = "Masks for step " + str(k)
+        logText += "=" +str(np.where(mask == 1.)[0])
+        write2log(logText + '\n')
+        
+        var_arr = var_arr[mask==0.]
+        var_arr_2 = var_arr_2[mask==0.]
+        var_arr_3 = var_arr_3[mask==0.]
+        var_arr_et = var_arr_et[mask==0.]
+        var_arr_er = var_arr_er[mask==0.]
+        
+        count_mask[k] = mask.sum()
         
         data_cons.append(var_arr)
         cons_err_max[k] = var_arr.max()

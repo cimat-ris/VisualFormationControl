@@ -547,6 +547,7 @@ def experiment(directory = "0",
 
             if modified.__contains__( "height"):
                 p0[2,:] += 2.
+
             
         #   END point modification 
         
@@ -1370,11 +1371,10 @@ def experiment_all_random(nReps = 100,
             #Misscount = Misscount)
 
 def experiment_3D_min(nReps = 100,
-                          conditions = 1,
                           dirBase = "",
                           node = 0,
                           enablePlotExp = True):
-    
+
     n_agents = 4
     var_arr = np.zeros((n_agents,nReps))
     var_arr_2 = np.zeros(nReps)
@@ -1386,11 +1386,11 @@ def experiment_3D_min(nReps = 100,
     mask = np.zeros(nReps)
     nP = 0
     #Misscount = 0
-    
+
 
     logText = "Test series, minimun 3D poinst required = "
     write2log(logText+'\n')
-    
+
     for k in range(nReps):
 
         #   Points
@@ -1439,7 +1439,14 @@ def experiment_3D_min(nReps = 100,
             p0[:,i] = tmp.copy()
 
             #   Referencias aleatorias
-            if conditions == 1:
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            tmp[3] = pi
+            tmp[4] = 0.
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
+
+            while agent.count_points_in_FOV(Ph) != nP:
                 tmp = np.random.rand(6)
                 tmp = offset + tmp*dRange
                 tmp[3] = pi
@@ -1447,15 +1454,7 @@ def experiment_3D_min(nReps = 100,
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
 
-                while agent.count_points_in_FOV(Ph) != nP:
-                    tmp = np.random.rand(6)
-                    tmp = offset + tmp*dRange
-                    tmp[3] = pi
-                    tmp[4] = 0.
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, tmp, tmp,P)
-
-                pd[:,i] = tmp.copy()
+            pd[:,i] = tmp.copy()
 
 
         errors = [0.2,0.2,0.2,0.2]
@@ -1502,9 +1501,9 @@ def experiment_3D_min(nReps = 100,
         arr_nP[k] = nP
         if FOVflag:
             mask[k] = 1
-        
+
     #   Save data
-    
+
     np.savez(dirBase+'data_'+str(node)+'.npz',
                 n_agents = n_agents,
             var_arr = var_arr,
@@ -1548,10 +1547,160 @@ def plot_minP_data(dirBase, n):
     plt.savefig(dirBase+'minPoints_Histogram_zoom.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+
+
+#   BEGIN
+
+def experiment_angles(nReps = 100,
+                    dirBase = "",
+                    k_int = 0.,
+                    intGamma0 = None,
+                    intGammaInf = None,
+                    intGammaSteep = 5.,
+                    gamma0 = None,
+                    gammaInf = None,
+                    gammaSteep = 5.,
+                    ang = 0,
+                    enablePlotExp = True):
+
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
+    arr_n_points = np.zeros(nReps)
+    mask = np.zeros(nReps)
+    #Misscount = 0
+
+    #   Testing ranges
+
+
+    logText = "Local testing"
+    logText += '\n' +"Local test directory = "+ str(dirBase)
+    write2log(logText + '\n')
+
+    for k in range(nReps):
+        FOVflag = True
+
+        #   Points
+        # Range
+        PxRange = [-1,1]
+        PyRange = [-1,1]
+        PzRange = [-1,0]
+
+        nP = 30
+        arr_n_points[k] = nP
+        P = np.random.rand(2,nP)
+        P[0,:] = PxRange[0]+ P[0,:]*(PxRange[1]-PxRange[0])
+        P[1,:] = PyRange[0]+ P[1,:]*(PyRange[1]-PyRange[0])
+        P = np.r_[P,-np.ones((1,nP))]
+
+        R = cm.rot(ang,'y')
+        P = R @ P
+
+        Ph = np.r_[P,np.ones((1,nP))]
+
+        #   Conifgs cameras
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [0,3]
+        offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+        dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+        dRange -= offset
+
+
+        pd = np.zeros((6,n_agents))
+        p0 = np.zeros((6,n_agents))
+        for i in range(n_agents):
+
+            #   References
+
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            tmp[3] = pi
+            tmp[4] = 0.
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
+
+            while agent.count_points_in_FOV(Ph) != nP:
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                tmp[3] = pi
+                tmp[4] = 0.
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+
+            pd[:,i] = tmp.copy()
+
+            #   Initial conds
+
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            tmp[3] = pi
+            tmp[4] = 0.
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
+
+            while agent.count_points_in_FOV(Ph) != nP:
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                tmp[3] = pi
+                tmp[4] = 0.
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+
+            p0[:,i] = tmp.copy()
+
+
+
+
+
+
+
+        write2log("CASE "+str(k)+'\n')
+        ret = experiment(directory=dirBase+str(k),
+                    k_int = k_int,
+                    gamma0 = gamma0,
+                    gammaInf = gammaInf,
+                    gammaSteep = gammaSteep ,
+                    intGamma0 = intGamma0,
+                    intGammaInf = intGammaInf,
+                    intGammaSteep = intGammaSteep ,
+                    pd = pd,
+                    p0 = p0,
+                    P = P,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set = 1.,
+                    t_end = 100,
+                    enablePlot = enablePlotExp)
+        #print(ret)
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_et[k] = errors[0]
+        var_arr_er[k] = errors[1]
+        var_arr_2[k] = errors[2]
+        var_arr_3[k] = errors[3]
+        if FOVflag:
+            mask[k] = 1
+            #Misscount += 1
+
+    #   Save data
+
+    np.savez(dirBase+'data.npz',
+                n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
+            arr_n_points = arr_n_points,
+            mask = mask)
+            #Misscount = Misscount)
     
+#   END
 
-
-def experiment_local(nReps = 100, 
+def experiment_local(nReps = 100,
                     pFlat = False,
                     dirBase = "",
                     dTras = 0.1,
@@ -2841,6 +2990,35 @@ def main(arg):
     # return
 
     #   END testing required points
+    #   BEGIN   testing angle effect
+
+
+    #   Local tests
+    job = int(arg[2])
+
+    name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_angles_test/"
+
+    #   Plot part
+    # plot_tendencias(dirBase =  name)
+    # return
+
+    #   Proc part
+    i = job
+
+    #  process
+
+    logText = "Set = "+ name+'\n'
+    write2log(logText)
+    logText = "Repetition = "+str(i)+'\n'
+    write2log(logText)
+    experiment_angles(nReps = 100,
+                        ang = i*pi/40,
+                        dirBase =  name+str(i)+"/",
+                        enablePlotExp= False)
+
+    experiment_plots(dirBase =  name+str(i)+"/")
+    return
+    #   END testing angle effect
 
 
     #   BEGIN test final state
@@ -2860,73 +3038,73 @@ def main(arg):
     
     #   BEGIN test final state - mod: más puntos
     
-    # i =  141
-
-    # name = "141_patologico"
-    name = "coplanar_34"
-    # name = str(i)
-    # view3D(name)
-    # return
+#     # i =  141
 #
-    experiment(directory=name,
-                t_end = 800,
-                # modified = ["height","nPoints"],
-                modified = ["nPoints"],
-                gamma0 = 8.,
-                gammaInf = 2.,
-                # intGamma0 = 0.2,
-                # intGammaInf = 0.05,
-                # intGammaSteep = 5,
-                repeat = True)
-    # for j in range(4):
-    #     agent_review(name,j)
-    view3D(name)
-    return
-    
-    repeats = np.array([110, 122, 134, 141, 158, 184])
-    
-    for i in repeats:
-        experiment(directory=str(i),
-                # t_end = 100,
-                t_end = 800,
-                modified = "nPoints",
-                gamma0 = 8.,
-                gammaInf = 2.,
-                intGamma0 = 0.3,
-                intGammaInf = 0.05,
-                intGammaSteep = 5,
-                repeat = True)
-        for j in range(4):
-            agent_review(str(i),j)
-            
-    return
+#     # name = "141_patologico"
+#     name = "coplanar_34"
+#     # name = str(i)
+#     # view3D(name)
+#     # return
+# #
+#     experiment(directory=name,
+#                 t_end = 800,
+#                 # modified = ["height","nPoints"],
+#                 modified = ["nPoints"],
+#                 gamma0 = 8.,
+#                 gammaInf = 2.,
+#                 # intGamma0 = 0.2,
+#                 # intGammaInf = 0.05,
+#                 # intGammaSteep = 5,
+#                 repeat = True)
+#     # for j in range(4):
+#     #     agent_review(name,j)
+#     view3D(name)
+#     return
+#
+#     repeats = np.array([110, 122, 134, 141, 158, 184])
+#
+#     for i in repeats:
+#         experiment(directory=str(i),
+#                 # t_end = 100,
+#                 t_end = 800,
+#                 modified = "nPoints",
+#                 gamma0 = 8.,
+#                 gammaInf = 2.,
+#                 intGamma0 = 0.3,
+#                 intGammaInf = 0.05,
+#                 intGammaSteep = 5,
+#                 repeat = True)
+#         for j in range(4):
+#             agent_review(str(i),j)
+#
+#     return
     
     #   END test final state - mod: más puntos
     
-    #   BEGIN simgular repeats
-    n = 34
-    #n = 10
-    #n = 22
-    ###n = 91
-    ###n=37
-    ##   97, 89
-    ##n= 56
-    #localdir = "/home/est_posgrado_edgar.chavez/Consenso/W_01_locales/localRand_PIG/1/64"
-    experiment(directory=str(n),
-    #experiment(directory=localdir,
-                t_end = 100,
-                #gamma0 = 5.,
-                #gammaInf = 2.,
-                #intGamma0 = 0.2,
-                #intGammaInf = 0.05,
-                #intGammaSteep = 5,
-                #set_derivative = True,
-                #tanhLimit = True,
-                #k_int = 0.1,
-                repeat = True)
-    view3D(str(n))
-    #view3D(localdir)
-    return
+    #   BEGIN singular repeats
+    # n = 34
+    # #n = 10
+    # #n = 22
+    # ###n = 91
+    # ###n=37
+    # ##   97, 89
+    # ##n= 56
+    # #localdir = "/home/est_posgrado_edgar.chavez/Consenso/W_01_locales/localRand_PIG/1/64"
+    # experiment(directory=str(n),
+    # #experiment(directory=localdir,
+    #             t_end = 100,
+    #             #gamma0 = 5.,
+    #             #gammaInf = 2.,
+    #             #intGamma0 = 0.2,
+    #             #intGammaInf = 0.05,
+    #             #intGammaSteep = 5,
+    #             #set_derivative = True,
+    #             #tanhLimit = True,
+    #             #k_int = 0.1,
+    #             repeat = True)
+    # view3D(str(n))
+    # #view3D(localdir)
+    # return
     
     #experiment(directory="local/0/53",
                 #t_end = 200,

@@ -155,11 +155,11 @@ def plot_3Dcam(ax, camera,
                camera_scale    = 0.02):
     
     #ax.plot(positionArray[0,:],
-    ax.scatter(positionArray[0,:],
-            positionArray[1,:],
-            positionArray[2,:],
-            label = str(i),
-            color = color) # Plot camera trajectory
+    # ax.scatter(positionArray[0,:],
+    #         positionArray[1,:],
+    #         positionArray[2,:],
+    #         label = str(i),
+    #         color = color) # Plot camera trajectory
     
     camera.draw_camera(ax, scale=camera_scale, color='red')
     ax.text(camera.p[0],camera.p[1],camera.p[2],str(i))
@@ -486,7 +486,7 @@ def experiment(directory = "0",
                tanhLimit = False,
                midMarker = False,
                enablePlot = True,
-               modified = "",
+               modified = [],
                repeat = False):
     
     #   Referencia de selecciones
@@ -529,19 +529,24 @@ def experiment(directory = "0",
         
         
         #   BEGIN point modification 
-        
-        if modified == "nPoints":
-            xRange = [-2,2]
-            yRange = [-2,2]
-            #zRange = [-1,0]
-            zRange = [-2,-1]
-            P = np.random.rand(3,30)
-            P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-            P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-            P[2,:] = zRange[0]+ P[1,:]*(zRange[1]-zRange[0])
-            #P = np.r_[P,np.zeros((1,30)),np.ones((1,30))]
-            P = np.r_[P,np.ones((1,30))]
-            n_points = P.shape[1]
+        if len(modified) > 0:
+            if modified.__contains__("nPoints"):
+                # kP = 30
+                kP = 6
+                xRange = [-2,2]
+                yRange = [-2,2]
+                zRange = [-1,0]
+                # zRange = [-2,-1]
+                P = np.random.rand(3,kP)
+                P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+                P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+                P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+                #P = np.r_[P,np.zeros((1,30)),np.ones((1,30))]
+                P = np.r_[P,np.ones((1,kP))]
+                n_points = P.shape[1]
+
+            if modified.__contains__( "height"):
+                p0[2,:] += 2.
             
         #   END point modification 
         
@@ -1053,7 +1058,7 @@ def experiment(directory = "0",
         mp.plot_time(t_array,
                     s_store[i,:,:],
                     colors,
-                    #ylimits = [.0,10.1],
+                    ylimits = [.0,10.1],
                     name = directory+"/ValoresPR_"+str(i),
                     label = "Non zero singular value magnitudes",
                     labels = ["0","1","2","3","4","5"])
@@ -1063,7 +1068,7 @@ def experiment(directory = "0",
         mp.plot_time(t_array,
                     sinv_store[i,:,:],
                     colors,
-                    #ylimits = [.0,10.1],
+                    ylimits = [.0,10.1],
                     name = directory+"/ValoresP_"+str(i),
                     label = "Non zero singular value magnitudes",
                     labels = ["0","1","2","3","4","5"])
@@ -1187,14 +1192,15 @@ def experiment_repeat(nReps = 1,
             mask = mask)
             #Misscount = Misscount)
     
-    
-def experiment_all_random(nReps = 100, 
+
+
+def experiment_all_random(nReps = 100,
                           conditions = 1,
                           pFlat = False,
                           dirBase = "",
                           nPconst = None,
                           enablePlotExp = True):
-    
+
     n_agents = 4
     var_arr = np.zeros((n_agents,nReps))
     var_arr_2 = np.zeros(nReps)
@@ -1205,24 +1211,24 @@ def experiment_all_random(nReps = 100,
     mask = np.zeros(nReps)
     nP = 0
     #Misscount = 0
-    
+
     conditionsDict = {1:"Random",
                       2:"Circular plus a rigid transformation",
                       3:"Circular, fixed",
                       4:"Circular, plus a perturbation"}
-    
+
     logText = "Test series, References = "+str( conditionsDict[conditions])
     logText += '\n' +"Test series, pFlat = "+str( pFlat)
     logText += '\n' +"Test series, nP conf = "+str( nPconst)
     write2log(logText+'\n')
-    
+
     for k in range(nReps):
         #   Points
         # Range
         xRange = [-2,2]
         yRange = [-2,2]
         zRange = [-1,0]
-        
+
         if nPconst is None :
             nP = random.randint(4,11)
         else:
@@ -1237,28 +1243,28 @@ def experiment_all_random(nReps = 100,
         if pFlat :
             P[2,:] = 0.
         Ph = np.r_[P,np.ones((1,nP))]
-        
+
         #   Cameras
         # Range
         xRange = [-2,2]
         yRange = [-2,2]
         zRange = [0,3]
-        
+
         p0 = np.zeros((6,n_agents))
         pd = np.zeros((6,n_agents))
-        
+
         offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
         dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
         dRange -= offset
         for i in range(n_agents):
-            
+
             tmp = np.random.rand(6)
             tmp = offset + tmp*dRange
             tmp[3] = pi
             tmp[4] = 0.
             cam = cm.camera()
             agent = ctr.agent(cam, tmp, tmp,P)
-            
+
             while agent.count_points_in_FOV(Ph) != nP :
                 tmp = np.random.rand(6)
                 tmp = offset + tmp*dRange
@@ -1266,9 +1272,9 @@ def experiment_all_random(nReps = 100,
                 tmp[4] = 0.
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
-            
+
             p0[:,i] = tmp.copy()
-            
+
             #   BEGIN referencias aleatorias
             if conditions == 1:
                 tmp = np.random.rand(6)
@@ -1277,7 +1283,7 @@ def experiment_all_random(nReps = 100,
                 tmp[4] = 0.
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
-                
+
                 while agent.count_points_in_FOV(Ph) != nP:
                     tmp = np.random.rand(6)
                     tmp = offset + tmp*dRange
@@ -1285,10 +1291,10 @@ def experiment_all_random(nReps = 100,
                     tmp[4] = 0.
                     cam = cm.camera()
                     agent = ctr.agent(cam, tmp, tmp,P)
-                
+
                 pd[:,i] = tmp.copy()
             #   END Referencias aleatorias
-        ##   BEGIN referencias fijas, + s T R 
+        ##   BEGIN referencias fijas, + s T R
         #if conditions == 2:
             #visibilityTest = False
             ##pd = None
@@ -1302,15 +1308,15 @@ def experiment_all_random(nReps = 100,
                     #cam = cm.camera()
                     #agent = ctr.agent(cam, tmp, pd[:,i],P)
                     #visibilityTest = visibilityTest and (agent.count_points_in_FOV(Ph) == nP)
-            
-            
+
+
         ##   END Referencias fijas s R T
-        
+
         ##  BEGIN Referencias fijas
         if conditions == 3:
             pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
         ##  END Referencias fijas
-        
+
         ##   BEGIN referencias con perturbación
         #if conditions == 4:
             #pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
@@ -1320,7 +1326,7 @@ def experiment_all_random(nReps = 100,
                 #tmp = pd[:,i] + tmp*dRange*2
                 #cam = cm.camera()
                 #agent = ctr.agent(cam, tmp, tmp,P)
-                
+
                 #while agent.count_points_in_FOV(Ph) != nP:
                     #tmp = np.random.rand(6)-0.5
                     #tmp = pd[:,i] + tmp*dRange*2
@@ -1328,8 +1334,8 @@ def experiment_all_random(nReps = 100,
                     #agent = ctr.agent(cam, tmp, tmp,P)
                 #pd[:,i] = tmp.copy()
         ##   END Referencias con perturbación
-            
-        
+
+
         write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(k),
                 #k_int = 0.1,
@@ -1349,9 +1355,9 @@ def experiment_all_random(nReps = 100,
         var_arr_3[k] = errors[3]
         if FOVflag:
             mask[k] = 1
-        
+
     #   Save data
-    
+
     np.savez(dirBase+'data.npz',
                 n_agents = n_agents,
             var_arr = var_arr,
@@ -1362,9 +1368,189 @@ def experiment_all_random(nReps = 100,
             arr_n_points = arr_n_points,
             mask = mask)
             #Misscount = Misscount)
+
+def experiment_3D_min(nReps = 100,
+                          conditions = 1,
+                          dirBase = "",
+                          node = 0,
+                          enablePlotExp = True):
+    
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
+    arr_nP = np.zeros(nReps)
+    arr_n_points = np.zeros(nReps)
+    mask = np.zeros(nReps)
+    nP = 0
+    #Misscount = 0
     
 
+    logText = "Test series, minimun 3D poinst required = "
+    write2log(logText+'\n')
     
+    for k in range(nReps):
+
+        #   Points
+        # Range
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [-1,0]
+
+        nP = 4
+        arr_n_points[k] = nP
+        P = np.random.rand(3,nP)
+        P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+        P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+        P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+        Ph = np.r_[P,np.ones((1,nP))]
+
+        #   Cameras
+        # Range
+        xRange = [-2,2]
+        yRange = [-2,2]
+        zRange = [0,3]
+
+        p0 = np.zeros((6,n_agents))
+        pd = np.zeros((6,n_agents))
+
+        offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
+        dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
+        dRange -= offset
+        for i in range(n_agents):
+
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            tmp[3] = pi
+            tmp[4] = 0.
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
+
+            while agent.count_points_in_FOV(Ph) != nP :
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                tmp[3] = pi
+                tmp[4] = 0.
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+
+            p0[:,i] = tmp.copy()
+
+            #   Referencias aleatorias
+            if conditions == 1:
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                tmp[3] = pi
+                tmp[4] = 0.
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+
+                while agent.count_points_in_FOV(Ph) != nP:
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    tmp[3] = pi
+                    tmp[4] = 0.
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, tmp, tmp,P)
+
+                pd[:,i] = tmp.copy()
+
+
+        errors = [0.2,0.2,0.2,0.2]
+        ret = None
+        while(errors[2] > 0.1 and errors[3]> 0.1 and nP < 100):
+
+
+            write2log("CASE "+str(k)+'\n')
+            ret = experiment(directory=dirBase+str(k+node*nReps),
+                    #k_int = 0.1,
+                        pd = pd,
+                        p0 = p0,
+                        P = P,
+                        gamma0 = 8.,
+                        gammaInf = 2.,
+                        #set_derivative = True,
+                        #tanhLimit = True,
+                        #depthOp = 4, Z_set = 1.,
+                        t_end = 100,
+                        enablePlot = enablePlotExp)
+            errors = ret[1]
+
+            if (errors[2] > 0.1 and errors[3]> 0.1):
+                #   Points
+                # Range
+                xRange = [-2,2]
+                yRange = [-2,2]
+                zRange = [-1,0]
+
+                nP += 1
+                arr_n_points[k] = nP
+
+                P = np.random.rand(3,nP)
+                P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
+                P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
+                P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+                Ph = np.r_[P,np.ones((1,nP))]
+        #print(ret)
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_et[k] = errors[0]
+        var_arr_er[k] = errors[1]
+        var_arr_2[k] = errors[2]
+        var_arr_3[k] = errors[3]
+        arr_nP[k] = nP
+        if FOVflag:
+            mask[k] = 1
+        
+    #   Save data
+    
+    np.savez(dirBase+'data_'+str(node)+'.npz',
+                n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
+            arr_n_points = arr_n_points,
+            mask = mask,
+             arr_nP= arr_nP)
+
+
+def plot_minP_data(dirBase, n):
+
+    data = np.array([])
+    for k in range(n):
+        name=dirBase+'/data_'+str(k)+'.npz'
+        npzfile = np.load(name)
+        data = np.concatenate((data,npzfile["arr_nP"]))
+
+    ##  Histogram min points
+    fig, ax = plt.subplots()
+    fig.suptitle("Number of 3D points needed histogram")
+    counts, bins = np.histogram(data)
+    plt.stairs(counts, bins)
+    plt.tight_layout()
+    plt.savefig(dirBase+'minPoints_Histogram.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+
+    ##  Histogram min points zoom
+    fig, ax = plt.subplots()
+    fig.suptitle("Number of 3D points needed histogram")
+    counts, bins = np.histogram(data,
+                                bins = 47 ,
+                                range = (3.5,50.5) )
+    plt.stairs(counts, bins)
+    plt.xticks(np.arange(4, 51, 2.0))
+    ax.grid(axis='x')
+    plt.tight_layout()
+    plt.savefig(dirBase+'minPoints_Histogram_zoom.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+
+
 def experiment_local(nReps = 100, 
                     pFlat = False,
                     dirBase = "",
@@ -2161,7 +2347,7 @@ def main(arg):
     
     try:
         with open(logFile,'w') as file:
-            file.write("Log file INIT")
+            file.write("Log file INIT\n")
     except IOError:
         print("Logfile Error. OUT")
         return
@@ -2629,6 +2815,34 @@ def main(arg):
     
     #   END Gamma tunning
     
+    #   BEGIN   testing required points
+
+    # job = int(arg[2])
+    #
+    # dirBase = "/home/est_posgrado_edgar.chavez/Consenso/W_01_nPoints_test/"
+    # nReps = 5   # por nodo
+    # nodos = 20
+    #
+    # #   Plot part
+    # plot_minP_data(dirBase, nodos)
+    # return
+    #
+    # init = job * nReps
+    # end =  init + nReps
+    # #  process
+    # logText = "Set = "+str(job)+'\n'
+    # write2log(logText)
+    # experiment_3D_min(nReps = nReps,
+    #                 conditions = 1,
+    #                 dirBase = dirBase,
+    #                 node = job,
+    #                 enablePlotExp = False)
+    #
+    # return
+
+    #   END testing required points
+
+
     #   BEGIN test final state
     
     #repeats = np.array([10, 22, 34, 41, 58, 84])
@@ -2646,35 +2860,41 @@ def main(arg):
     
     #   BEGIN test final state - mod: más puntos
     
-    #view3D(str(141))
-    #view3D(str(184))
-    #return
-    
-    i =  184
-    experiment(directory=str(i),
-                t_end = 100,
-                modified = "nPoints",
-                gamma0 = 5.,
+    # i =  141
+
+    # name = "141_patologico"
+    name = "coplanar_34"
+    # name = str(i)
+    # view3D(name)
+    # return
+#
+    experiment(directory=name,
+                t_end = 800,
+                # modified = ["height","nPoints"],
+                modified = ["nPoints"],
+                gamma0 = 8.,
                 gammaInf = 2.,
-                intGamma0 = 0.2,
-                intGammaInf = 0.05,
-                intGammaSteep = 5,
+                # intGamma0 = 0.2,
+                # intGammaInf = 0.05,
+                # intGammaSteep = 5,
                 repeat = True)
-    for j in range(4):
-        agent_review(str(i),j)
+    # for j in range(4):
+    #     agent_review(name,j)
+    view3D(name)
     return
     
     repeats = np.array([110, 122, 134, 141, 158, 184])
     
     for i in repeats:
         experiment(directory=str(i),
+                # t_end = 100,
                 t_end = 800,
                 modified = "nPoints",
                 gamma0 = 8.,
                 gammaInf = 2.,
-                #intGamma0 = 0.3,
-                #intGammaInf = 0.05,
-                #intGammaSteep = 5,
+                intGamma0 = 0.3,
+                intGammaInf = 0.05,
+                intGammaSteep = 5,
                 repeat = True)
         for j in range(4):
             agent_review(str(i),j)

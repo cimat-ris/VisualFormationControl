@@ -13,7 +13,7 @@ import imageio
 #   Grafica el error y las salidas en x,y
 def plot_time(t_array,
               var_array,
-              colors,
+              #colors,
               name="time_plot", 
               label="Variable",
               labels = [],
@@ -22,6 +22,9 @@ def plot_time(t_array,
               ref = None):
     
     n = var_array.shape[0]
+    
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
     
     fig, ax = plt.subplots()
     fig.suptitle(label)
@@ -54,7 +57,7 @@ def plot_time(t_array,
 def plot_descriptors(descriptors_array,
                      camera_iMsize,
                      s_ref,
-                    colors,
+                    #colors,
                     pred,
                     enableLims = True,
                     name="time_plot", 
@@ -63,6 +66,10 @@ def plot_descriptors(descriptors_array,
     n = descriptors_array.shape[0]/2
     #print(n)
     n = int(n)
+    
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
+    
     fig, ax = plt.subplots()
     fig.suptitle(label)
     if enableLims:
@@ -108,13 +115,17 @@ def plot_descriptors(descriptors_array,
 def plot_position(position_array,
                     desired_position,
                     lfact,
-                    colors,
+                    #colors,
                     name="Trayectories", 
                     label="Positions"):
     
     n = position_array.shape[0]
     #print(n)
     n = int(n)
+    
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
+    
     fig, ax = plt.subplots()
     fig.suptitle(label)
     

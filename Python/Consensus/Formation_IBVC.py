@@ -34,6 +34,7 @@ import myplots as mp
 
 #   Interfacing 
 import sys
+import time
 
 #case 1
 #SceneP=[[-0.5],
@@ -69,7 +70,9 @@ SceneP=[[-0.5, -0.5, 0.5,  0.5],
 #SceneP=[[-0.5, -0.5, 0.5, 0.5],
 #[-0.5, 0.5, 0.5, -0.5],
 #[0, 0.2, 0.3, -0.1]]
-
+colorNames = ["colorPalette_A.npz",
+             "colorPalette_B.npz"]
+             
 logFile = ""
 
 def write2log(text):
@@ -192,7 +195,9 @@ def view3D(directory,
     
     #   Plot
     
-    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    #colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
@@ -255,7 +260,9 @@ def agent_review(directory = "",
     
     #   Plot
     
-    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    #colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
     
     #   Transoformaciones necesarias 
     
@@ -525,7 +532,17 @@ def experiment(directory = "0",
             set_consensoRef = False
         n_agents = p0.shape[1] #Number of agents
         pd = npzfile["pd"]
-        adjMat = npzfile["adjMat"]
+        if npzfile.__contains__('adjMat'):
+            adjMat = npzfile["adjMat"]
+        else:
+            if adjMat is None:
+                #   Make a complete graph
+                adjMat = []
+                for i in range(n_agents):
+                    tmp = [1 for j in range(n_agents)]
+                    tmp[i] = 0
+                    adjMat.append(tmp)
+                
         
         
         #   BEGIN point modification 
@@ -897,9 +914,11 @@ def experiment(directory = "0",
     write2log(logText+'\n'+'\n')
     
     # Colors setup
-    n_colors = max(n_agents,2*n_points)
-    colors = randint(0,255,3*n_colors)/255.0
-    colors = colors.reshape((n_colors,3))
+    #n_colors = max(n_agents,2*n_points)
+    #colors = randint(0,255,3*n_colors)/255.0
+    #colors = colors.reshape((n_colors,3))
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
     
     #   Save 3D plot data:
     np.savez(directory + "/data3DPlot.npz",
@@ -913,7 +932,7 @@ def experiment(directory = "0",
     mp.plot_position(pos_arr,
                     pd,
                     lfact = 1.1,
-                    colors = colors,
+                    #colors = colors,
                     name = directory+"/Cameras_trayectories")
     
     #   3D plots
@@ -995,7 +1014,7 @@ def experiment(directory = "0",
         mp.plot_descriptors(desc_arr[i,:,:],
                             agents[i].camera.iMsize,
                             agents[i].s_ref,
-                            colors,
+                            #colors,
                             pred[i,:],
                             #enableLims = False,
                             name = directory+"/Image_Features_"+str(i),
@@ -1004,7 +1023,7 @@ def experiment(directory = "0",
     #   Error de formación
     mp.plot_time(t_array,
                 serr_array[:,:],
-                colors,
+                #colors,
                 ylimits = [-0.1,1.1],
                 name = directory+"/State_Error",
                 label = "Formation Error",
@@ -1014,7 +1033,7 @@ def experiment(directory = "0",
     for i in range(n_agents):
         mp.plot_time(t_array,
                     err_array[i,:,:],
-                    colors,
+                    #colors,
                     ylimits = [-1,1],
                     name = directory+"/Features_Error_"+str(i),
                     label = "Features Error")
@@ -1023,7 +1042,7 @@ def experiment(directory = "0",
     tmp = norm(err_array,axis = 1) / n_agents
     mp.plot_time(t_array,
                 tmp,
-                colors,
+                #colors,
                 ref = int_res,
                 ylimits = [-1,1],
                 name = directory+"/Norm_Feature_Error",
@@ -1033,7 +1052,7 @@ def experiment(directory = "0",
     for i in range(n_agents):
         mp.plot_time(t_array,
                     U_array[i,:,:],
-                    colors,
+                    #colors,
                     ylimits = [-1,1],
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocities",
@@ -1043,13 +1062,13 @@ def experiment(directory = "0",
     for i in range(n_agents):
         mp.plot_time(t_array,
                     pos_arr[i,:3,:],
-                    colors,
+                    #colors,
                     name = directory+"/Traslaciones_"+str(i),
                     label = "Traslations",
                     labels = ["X","Y","Z"])
         mp.plot_time(t_array,
                     pos_arr[i,3:,:],
-                    colors,
+                    #colors,
                     name = directory+"/Angulos_"+str(i),
                     label = "Angles",
                     labels = ["Roll","Pitch","yaw"])
@@ -1058,7 +1077,7 @@ def experiment(directory = "0",
     for i in range(n_agents):
         mp.plot_time(t_array,
                     s_store[i,:,:],
-                    colors,
+                    #colors,
                     ylimits = [.0,10.1],
                     name = directory+"/ValoresPR_"+str(i),
                     label = "Non zero singular value magnitudes",
@@ -1068,7 +1087,7 @@ def experiment(directory = "0",
     for i in range(n_agents):
         mp.plot_time(t_array,
                     sinv_store[i,:,:],
-                    colors,
+                    #colors,
                     ylimits = [.0,10.1],
                     name = directory+"/ValoresP_"+str(i),
                     label = "Non zero singular value magnitudes",
@@ -1084,7 +1103,7 @@ def experiment(directory = "0",
         mp.plot_time(t_array,
                     #svdProy[i,:,:],
                     svdProy[i,:6,:],
-                    colors,
+                    #colors,
                     name = directory+"/Proy_et_VH_"+str(i),
                     label = "Proy($e$) over $V^h$ ",
                     labels = labels)
@@ -1108,7 +1127,185 @@ def experiment(directory = "0",
 #
 ###########################################################################
 
+def scene(modify = [],
+          dirBase = "",
+          n_agents = 4, 
+          n_points = 30,
+          refCirc = None,
+          Flat = False,
+          ranges = {"Px":[-2,2],
+                    "Py":[-2,2],
+                    "Pz":[-1,0],
+                    "X":[-2,2],
+                    "Y":[-2,2],
+                    "Z":[0,3],
+                    "roll":[pi,pi],
+                    "pitch":[0,0],
+                    "yaw":[-pi,pi]}):
+    
+    P = None
+    pd = None
+    p0 = None
+    
+    name = dirBase.rstrip('/')+'/data.npz'
+    if os.path.isfile(name):
+        npzfile = np.load(name)
+        if npzfile.__contains__('P'):
+            P = npzfile['P']
+        if npzfile.__contains__('pd'):
+            pd = npzfile['pd']
+        if npzfile.__contains__('p0'):
+            p0 = npzfile['p0']
+    else:
+        if len(modify) != 0:
+            print("Error, file inteded to be modified does not exist.")
+            return
+        modify = ['P','pd','p0']
+    
+    if modify.__contains__("P"):
+        P = np.zeros((3,n_points))
+        if Flat:
+            P = np.random.rand(3,n_points)
+            P[0,:] = ranges['Px'][0]+ P[0,:]*(ranges['Px'][1]-ranges['Px'][0])
+            P[1,:] = ranges['Py'][0]+ P[1,:]*(ranges['Py'][1]-ranges['Py'][0])
+            P = np.r_[P,np.zeros((1,n_points))]
+        else:
+            P = np.random.rand(3,n_points)
+            P[0,:] = ranges['Px'][0]+ P[0,:]*(ranges['Px'][1]-ranges['Px'][0])
+            P[1,:] = ranges['Py'][0]+ P[1,:]*(ranges['Py'][1]-ranges['Py'][0])
+            P[2,:] = ranges['Pz'][0]+ P[2,:]*(ranges['Pz'][1]-ranges['Pz'][0])
+    
+    Ph =  np.r_[P,np.ones((1,n_points))]
+    
+    if modify.__contains__("pd"):
+        if refCirc is None:
+            pd = np.zeros((6,n_agents))
+            offset = np.array([ranges['X'][0],ranges['Y'][0],ranges['Z'][0],
+                               ranges['roll'][0],ranges['pitch'][0],ranges['yaw'][0]])
+            dRange = np.array([ranges['X'][1],ranges['Y'][1],ranges['Z'][1],
+                               ranges['roll'][1],ranges['pitch'][1],ranges['yaw'][1]])
+            dRange -= offset
+            
+            
+            
+            for i in range(n_agents):
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
 
+                while agent.count_points_in_FOV(Ph) != n_points :
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, tmp, tmp,P)
+
+                pd[:,i] = tmp.copy()
+        else:
+            pd = pd = circle(n_agents,
+                             r = refCirc['r'],
+                             T = refCirc['T'],
+                             angs = refCirc['angs'])
+            
+    if modify.__contains__("p0"):
+        p0 = np.zeros((6,n_agents))
+        offset = np.array([ranges['X'][0],ranges['Y'][0],ranges['Z'][0],
+                            ranges['roll'][0],ranges['pitch'][0],ranges['yaw'][0]])
+        dRange = np.array([ranges['X'][1],ranges['Y'][1],ranges['Z'][1],
+                            ranges['roll'][1],ranges['pitch'][1],ranges['yaw'][1]])
+        dRange -= offset
+        
+        
+        
+        for i in range(n_agents):
+            tmp = np.random.rand(6)
+            tmp = offset + tmp*dRange
+            cam = cm.camera()
+            agent = ctr.agent(cam, tmp, tmp,P)
+
+            while agent.count_points_in_FOV(Ph) != n_points :
+                tmp = np.random.rand(6)
+                tmp = offset + tmp*dRange
+                cam = cm.camera()
+                agent = ctr.agent(cam, tmp, tmp,P)
+
+            p0[:,i] = tmp.copy()
+    
+    np.savez(name,
+            P = P,
+            p0 = p0,
+            pd = pd)
+    return
+
+
+
+
+def colorPalette(name = "colors.npz", n_colors = 30):
+    
+    colors = randint(0,255,3*n_colors)/255.0
+    colors = colors.reshape((n_colors,3))
+    
+    np.savez(name, colors = colors)
+    return
+
+#   BEGIN
+def experiment_frontParallel(nReps = 1,
+                     t_end = 800,
+                    dirBase = "",
+                    node = 0,
+                    Flat = True,
+                    enablePlotExp = False):
+    
+    n_agents = 4
+    var_arr = np.zeros((n_agents,nReps))
+    var_arr_2 = np.zeros(nReps)
+    var_arr_3 = np.zeros(nReps)
+    var_arr_et = np.zeros(nReps)
+    var_arr_er = np.zeros(nReps)
+    arr_n_points = np.zeros(nReps)
+    mask = np.zeros(nReps)
+    #Misscount = 0
+    
+    logText = '\n' +"Local test directory = "+ str(dirBase)
+    write2log(logText + '\n')
+    
+    for k in range(nReps):
+        
+        #   Modifica aleatoriamente lospuntos de escena
+        scene(modify = ["P"],
+              Flat = Flat,
+                dirBase = dirBase+str(k+node*nReps),
+                n_agents = 4, 
+                n_points = random.randint(4,11))
+        
+        write2log("CASE "+str(k)+'\n')
+        ret = experiment(directory=dirBase+str(node*nReps+k),
+                         repeat = True,
+                        t_end = t_end,
+                        enablePlot = enablePlotExp)
+        #print(ret)
+        [var_arr[:,k], errors, FOVflag] = ret
+        var_arr_et[k] = errors[0]
+        var_arr_er[k] = errors[1]
+        var_arr_2[k] = errors[2]
+        var_arr_3[k] = errors[3]
+        if FOVflag:
+            mask[k] = 1
+        
+    #   Save data
+    
+    np.savez(dirBase+'data_'+str(node)+'.npz',
+                n_agents = n_agents,
+            var_arr = var_arr,
+            var_arr_2 = var_arr_2,
+            var_arr_3 = var_arr_3,
+            var_arr_et = var_arr_et,
+            var_arr_er = var_arr_er,
+            arr_n_points = arr_n_points,
+            mask = mask)
+            #Misscount = Misscount)
+
+#   END
 def experiment_repeat(nReps = 1,
                       dirBase = "",
                       k_int = 0,
@@ -1373,7 +1570,7 @@ def experiment_all_random(nReps = 100,
 def experiment_3D_min(nReps = 100,
                           dirBase = "",
                           node = 0,
-                          sel_control = 0,
+                          sel_case = 0,
                           repeat = False,
                           enablePlotExp = True):
 
@@ -1381,7 +1578,7 @@ def experiment_3D_min(nReps = 100,
     gammaInf = None
     intGamma0 = None
     intGammaInf = None
-    if sel_control == 1:
+    if sel_case%2 == 1:
         gamma0 = 5.
         gammaInf = 2.
         intGamma0 = 0.2
@@ -1486,6 +1683,9 @@ def experiment_3D_min(nReps = 100,
 
 
             write2log("CASE "+str(k)+'\n')
+            t = time.localtime()
+            current_time = time.strftime("%Y-%m-%d %H:%M:%S", t)
+            write2log("TIMESTAMP "+current_time+'\n')
             ret = experiment(directory=dirBase+str(k+node*nReps),
                     #k_int = 0.1,
                         pd = pd,
@@ -1541,7 +1741,7 @@ def experiment_3D_min(nReps = 100,
              arr_nP= arr_nP)
 
 
-def plot_minP_data(dirBase, n):
+def plot_minP_data(dirBase, n, colorFile = "default.npz"):
 
     data = np.array([])
     mask = np.array([])
@@ -1557,12 +1757,15 @@ def plot_minP_data(dirBase, n):
         return
     data = data[mask==0.]
     
-
+    npzfile = np.load(colorFile)
+    colors = npzfile["colors"]
+    
     ##  Histogram min points
     fig, ax = plt.subplots()
     fig.suptitle("Number of 3D points needed histogram")
-    counts, bins = np.histogram(data)
-    plt.stairs(counts, bins)
+    #counts, bins = np.histogram(data)
+    #plt.stairs(counts, bins)
+    plt.hist(data, edgecolor = colors[0], fill = False)
     plt.tight_layout()
     plt.savefig(dirBase+'minPoints_Histogram.pdf',bbox_inches='tight')
     #plt.show()
@@ -1571,10 +1774,15 @@ def plot_minP_data(dirBase, n):
     ##  Histogram min points zoom
     fig, ax = plt.subplots()
     fig.suptitle("Number of 3D points needed histogram")
-    counts, bins = np.histogram(data,
-                                bins = 47 ,
-                                range = (3.5,50.5) )
-    plt.stairs(counts, bins)
+    #counts, bins = np.histogram(data,
+                                #bins = 47 ,
+                                #range = (3.5,50.5) )
+    #plt.stairs(counts, bins)
+    plt.hist(data,
+             edgecolor = colors[0],
+             fill = False,
+             bins = 47 ,
+             range = (3.5,50.5))
     plt.xticks(np.arange(4, 51, 2.0))
     ax.grid(axis='x')
     plt.tight_layout()
@@ -1732,7 +1940,7 @@ def experiment_angles(nReps = 100,
             mask = mask)
             #Misscount = Misscount)
     
-#   BEGIN
+
 
 def experiment_rep_3D(nReps = 1,
                      t_end = 100,
@@ -1799,7 +2007,7 @@ def experiment_rep_3D(nReps = 1,
             mask = mask)
             #Misscount = Misscount)
             
-#   END
+
 
 def experiment_local(nReps = 100,
                     pFlat = False,
@@ -1968,7 +2176,7 @@ def experiment_local(nReps = 100,
             mask = mask)
             #Misscount = Misscount)
     
-def experiment_plots(dirBase = "", kSets = 0):
+def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     
     n_agents = 4    #   TODO: generalizar
     var_arr = np.array([[],[],[],[]])
@@ -1978,6 +2186,9 @@ def experiment_plots(dirBase = "", kSets = 0):
     var_arr_er = np.array([])
     arr_n_points = np.array([])
     mask = np.array([])
+    
+    npzfile = np.load(colorFile)
+    colors = npzfile["colors"]
     
     if kSets != 0:
         data = np.array([])
@@ -2048,7 +2259,7 @@ def experiment_plots(dirBase = "", kSets = 0):
     
     #   Plot data
     
-    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    #colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
     
     ##      Simulation - wise consensus error
     fig, ax = plt.subplots()
@@ -2086,8 +2297,11 @@ def experiment_plots(dirBase = "", kSets = 0):
     ##  Histogram consensus
     fig, ax = plt.subplots()
     fig.suptitle("Consensus error histogram")
-    counts, bins = np.histogram(var_arr)
-    plt.stairs(counts, bins)
+    #counts, bins = np.histogram(var_arr)
+    #plt.stairs(counts, bins)
+    plt.hist(var_arr,
+             edgecolor = colors[0],
+             fill = False)
     plt.tight_layout()
     plt.savefig(dirBase+'Consensus error_Histogram.pdf',bbox_inches='tight')
     #plt.show()
@@ -2097,8 +2311,11 @@ def experiment_plots(dirBase = "", kSets = 0):
     ##  Histogram consensus Zoom
     fig, ax = plt.subplots()
     fig.suptitle("Consensus error histogram (zoom)")
-    counts, bins = np.histogram(var_arr[var_arr < 0.5])
-    plt.stairs(counts, bins)
+    #counts, bins = np.histogram(var_arr[var_arr < 0.5])
+    #plt.stairs(counts, bins)
+    plt.hist(var_arr[var_arr < 0.5],
+             edgecolor = colors[0],
+             fill = False)
     plt.tight_layout()
     plt.savefig(dirBase+'Consensus error_Histogram_zoom.pdf',bbox_inches='tight')
     #plt.show()
@@ -2177,7 +2394,7 @@ def experiment_plots(dirBase = "", kSets = 0):
     #plt.close()
     
     ##  Heatmap
-    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
+    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3, cmap = "Purples")
     fig, ax = plt.subplots()
     fig.suptitle("End formation error heatmap")
     
@@ -2208,7 +2425,7 @@ def experiment_plots(dirBase = "", kSets = 0):
     var_arr_2 = var_arr_2[var_arr_2 < 0.2]
     var_arr_2 = var_arr_2[var_arr_3 < 0.2]
     var_arr_3 = var_arr_3[var_arr_3 < 0.2]
-    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3)
+    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3, cmap = "Purples")
     fig, ax = plt.subplots()
     fig.suptitle("End formation error heatmap (Zoom)")
     
@@ -2249,7 +2466,8 @@ def experiment_plots(dirBase = "", kSets = 0):
 
 #   Grafica las relaciones de errores inicial y final, RvsT
 def plot_error_stats(nReps = 100,
-                     dirBase = ""):
+                     dirBase = "",
+                     colorFile = "default.pnz"):
     #   TODO: actualizar con masking
     arr_err = np.zeros(nReps)
     
@@ -2282,7 +2500,9 @@ def plot_error_stats(nReps = 100,
     
     var_arr = norm(var_arr,axis = 0)/n_agents
     
-    colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    #colors = (randint(0,255,3*n_agents)/255.0).reshape((n_agents,3))
+    npzfile = np.load(colorFile)
+    colors = npzfile["colors"]
     
     ##  Scatter err T, Ce
     fig, ax = plt.subplots()
@@ -2437,10 +2657,13 @@ def plot_error_stats(nReps = 100,
 
 
 def plot_tendencias(nReps = 20,
-                    dirBase = ""):
+                    dirBase = "",
+                    colorFile = "default.npz"):
     
     n_agents = 4
-    colors = (randint(0,255,3*3)/255.0).reshape((3,3))
+    #colors = (randint(0,255,3*3)/255.0).reshape((3,3))
+    npzfile = np.load(colorFile)
+    colors = npzfile["colors"]
     
     ref = np.arange(nReps)+1
     count_mask = np.zeros(nReps)
@@ -2612,6 +2835,14 @@ def plot_tendencias(nReps = 20,
 ################################################################################
 
 def main(arg):
+    
+    ##  Color palettes
+    #colorPalette("general.npz", n_colors = 30)
+    #colorPalette("colorPalette_A.npz", n_colors = 4)
+    #colorPalette("colorPalette_B.npz", n_colors = 4)
+    #colorPalette("default.npz", n_colors = 4)
+    #return
+    
     
     #   reset Log
     global logFile
@@ -2884,6 +3115,56 @@ def main(arg):
     #   END UI
     
     
+    
+    
+    
+    #   BEGIN Front parallel Part: set Circular
+    
+    
+    
+    #   Local tests  
+    job = int(arg[2])
+    sel_case = int(arg[3])
+    
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    Names = ["W_02_FrontParallel_Circular_Flat/",
+             "W_02_FrontParallel_Circular_NFlat/"]
+    nReps = 4
+    nodes = 25
+    
+    #   Plot
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[i]
+        #experiment_plots(dirBase =  dirBase,
+                         #kSets = nodes,
+                         #colorFile = colorFile)
+        
+    #return
+    
+    
+    #  process
+    dirBase = root + Names[sel_case]
+    colorFile = colorNames[sel_case]
+    
+    logText = "Set = "+ dirBase+'\n'
+    write2log(logText)
+    
+    logText = "Job = "+str(job)+'\n'
+    write2log(logText)
+    
+    
+    experiment_frontParallel(nReps = nReps,
+                     t_end = 800,
+                    dirBase = dirBase,
+                    node = job,
+                    Flat = (sel_case == 0))
+    
+    return 
+    
+    
+    #   END Front parallel Part: set Circular
+    
     #   BEGIN CLUSTER Front paralle
     
     ##   Local tests  
@@ -2899,6 +3180,7 @@ def main(arg):
         
     ##  process
     #name = Names[job]
+    #colorFile = colorNames[job%2]
     
     #logText = "Set = "+root + name+'\n'
     #write2log(logText)
@@ -2921,7 +3203,7 @@ def main(arg):
                     ##intGammaSteep = 5,
                     ##dirBase = root + name,
                     ##enablePlotExp= False)
-    ##experiment_plots(dirBase = root + name)
+    ##experiment_plots(dirBase = root + name, colorFile = colorFile)
     ##return 
     
     ##   Circular coplanar
@@ -2962,7 +3244,7 @@ def main(arg):
                     #dirBase = root + name,
                     #enablePlotExp= False)
     
-    #experiment_plots(dirBase = root + name)
+    #experiment_plots(dirBase = root + name, colorFile = colorFile)
     
     
     #return
@@ -2980,9 +3262,11 @@ def main(arg):
              #"localCirc_PIG/",
              #"localRand_PIG/"]
     
+    
     ##   Plot part
-    #for name in Names:
-        #plot_tendencias(dirBase = root + name)
+    #for i in range(len(Names)):
+        #colorFile = colorNames[i%2]
+        #plot_tendencias(dirBase = root + Names[i], colorFile = colorFile)
         
     #return
     
@@ -2991,6 +3275,7 @@ def main(arg):
     
     ##  process
     #name = Names[sel]
+    #colorFile = colorNames[sel%2]
     
     #logText = "Set = "+root + name+'\n'
     #write2log(logText)
@@ -3019,7 +3304,7 @@ def main(arg):
                         #intGammaSteep = 5,
                         #dirBase = root + name+str(i)+"/",
                         #enablePlotExp= False)
-    #experiment_plots(dirBase = root + name+str(i)+"/")
+    #experiment_plots(dirBase = root + name+str(i)+"/", , colorFile = colorFile)
     
     
     #return
@@ -3089,36 +3374,38 @@ def main(arg):
     
     #   BEGIN   testing required points
 
-    job = int(arg[2])
-    sel_control = int(arg[3])
+    #job = int(arg[2])
+    #sel_case = int(arg[3])
     
-    Names= ["W_02_nPoints_test/","W_02_nPoints_test_PIG/"]
+    #Names= ["W_02_nPoints_test_Flat/","W_02_nPoints_test_Flat_PIG/",
+            #"W_02_nPoints_test/","W_02_nPoints_test_PIG/"]
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    dirBase = root + Names[sel_control]
-    nReps = 4   # por nodo
-    nodos = 25
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #dirBase = root + Names[sel_case]
+    #nReps = 4   # por nodo
+    #nodos = 25
     
-    #   Plot part
-    #for iN in Names:
-        #dirBase = root + iN
-        #plot_minP_data(dirBase, nodos)
-        #experiment_plots(dirBase = dirBase, kSets = nodos)
+    ##   Plot part
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(np.floor(sel_case/2))]
+        ##plot_minP_data(dirBase, nodos, colorFile = colorFile)
+        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    ##return
+    
+    #init = job * nReps
+    #end =  init + nReps
+    ##  process
+    #logText = "Set = "+str(job)+'\n'
+    #write2log(logText)
+    #experiment_3D_min(nReps = nReps,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #sel_case = sel_case,
+                    #repeat = True,
+                    #enablePlotExp = False)
+    
     #return
-    
-    init = job * nReps
-    end =  init + nReps
-    #  process
-    logText = "Set = "+str(job)+'\n'
-    write2log(logText)
-    experiment_3D_min(nReps = nReps,
-                    dirBase = dirBase,
-                    node = job,
-                    sel_control = sel_control,
-                    repeat = True,
-                    enablePlotExp = False)
-    
-    return
 
     #   END testing required points
     #   BEGIN   testing angle effect
@@ -3127,11 +3414,13 @@ def main(arg):
     #   Local tests
     #job = int(arg[2])
 
-    ##name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_angles_test_PIG/"
     #name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_angles_test/"
-
+    ##name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_angles_test_PIG/"
+    #colorFile = colorNames[0] # 0 or 1
+    
     ##   Plot part
-    #plot_tendencias(dirBase =  name)
+    #plot_tendencias(dirBase =  name, colorFile = colorFile)
+    ##plot_tendencias(dirBase =  name, colorFile = colorFile)
     #return
 
     ##   Proc part
@@ -3153,7 +3442,7 @@ def main(arg):
                         #dirBase =  name+str(i)+"/",
                         #enablePlotExp= False)
 
-    #experiment_plots(dirBase =  name+str(i)+"/")
+    #experiment_plots(dirBase =  name+str(i)+"/", colorFile = colorFile)
     #return
     #   END testing angle effect
 

@@ -1132,16 +1132,15 @@ def scene(modify = [],
           n_agents = 4, 
           n_points = 30,
           refCirc = None,
-          Flat = False,
-          ranges = {"Px":[-2,2],
-                    "Py":[-2,2],
-                    "Pz":[-1,0],
-                    "X":[-2,2],
-                    "Y":[-2,2],
-                    "Z":[0,3],
-                    "roll":[pi,pi],
-                    "pitch":[0,0],
-                    "yaw":[-pi,pi]}):
+          Px=[-2,2],
+            Py=[-2,2],
+            Pz=[-1,0],
+            X=[-2,2],
+            Y=[-2,2],
+            Z=[0,3],
+            roll=[pi,pi],
+            pitch=[0,0],
+            yaw=[-pi,pi]):
     
     P = None
     pd = None
@@ -1163,27 +1162,17 @@ def scene(modify = [],
         modify = ['P','pd','p0']
     
     if modify.__contains__("P"):
-        P = np.zeros((3,n_points))
-        if Flat:
-            P = np.random.rand(3,n_points)
-            P[0,:] = ranges['Px'][0]+ P[0,:]*(ranges['Px'][1]-ranges['Px'][0])
-            P[1,:] = ranges['Py'][0]+ P[1,:]*(ranges['Py'][1]-ranges['Py'][0])
-            P = np.r_[P,np.zeros((1,n_points))]
-        else:
-            P = np.random.rand(3,n_points)
-            P[0,:] = ranges['Px'][0]+ P[0,:]*(ranges['Px'][1]-ranges['Px'][0])
-            P[1,:] = ranges['Py'][0]+ P[1,:]*(ranges['Py'][1]-ranges['Py'][0])
-            P[2,:] = ranges['Pz'][0]+ P[2,:]*(ranges['Pz'][1]-ranges['Pz'][0])
-    
-    Ph =  np.r_[P,np.ones((1,n_points))]
+        P = np.random.rand(3,n_points)
+        P[0,:] = Px[0]+ P[0,:]*(Px[1]-Px[0])
+        P[1,:] = Py[0]+ P[1,:]*(Py[1]-Py[0])
+        P[2,:] = Pz[0]+ P[2,:]*(Pz[1]-Pz[0])
+        P =  np.r_[P,np.ones((1,n_points))]
     
     if modify.__contains__("pd"):
         if refCirc is None:
             pd = np.zeros((6,n_agents))
-            offset = np.array([ranges['X'][0],ranges['Y'][0],ranges['Z'][0],
-                               ranges['roll'][0],ranges['pitch'][0],ranges['yaw'][0]])
-            dRange = np.array([ranges['X'][1],ranges['Y'][1],ranges['Z'][1],
-                               ranges['roll'][1],ranges['pitch'][1],ranges['yaw'][1]])
+            offset = np.array([X[0],X[0],Z[0],roll[0],pitch[0],yaw[0]])
+            dRange = np.array([X[1],X[1],Z[1],roll[1],pitch[1],yaw[1]])
             dRange -= offset
             
             
@@ -1194,7 +1183,7 @@ def scene(modify = [],
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
 
-                while agent.count_points_in_FOV(Ph) != n_points :
+                while agent.count_points_in_FOV(P) != n_points :
                     tmp = np.random.rand(6)
                     tmp = offset + tmp*dRange
                     cam = cm.camera()
@@ -1209,10 +1198,8 @@ def scene(modify = [],
             
     if modify.__contains__("p0"):
         p0 = np.zeros((6,n_agents))
-        offset = np.array([ranges['X'][0],ranges['Y'][0],ranges['Z'][0],
-                            ranges['roll'][0],ranges['pitch'][0],ranges['yaw'][0]])
-        dRange = np.array([ranges['X'][1],ranges['Y'][1],ranges['Z'][1],
-                            ranges['roll'][1],ranges['pitch'][1],ranges['yaw'][1]])
+        offset = np.array([X[0],X[0],Z[0],roll[0],pitch[0],yaw[0]])
+        dRange = np.array([X[1],X[1],Z[1],roll[1],pitch[1],yaw[1]])
         dRange -= offset
         
         
@@ -1223,13 +1210,38 @@ def scene(modify = [],
             cam = cm.camera()
             agent = ctr.agent(cam, tmp, tmp,P)
 
-            while agent.count_points_in_FOV(Ph) != n_points :
+            while agent.count_points_in_FOV(P) != n_points :
                 tmp = np.random.rand(6)
                 tmp = offset + tmp*dRange
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
 
             p0[:,i] = tmp.copy()
+    
+    #   Adjust P when needed
+    agents = []
+    for i in range(n_agents):
+        cam = cm.camera()
+        agents.append(ctr.agent(cam,pd[:,i],p0[:,i],P))
+    
+    testing = False
+    for i in range(n_agents):
+        if agents[i].count_points_in_FOV(P, enableMargin = False) != n_points:
+            testing = True
+    
+    while testing:
+        testing = False
+        
+        P = np.random.rand(3,n_points)
+        P[0,:] = Px[0]+ P[0,:]*(Px[1]-Px[0])
+        P[1,:] = Py[0]+ P[1,:]*(Py[1]-Py[0])
+        P[2,:] = Pz[0]+ P[2,:]*(Pz[1]-Pz[0])
+        P =  np.r_[P,np.ones((1,n_points))]
+        
+        for i in range(n_agents):
+            if agents[i].count_points_in_FOV(P, enableMargin = False) != n_points:
+                testing = True
+    
     
     np.savez(name,
             P = P,
@@ -1266,6 +1278,10 @@ def experiment_frontParallel(nReps = 1,
     mask = np.zeros(nReps)
     #Misscount = 0
     
+    Pz = [-1,0]
+    if Flat:
+        Pz = [0,0]
+    
     logText = '\n' +"Local test directory = "+ str(dirBase)
     write2log(logText + '\n')
     
@@ -1273,7 +1289,7 @@ def experiment_frontParallel(nReps = 1,
         
         #   Modifica aleatoriamente lospuntos de escena
         scene(modify = ["P"],
-              Flat = Flat,
+              Pz = Pz,
                 dirBase = dirBase+str(k+node*nReps),
                 n_agents = 4, 
                 n_points = random.randint(4,11))
@@ -1593,6 +1609,9 @@ def experiment_3D_min(nReps = 100,
     var_arr_er = np.zeros(nReps)
     arr_nP = np.zeros(nReps)
     arr_n_points = np.zeros(nReps)
+    arr_trial_heat_t = -np.ones((nReps,100-4))
+    arr_trial_heat_ang = -np.ones((nReps,100-4))
+    arr_trial_heat_cons = -np.ones((nReps,100-4))
     mask = np.zeros(nReps)
     nP = 0
     #Misscount = 0
@@ -1700,7 +1719,13 @@ def experiment_3D_min(nReps = 100,
                         #depthOp = 4, Z_set = 1.,
                         t_end = 800,
                         enablePlot = enablePlotExp)
-            errors = ret[1]
+            [arr_tmp, errors, FOVflag] = ret
+            
+            #   si no falla, guardar datos de error
+            if not FOVflag:
+                arr_trial_heat_t[k,nP-4] = errors[2]
+                arr_trial_heat_ang[k,nP-4] = errors[3]
+                arr_trial_heat_cons[k,nP-4] = norm(arr_tmp)
 
             if (errors[2] > 0.1 and errors[3]> 0.1):
                 #   Points
@@ -1738,18 +1763,31 @@ def experiment_3D_min(nReps = 100,
             var_arr_er = var_arr_er,
             arr_n_points = arr_n_points,
             mask = mask,
-             arr_nP= arr_nP)
+             arr_nP= arr_nP,
+             arr_trial_heat_t = arr_trial_heat_t,
+             arr_trial_heat_ang = arr_trial_heat_ang,
+             arr_trial_heat_cons = arr_trial_heat_cons)
 
 
 def plot_minP_data(dirBase, n, colorFile = "default.npz"):
 
     data = np.array([])
     mask = np.array([])
+    arr_trial_heat_t = np.zeros((1,100-4))
+    arr_trial_heat_ang = np.zeros((1,100-4))
+    arr_trial_heat_cons = np.zeros((1,100-4))
     for k in range(n):
         name=dirBase+'/data_'+str(k)+'.npz'
         npzfile = np.load(name)
         data = np.concatenate((data,npzfile["arr_nP"]))
         mask = np.concatenate((mask,npzfile["mask"]))
+        arr_trial_heat_t = np.r_[arr_trial_heat_t,npzfile["arr_trial_heat_t"]]
+        arr_trial_heat_ang = np.r_[arr_trial_heat_ang,npzfile["arr_trial_heat_ang"]]
+        arr_trial_heat_cons = np.r_[arr_trial_heat_cons,npzfile["arr_trial_heat_cons"]]
+    
+    arr_trial_heat_t = arr_trial_heat_t[1:,:]
+    arr_trial_heat_arr = arr_trial_heat_ang[1:,:]
+    arr_trial_heat_cons = arr_trial_heat_cons[1:,:]
     
     #   Masking
     if (np.count_nonzero(mask == 1.) == mask.shape[0]):
@@ -1789,8 +1827,38 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     plt.savefig(dirBase+'minPoints_Histogram_zoom.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+    
+    #   Heatmaps de errores p/experimento
 
+    fig, ax = plt.subplots()
+    fig.suptitle("Trial errors (T) heatmap")
+    
+    h = arr_trial_heat_t.copy()
+    h[h < 0] = 0
+    ax.imshow(h, cmap = "Purples")
+    ax.invert_yaxis()
+    x = [str(i) for i in range(100-4)]
+    y = [str(i) for i in range(100)]
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
+    ax.set_xticklabels(x, fontsize = 2)
+    ax.set_yticklabels(y, fontsize = 2)
+    ax.set_xlabel("Trial")
+    ax.set_ylabel("Translation error")
+    for i in range(len(x)):
+        for j in range(len(y)):
+            if arr_trial_heat_t[j,i] < 0 :
+                text = ax.text(i, j, "X",
+                        ha="center", va="center", color="red", fontsize =3)
+            #else:
+                #text = ax.text(j, i, arr_trial_heat_t[j,i],
+                        #ha="center", va="center", color="k")
 
+    
+    plt.tight_layout()
+    plt.savefig(dirBase+'ErrorT_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
 
 
 def experiment_angles(nReps = 100,
@@ -2280,7 +2348,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     #fig.suptitle("Error de consenso (Densidad por Kernels)")
     ##plt.ylim([-2.,2.])
     
-    #var_arr = norm(var_arr,axis = 0)/n_agents
+    var_arr = norm(var_arr,axis = 0)/n_agents
     #density = gaussian_kde(var_arr)
     #dh = var_arr.max() - var_arr.min()
     #xs = np.linspace(var_arr.min()-dh*0.1,var_arr.max()+dh*0.1,200)
@@ -2295,14 +2363,16 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     #plt.close()
     
     ##  Histogram consensus
+    
     fig, ax = plt.subplots()
     fig.suptitle("Consensus error histogram")
     #counts, bins = np.histogram(var_arr)
     #plt.stairs(counts, bins)
     plt.hist(var_arr,
+             #bins=1,
              edgecolor = colors[0],
              fill = False)
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.savefig(dirBase+'Consensus error_Histogram.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
@@ -2399,7 +2469,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("End formation error heatmap")
     
     h = h.T
-    ax.imshow(h)
+    ax.imshow(h, cmap = "Purples")
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
@@ -2412,7 +2482,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     for i in range(len(x)):
         for j in range(len(y)):
             text = ax.text(j, i, h[i, j],
-                        ha="center", va="center", color="w")
+                        ha="center", va="center", color="k")
 
     
     plt.tight_layout()
@@ -2430,7 +2500,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("End formation error heatmap (Zoom)")
     
     h = h.T
-    ax.imshow(h)
+    ax.imshow(h, cmap = "Purples")
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
@@ -2443,7 +2513,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     for i in range(len(x)):
         for j in range(len(y)):
             text = ax.text(j, i , h[i, j],
-                        ha="center", va="center", color="w")
+                        ha="center", va="center", color="k")
 
     
     plt.tight_layout()
@@ -3122,17 +3192,17 @@ def main(arg):
     
     
     
-    #   Local tests  
-    job = int(arg[2])
-    sel_case = int(arg[3])
+    ##   Local tests  
+    #job = int(arg[2])
+    #sel_case = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    Names = ["W_02_FrontParallel_Circular_Flat/",
-             "W_02_FrontParallel_Circular_NFlat/"]
-    nReps = 4
-    nodes = 25
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_02_FrontParallel_Circular_Flat/",
+             #"W_02_FrontParallel_Circular_NFlat/"]
+    #nReps = 4
+    #nodes = 25
     
-    #   Plot
+    ##   Plot
     #for i in range(len(Names)):
         #dirBase = root + Names[i]
         #colorFile = colorNames[i]
@@ -3143,24 +3213,24 @@ def main(arg):
     #return
     
     
-    #  process
-    dirBase = root + Names[sel_case]
-    colorFile = colorNames[sel_case]
+    ##  process
+    #dirBase = root + Names[sel_case]
+    #colorFile = colorNames[sel_case]
     
-    logText = "Set = "+ dirBase+'\n'
-    write2log(logText)
+    #logText = "Set = "+ dirBase+'\n'
+    #write2log(logText)
     
-    logText = "Job = "+str(job)+'\n'
-    write2log(logText)
+    #logText = "Job = "+str(job)+'\n'
+    #write2log(logText)
     
     
-    experiment_frontParallel(nReps = nReps,
-                     t_end = 800,
-                    dirBase = dirBase,
-                    node = job,
-                    Flat = (sel_case == 0))
+    #experiment_frontParallel(nReps = nReps,
+                     #t_end = 800,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #Flat = (sel_case == 0))
     
-    return 
+    #return 
     
     
     #   END Front parallel Part: set Circular
@@ -3374,38 +3444,40 @@ def main(arg):
     
     #   BEGIN   testing required points
 
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
+    job = int(arg[2])
+    sel_case = int(arg[3])
     
-    #Names= ["W_02_nPoints_test_Flat/","W_02_nPoints_test_Flat_PIG/",
-            #"W_02_nPoints_test/","W_02_nPoints_test_PIG/"]
+    Names= ["W_02_nPoints_Circular/",
+            "W_02_nPoints_Circular_PIG/",
+            "W_02_nPoints_Random/",
+            "W_02_nPoints_Random_PIG/"]
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #dirBase = root + Names[sel_case]
-    #nReps = 4   # por nodo
-    #nodos = 25
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    dirBase = root + Names[sel_case]
+    nReps = 4   # por nodo
+    nodos = 25
     
-    ##   Plot part
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(np.floor(sel_case/2))]
-        ##plot_minP_data(dirBase, nodos, colorFile = colorFile)
-        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return
     
-    #init = job * nReps
-    #end =  init + nReps
-    ##  process
-    #logText = "Set = "+str(job)+'\n'
-    #write2log(logText)
-    #experiment_3D_min(nReps = nReps,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #sel_case = sel_case,
-                    #repeat = True,
-                    #enablePlotExp = False)
     
+    #   Plot part
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[int(np.floor(sel_case/2))]
+        #plot_minP_data(dirBase, nodos, colorFile = colorFile)
+        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
     #return
+    
+    #  process
+    logText = "Set = "+str(job)+'\n'
+    write2log(logText)
+    experiment_3D_min(nReps = nReps,
+                    dirBase = dirBase,
+                    node = job,
+                    sel_case = sel_case,
+                    repeat = True,
+                    enablePlotExp = False)
+    
+    return
 
     #   END testing required points
     #   BEGIN   testing angle effect

@@ -18,6 +18,7 @@ from scipy.optimize import minimize_scalar
 #   Plot
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.colors as mcolors
 from numpy.random import rand, randint
 from scipy.stats import gaussian_kde
 
@@ -1128,6 +1129,9 @@ def experiment(directory = "0",
 ###########################################################################
 
 def scene(modify = [],
+          inP = None,
+          inpd = None,
+          inp0 = None,
           dirBase = "",
           n_agents = 4, 
           n_points = 30,
@@ -1156,20 +1160,20 @@ def scene(modify = [],
         if npzfile.__contains__('p0'):
             p0 = npzfile['p0']
     else:
-        if len(modify) != 0:
-            print("Error, file inteded to be modified does not exist.")
-            return
+        
         modify = ['P','pd','p0']
     
     if modify.__contains__("P"):
-        P = np.random.rand(3,n_points)
-        P[0,:] = Px[0]+ P[0,:]*(Px[1]-Px[0])
-        P[1,:] = Py[0]+ P[1,:]*(Py[1]-Py[0])
-        P[2,:] = Pz[0]+ P[2,:]*(Pz[1]-Pz[0])
-        P =  np.r_[P,np.ones((1,n_points))]
-    
+        if inP is None:
+            P = np.random.rand(3,n_points)
+            P[0,:] = Px[0]+ P[0,:]*(Px[1]-Px[0])
+            P[1,:] = Py[0]+ P[1,:]*(Py[1]-Py[0])
+            P[2,:] = Pz[0]+ P[2,:]*(Pz[1]-Pz[0])
+            P =  np.r_[P,np.ones((1,n_points))]
+        else:
+            P = inP.copy()
     if modify.__contains__("pd"):
-        if refCirc is None:
+        if (refCirc is None) and (inpd is None):
             pd = np.zeros((6,n_agents))
             offset = np.array([X[0],X[0],Z[0],roll[0],pitch[0],yaw[0]])
             dRange = np.array([X[1],X[1],Z[1],roll[1],pitch[1],yaw[1]])
@@ -1190,33 +1194,38 @@ def scene(modify = [],
                     agent = ctr.agent(cam, tmp, tmp,P)
 
                 pd[:,i] = tmp.copy()
-        else:
-            pd = pd = circle(n_agents,
+        elif not refCirc is None:
+            pd  = circle(n_agents,
                              r = refCirc['r'],
                              T = refCirc['T'],
                              angs = refCirc['angs'])
+        else:
+            pd = inpd.copy()
             
     if modify.__contains__("p0"):
-        p0 = np.zeros((6,n_agents))
-        offset = np.array([X[0],X[0],Z[0],roll[0],pitch[0],yaw[0]])
-        dRange = np.array([X[1],X[1],Z[1],roll[1],pitch[1],yaw[1]])
-        dRange -= offset
-        
-        
-        
-        for i in range(n_agents):
-            tmp = np.random.rand(6)
-            tmp = offset + tmp*dRange
-            cam = cm.camera()
-            agent = ctr.agent(cam, tmp, tmp,P)
-
-            while agent.count_points_in_FOV(P) != n_points :
+        if inp0 is None:
+            p0 = np.zeros((6,n_agents))
+            offset = np.array([X[0],X[0],Z[0],roll[0],pitch[0],yaw[0]])
+            dRange = np.array([X[1],X[1],Z[1],roll[1],pitch[1],yaw[1]])
+            dRange -= offset
+            
+            
+            
+            for i in range(n_agents):
                 tmp = np.random.rand(6)
                 tmp = offset + tmp*dRange
                 cam = cm.camera()
                 agent = ctr.agent(cam, tmp, tmp,P)
 
-            p0[:,i] = tmp.copy()
+                while agent.count_points_in_FOV(P) != n_points :
+                    tmp = np.random.rand(6)
+                    tmp = offset + tmp*dRange
+                    cam = cm.camera()
+                    agent = ctr.agent(cam, tmp, tmp,P)
+
+                p0[:,i] = tmp.copy()
+        else :
+            p0 = inp0.copy()
     
     #   Adjust P when needed
     agents = []
@@ -1242,7 +1251,7 @@ def scene(modify = [],
             if agents[i].count_points_in_FOV(P, enableMargin = False) != n_points:
                 testing = True
     
-    
+    #write2log(name + '\n')
     np.savez(name,
             P = P,
             p0 = p0,
@@ -1263,6 +1272,7 @@ def colorPalette(name = "colors.npz", n_colors = 30):
 #   BEGIN
 def experiment_frontParallel(nReps = 1,
                      t_end = 800,
+                     n_points = None,
                     dirBase = "",
                     node = 0,
                     Flat = True,
@@ -1288,11 +1298,17 @@ def experiment_frontParallel(nReps = 1,
     for k in range(nReps):
         
         #   Modifica aleatoriamente lospuntos de escena
+        nP = None
+        if n_points is None:
+            nP = random.randint(4,11)
+        else:
+            nP = n_points
         scene(modify = ["P"],
               Pz = Pz,
                 dirBase = dirBase+str(k+node*nReps),
                 n_agents = 4, 
-                n_points = random.randint(4,11))
+                #n_points = random.randint(4,11))
+                n_points = nP)
         
         write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(node*nReps+k),
@@ -1786,7 +1802,7 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
         arr_trial_heat_cons = np.r_[arr_trial_heat_cons,npzfile["arr_trial_heat_cons"]]
     
     arr_trial_heat_t = arr_trial_heat_t[1:,:]
-    arr_trial_heat_arr = arr_trial_heat_ang[1:,:]
+    arr_trial_heat_ang = arr_trial_heat_ang[1:,:]
     arr_trial_heat_cons = arr_trial_heat_cons[1:,:]
     
     #   Masking
@@ -1830,35 +1846,107 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     
     #   Heatmaps de errores p/experimento
 
-    fig, ax = plt.subplots()
-    fig.suptitle("Trial errors (T) heatmap")
+    #       previous end detect
+    h1 = arr_trial_heat_t.copy()
+    h1[h1 < 0] = 100
+    h2 = arr_trial_heat_ang.copy()
+    h2[h2 < 0] = 100
+    test = - np.ones(100, dtype = np.int16)
+    for i in range(100):
+        for j in range(96):
+            if h1[i,j] < 0.1 or h2[i,j] < 0.1:
+                test[i] = j
+    
+    #       Traslacion
+    fig, ax = plt.subplots(figsize=(8, 5))
+    fig.suptitle("Trial errors (T) heatmap", size = 9)
     
     h = arr_trial_heat_t.copy()
     h[h < 0] = 0
-    ax.imshow(h, cmap = "Purples")
     ax.invert_yaxis()
     x = [str(i) for i in range(100-4)]
     y = [str(i) for i in range(100)]
     ax.set_yticks(np.arange(len(y)))
     ax.set_xticks(np.arange(len(x)))
-    ax.set_xticklabels(x, fontsize = 2)
-    ax.set_yticklabels(y, fontsize = 2)
-    ax.set_xlabel("Trial")
-    ax.set_ylabel("Translation error")
-    for i in range(len(x)):
-        for j in range(len(y)):
-            if arr_trial_heat_t[j,i] < 0 :
-                text = ax.text(i, j, "X",
-                        ha="center", va="center", color="red", fontsize =3)
-            #else:
-                #text = ax.text(j, i, arr_trial_heat_t[j,i],
-                        #ha="center", va="center", color="k")
-
+    ax.set_xticklabels(x, fontsize = 2.5)
+    ax.set_yticklabels(y, fontsize = 2.5)
+    ax.set_xlabel("Trial", size =4)
+    ax.set_ylabel("Translation error", size = 4)
+    ax.grid(axis='y', linewidth=0.1)
+    ax.set_axisbelow(True)
+    im = ax.imshow(h, cmap = "Purples")
+    fig.colorbar(im, ax = ax, shrink = 0.8)
+    for j in range(len(y)):
+        if test[j] != -1:
+            text = ax.text( test[j], j , 
+                           "X", ha="center", va="center", 
+                           color="k", fontsize =4)
     
     plt.tight_layout()
     plt.savefig(dirBase+'ErrorT_heatmap.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+    
+    #       Traslacion
+    fig, ax = plt.subplots(figsize=(8, 5))
+    fig.suptitle("Trial errors (R) heatmap", size = 9)
+    
+    h = arr_trial_heat_ang.copy()
+    h[h < 0] = 0
+    ax.invert_yaxis()
+    x = [str(i) for i in range(100-4)]
+    y = [str(i) for i in range(100)]
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
+    ax.set_xticklabels(x, fontsize = 2.5)
+    ax.set_yticklabels(y, fontsize = 2.5)
+    ax.set_xlabel("Trial", size =4)
+    ax.set_ylabel("Rotation error", size = 4)
+    ax.grid(axis='y', linewidth=0.1)
+    ax.set_axisbelow(True)
+    im = ax.imshow(h, cmap = "Purples")
+    fig.colorbar(im, ax = ax, shrink = 0.8)
+    for j in range(len(y)):
+        if test[j] != -1:
+            text = ax.text( test[j], j , 
+                           "X", ha="center", va="center", 
+                           color="k", fontsize =4)
+    
+    plt.tight_layout()
+    plt.savefig(dirBase+'ErrorR_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #       Traslacion
+    fig, ax = plt.subplots(figsize=(8, 5))
+    fig.suptitle("Trial errors (Consensus) heatmap", size = 9)
+    
+    h = arr_trial_heat_cons.copy()
+    h[h < 0] = 0
+    ax.invert_yaxis()
+    x = [str(i) for i in range(100-4)]
+    y = [str(i) for i in range(100)]
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
+    ax.set_xticklabels(x, fontsize = 2.5)
+    ax.set_yticklabels(y, fontsize = 2.5)
+    ax.set_xlabel("Trial", size =4)
+    ax.set_ylabel("Consensus error", size = 4)
+    ax.grid(axis='y', linewidth=0.1)
+    ax.set_axisbelow(True)
+    im = ax.imshow(h, cmap = "Purples")
+    fig.colorbar(im, ax = ax, shrink = 0.8)
+    for j in range(len(y)):
+        if test[j] != -1:
+            text = ax.text( test[j], j , 
+                           "X", ha="center", va="center", 
+                           color="k", fontsize =4)
+    
+    plt.tight_layout()
+    plt.savefig(dirBase+'ErrorC_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
 
 
 def experiment_angles(nReps = 100,
@@ -2079,6 +2167,7 @@ def experiment_rep_3D(nReps = 1,
 
 def experiment_local(nReps = 100,
                     pFlat = False,
+                    n_points = None,
                     dirBase = "",
                     dTras = 0.1,
                     dRot = 0.3,
@@ -2089,11 +2178,8 @@ def experiment_local(nReps = 100,
                     gamma0 = None,
                     gammaInf = None,
                     gammaSteep = 5.,
-                    randomInit = False,
-                    xRange = [-2,2],
-                    yRange = [-2,2],
-                    zRange = [0,3],
-                    enablePlotExp = True):
+                    activatepdCirc = True,
+                    enablePlotExp = False):
     
     n_agents = 4
     var_arr = np.zeros((n_agents,nReps))
@@ -2104,6 +2190,10 @@ def experiment_local(nReps = 100,
     arr_n_points = np.zeros(nReps)
     mask = np.zeros(nReps)
     #Misscount = 0
+    
+    Pz = [-1,0]
+    if pFlat:
+        Pz = [0,0]
     
     #   Testing ranges 
     # Range
@@ -2121,33 +2211,47 @@ def experiment_local(nReps = 100,
     for k in range(nReps):
         FOVflag = True
         
+        
+        
+        
+        
         #   Points
-        # Range
-        PxRange = [-2,2]
-        PyRange = [-2,2]
-        PzRange = [-1,0]
+        ## Range
+        #PxRange = [-2,2]
+        #PyRange = [-2,2]
+        #PzRange = [-1,0]
         
-        nP = random.randint(4,11)
-        arr_n_points[k] = nP
-        #nP = 4
-        #nP = 10
-        P = np.random.rand(3,nP)
-        P[0,:] = PxRange[0]+ P[0,:]*(PxRange[1]-PxRange[0])
-        P[1,:] = PyRange[0]+ P[1,:]*(PyRange[1]-PyRange[0])
-        P[2,:] = PzRange[0]+ P[2,:]*(PzRange[1]-PzRange[0])
-        if pFlat :
-            P[2,:] = 0.
-            #   BEGIN experimentos con rotaciones
-            #P = R @ P 
-            #   END
-        Ph = np.r_[P,np.ones((1,nP))]
         
-        #   Conifgs if randInt
-        offsetInit = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
-        dRangeInit = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-        dRangeInit -= offsetInit
+        nP = None
+        if n_points is None:
+            nP = random.randint(4,11)
+        else:
+            nP = n_points
+            
+            
+        if activatepdCirc:
+            scene(modify = ["pd"],
+            inpd  = circle(4,1,T=np.array([0.,0.,2.])),
+                dirBase = dirBase+str(k),
+                n_agents = 4, 
+                n_points = nP)    
+            
+        scene(modify = ["P"],
+              Pz = Pz,
+                dirBase = dirBase+str(k),
+                n_agents = 4, 
+                n_points = nP)
         
-        #   Cameras
+        
+        
+        #   leer datos de data.npz 
+        
+        npzfile = np.load(dirBase+str(k)+'/data.npz')
+        P = npzfile['P']
+        pd = npzfile['pd']
+        p0 = npzfile['p0']
+        
+        ##   Cameras
         
         p0 = np.zeros((6,n_agents))
         
@@ -2157,28 +2261,13 @@ def experiment_local(nReps = 100,
                             rotRange[1],rotRange[1],rotRange[1]])
         dRange -= offset
         
-        #iSel = {0:0,1:3,2:2,3:1}
+        ##iSel = {0:0,1:3,2:2,3:1}
         
         #   References
-        pd = circle(n_agents,1,T = np.array([0.,0.,1.]))
         
         for i in range(n_agents):
             
-            #   BEGIN Random
-            if randomInit:
-                tmp = np.random.rand(6)
-                tmp = offsetInit + tmp*dRangeInit
-                cam = cm.camera()
-                agent = ctr.agent(cam, tmp, tmp,P)
-                
-                while agent.count_points_in_FOV(Ph) != nP or tmp[2]<0.:
-                    tmp = np.random.rand(6)
-                    tmp = offsetInit + tmp*dRangeInit
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, tmp, tmp,P)
-                
-                pd[:,i] = tmp.copy()
-            #   END radnom
+            
             
             
             #   Initial conditions
@@ -2189,7 +2278,7 @@ def experiment_local(nReps = 100,
             cam = cm.camera()
             agent = ctr.agent(cam, tmp, tmp,P)
             
-            while agent.count_points_in_FOV(Ph) != nP or tmp[2]<0.:
+            while agent.count_points_in_FOV(P) != nP or tmp[2]<0.:
                 tmp = np.random.rand(6)
                 #tmp = pd[:,iSel[i]] + offset + tmp*dRange
                 tmp = pd[:,i] + offset + tmp*dRange
@@ -2200,26 +2289,23 @@ def experiment_local(nReps = 100,
             
             p0[:,i] = tmp.copy()
             
-            
         
-        
+        scene(modify = ["p0"],
+              inp0 = p0,
+                dirBase = dirBase+str(k),
+                n_agents = 4, 
+                n_points = nP)
         
         write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(k),
-                    k_int = k_int,
                     gamma0 = gamma0,
                     gammaInf = gammaInf,
                     gammaSteep = gammaSteep ,
                     intGamma0 = intGamma0,
                     intGammaInf = intGammaInf,
                     intGammaSteep = intGammaSteep ,
-                    pd = pd,
-                    p0 = p0,
-                    P = P,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #depthOp = 4, Z_set = 1.,
-                    t_end = 100,
+                    t_end = 200,
+                    repeat = True,
                     enablePlot = enablePlotExp)
         #print(ret)
         [var_arr[:,k], errors, FOVflag] = ret
@@ -2464,12 +2550,18 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     #plt.close()
     
     ##  Heatmap
-    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3, cmap = "Purples")
+    h, x, y, img = plt.hist2d(var_arr_2,var_arr_3, 
+                              #cmap = "Purples",
+                              #norm =  mcolors.LogNorm(),
+                              #norm=mcolors.PowerNorm(gamma=0.5),
+                                #cmap='PuBu_r',
+                              range = [[0., 1.],[0.,3.15]])
     fig, ax = plt.subplots()
     fig.suptitle("End formation error heatmap")
     
     h = h.T
-    ax.imshow(h, cmap = "Purples")
+    ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
+                                cmap='Purples')
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
@@ -2500,7 +2592,8 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("End formation error heatmap (Zoom)")
     
     h = h.T
-    ax.imshow(h, cmap = "Purples")
+    ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
+                                cmap='Purples')
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
@@ -3234,6 +3327,53 @@ def main(arg):
     
     
     #   END Front parallel Part: set Circular
+    #   BEGIN Front parallel Part: set Random
+    
+    
+    
+    ##   Local tests  
+    #job = int(arg[2])
+    #sel_case = int(arg[3])
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_02_FrontParallel_Random_Flat/",
+             #"W_02_FrontParallel_Random_NFlat/"]
+    #nReps = 4
+    #nodes = 25
+    
+    ##   Plot
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[i]
+        ##experiment_plots(dirBase =  dirBase,
+                         ##kSets = nodes,
+                         ##colorFile = colorFile)
+        
+    ##return
+    
+    
+    ##  process
+    #dirBase = root + Names[sel_case]
+    #colorFile = colorNames[sel_case]
+    
+    #logText = "Set = "+ dirBase+'\n'
+    #write2log(logText)
+    
+    #logText = "Job = "+str(job)+'\n'
+    #write2log(logText)
+    
+    
+    #experiment_frontParallel(nReps = nReps,
+                     #t_end = 800,
+                     #n_points = 30,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #Flat = (sel_case == 0))
+    
+    #return 
+    
+    
+    #   END Front parallel Part: set Random
     
     #   BEGIN CLUSTER Front paralle
     
@@ -3322,62 +3462,68 @@ def main(arg):
     ##   END Cluster Front Parallel
     ##   BEGIN CLUSTER Local
     
-    ##   Local tests  
-    #job = int(arg[2])
-    #sel = int(arg[3])
+    #   Local tests  
+    job = int(arg[2])
+    sel = int(arg[3])
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/W_01_locales/"
-    #Names = ["localCirc_P/",
-             #"localRand_P/",
-             #"localCirc_PIG/",
-             #"localRand_PIG/"]
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    Names = ["W_02_localCirc_P/",
+             "W_02_localRand_P/",
+             "W_02_localCirc_PIG/",
+             "W_02_localRand_PIG/"]
     
     
-    ##   Plot part
+    #   Plot part
     #for i in range(len(Names)):
         #colorFile = colorNames[i%2]
         #plot_tendencias(dirBase = root + Names[i], colorFile = colorFile)
         
     #return
     
-    ##   Proc part
-    #i = job
+    #   Proc part
+    i = job
     
-    ##  process
-    #name = Names[sel]
-    #colorFile = colorNames[sel%2]
+    #  process
+    name = Names[sel]
+    colorFile = colorNames[sel%2]
     
-    #logText = "Set = "+root + name+'\n'
-    #write2log(logText)
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
     
-    #logText = "Repetition = "+str(i)+'\n'
-    #write2log(logText)
-    #if sel == 0:
-        #experiment_local(nReps = 100,
-                        #dTras = 0.1*(i+1),
-                        #dRot = (np.pi/20.)*(i+1),
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    #if sel == 1:
-        #experiment_local(nReps = 100,
-                        #randomInit = True,
-                        #dTras = 0.1*(i+1),
-                        #dRot = (np.pi/20.)*(i+1),
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    #if sel == 2 or sel ==3:
-        #experiment_repeat(nReps = 100,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.,
-                        #intGamma0 = 0.2,
-                        #intGammaInf = 0.05,
-                        #intGammaSteep = 5,
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    #experiment_plots(dirBase = root + name+str(i)+"/", , colorFile = colorFile)
+    logText = "Repetition = "+str(i)+'\n'
+    write2log(logText)
+    #   circular P 
+    if sel == 0:
+        experiment_local(nReps = 100,
+                         n_points = 30,
+                         activatepdCirc = True,
+                        dTras = 0.1*(i+1),
+                        dRot = (np.pi/20.)*(i+1),
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #   Renad P
+    if sel == 1:
+        experiment_local(nReps = 100,
+                         n_points = 30,
+                        activatepdCirc = False,
+                        dTras = 0.1*(i+1),
+                        dRot = (np.pi/20.)*(i+1),
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    if sel == 2 or sel ==3:
+        experiment_repeat(nReps = 100,
+                        gamma0 = 5.,
+                        gammaInf = 2.,
+                        intGamma0 = 0.2,
+                        intGammaInf = 0.05,
+                        intGammaSteep = 5,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #experiment_plots(dirBase = root + name+str(i)+"/", 
+                     #colorFile = colorFile)
     
     
-    #return
+    return
     
     #   END Cluster local
     #   BEGIN Gamma tunning 
@@ -3444,40 +3590,52 @@ def main(arg):
     
     #   BEGIN   testing required points
 
-    job = int(arg[2])
-    sel_case = int(arg[3])
+    #job = int(arg[2])
+    #sel_case = int(arg[3])
     
-    Names= ["W_02_nPoints_Circular/",
-            "W_02_nPoints_Circular_PIG/",
-            "W_02_nPoints_Random/",
-            "W_02_nPoints_Random_PIG/"]
+    #Names= ["W_02_nPoints_Circular/",
+            #"W_02_nPoints_Circular_PIG/",
+            #"W_02_nPoints_Random/",
+            #"W_02_nPoints_Random_PIG/"]
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    dirBase = root + Names[sel_case]
-    nReps = 4   # por nodo
-    nodos = 25
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #dirBase = root + Names[sel_case]
+    #nReps = 4   # por nodo
+    #nodos = 25
     
+    #dirBase = root + Names[0]
+    #colorFile = colorNames[0]
+    #plot_minP_data(dirBase, nodos, colorFile = colorFile)
+    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    #dirBase = root + Names[1]
+    #colorFile = colorNames[0]
+    #plot_minP_data(dirBase, nodos, colorFile = colorFile)
+    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    #dirBase = root + Names[3]
+    #colorFile = colorNames[1]
+    #plot_minP_data(dirBase, nodos, colorFile = colorFile)
+    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    #return 
     
+    ##   Plot part
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(np.floor(sel_case/2))]
+        ##plot_minP_data(dirBase, nodos, colorFile = colorFile)
+        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    ##return
     
-    #   Plot part
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[int(np.floor(sel_case/2))]
-        #plot_minP_data(dirBase, nodos, colorFile = colorFile)
-        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    ##  process
+    #logText = "Set = "+str(job)+'\n'
+    #write2log(logText)
+    #experiment_3D_min(nReps = nReps,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #sel_case = sel_case,
+                    #repeat = True,
+                    #enablePlotExp = False)
+    
     #return
-    
-    #  process
-    logText = "Set = "+str(job)+'\n'
-    write2log(logText)
-    experiment_3D_min(nReps = nReps,
-                    dirBase = dirBase,
-                    node = job,
-                    sel_case = sel_case,
-                    repeat = True,
-                    enablePlotExp = False)
-    
-    return
 
     #   END testing required points
     #   BEGIN   testing angle effect

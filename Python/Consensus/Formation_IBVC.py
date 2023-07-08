@@ -1269,7 +1269,7 @@ def colorPalette(name = "colors.npz", n_colors = 30):
     np.savez(name, colors = colors)
     return
 
-#   BEGIN
+
 def experiment_frontParallel(nReps = 1,
                      t_end = 800,
                      n_points = None,
@@ -1337,19 +1337,18 @@ def experiment_frontParallel(nReps = 1,
             mask = mask)
             #Misscount = Misscount)
 
-#   END
+#   BEGIN
 def experiment_repeat(nReps = 1,
-                      dirBase = "",
-                      k_int = 0,
-                      int_res = None,
-                      intGamma0 = None,
-                        intGammaInf = None,
-                        intGammaSteep = 5.,
-                        gamma0 = None,
-                        gammaInf = None,
-                        gammaSteep = 5.,
-                      intMatSel = 1,
-                      enablePlotExp = True):
+                     t_end = 100,
+                    dirBase = "",
+                    node = 0,
+                    intGamma0 = None,
+                    intGammaInf = None,
+                    intGammaSteep = 5.,
+                    gamma0 = None,
+                    gammaInf = None,
+                    gammaSteep = 5.,
+                    enablePlotExp = True):
     
     n_agents = 4
     var_arr = np.zeros((n_agents,nReps))
@@ -1361,58 +1360,40 @@ def experiment_repeat(nReps = 1,
     mask = np.zeros(nReps)
     #Misscount = 0
     
-    intMatSelDict = {1:"Real",
-                     2:"Constant depth"}
-    logText = "test series, Base Directory = "+str(dirBase)
-    logText += '\n' +"Test series, Interaction Matrix = "
-    logText += str( intMatSelDict[intMatSel])
-    logText += '\n' +"Test series, Integral gain = " + str(k_int)
-    write2log(logText+'\n')
+    logText = '\n' +"Local test directory = "+ str(dirBase)
+    write2log(logText + '\n')
     
     for k in range(nReps):
+        
         write2log("CASE "+str(k)+'\n')
-        npzfile = np.load(dirBase+str(k)+'/data.npz')
-        P = npzfile["P"]
-        arr_n_points[k] = P.shape[1]
-        if intMatSel  == 1:
-            ret = experiment(directory=dirBase+str(k),
-                            k_int = k_int,
-                            int_res = int_res,
-                            gamma0 = gamma0,
-                            gammaInf = gammaInf,
-                            gammaSteep = gammaSteep ,
-                            intGamma0 = intGamma0,
-                            intGammaInf = intGammaInf,
-                            intGammaSteep = intGammaSteep ,
-                                t_end = 100,
-                                enablePlot = enablePlotExp,
-                                repeat = True)
-        if intMatSel  == 2:
-            ret = experiment(directory=dirBase+str(k),
-                            k_int = k_int,
-                            int_res = int_res,
-                            gamma0 = gamma0,
-                            gammaInf = gammaInf,
-                            gammaSteep = gammaSteep ,
-                            intGamma0 = intGamma0,
-                            intGammaInf = intGammaInf,
-                            intGammaSteep = intGammaSteep ,
-                                depthOp = 4, Z_set = 1.,
-                                t_end = 100,
-                                enablePlot = enablePlotExp,
-                                repeat = True)
+        ret = experiment(directory=dirBase+str(k),
+                         modified = ["nPoints"],
+                    gamma0 = gamma0,
+                    gammaInf = gammaInf,
+                    gammaSteep = gammaSteep ,
+                    intGamma0 = intGamma0,
+                    intGammaInf = intGammaInf,
+                    intGammaSteep = intGammaSteep ,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #depthOp = 4, Z_set = 1.,
+                    t_end = t_end,
+                    repeat = True,
+                    enablePlot = enablePlotExp)
+        #print(ret)
         [var_arr[:,k], errors, FOVflag] = ret
         var_arr_et[k] = errors[0]
         var_arr_er[k] = errors[1]
         var_arr_2[k] = errors[2]
         var_arr_3[k] = errors[3]
-        
         if FOVflag:
             mask[k] = 1
             #Misscount += 1
+        
+    #   Save data
     
     np.savez(dirBase+'data.npz',
-            n_agents = n_agents,
+                n_agents = n_agents,
             var_arr = var_arr,
             var_arr_2 = var_arr_2,
             var_arr_3 = var_arr_3,
@@ -1422,7 +1403,7 @@ def experiment_repeat(nReps = 1,
             mask = mask)
             #Misscount = Misscount)
     
-
+#   END
 
 def experiment_all_random(nReps = 100,
                           conditions = 1,
@@ -2166,6 +2147,7 @@ def experiment_rep_3D(nReps = 1,
 
 
 def experiment_local(nReps = 100,
+                     t_end = 100,
                     pFlat = False,
                     n_points = None,
                     dirBase = "",
@@ -2304,7 +2286,7 @@ def experiment_local(nReps = 100,
                     intGamma0 = intGamma0,
                     intGammaInf = intGammaInf,
                     intGammaSteep = intGammaSteep ,
-                    t_end = 200,
+                    t_end = t_end,
                     repeat = True,
                     enablePlot = enablePlotExp)
         #print(ret)
@@ -2847,6 +2829,10 @@ def plot_tendencias(nReps = 20,
     data_tErr = []
     data_rErr = []
     
+    h1 = np.zeros((1,100))
+    h2 = np.zeros((1,100))
+    hcons = np.zeros((1,100))
+    
     for k in range(nReps):
         
         npzfile = np.load(dirBase+str(k)+'/data.npz')
@@ -2860,6 +2846,10 @@ def plot_tendencias(nReps = 20,
         arr_n_points = npzfile['arr_n_points']
         #Misscount = npzfile['Misscount']
         mask = npzfile['mask']
+        
+        hcons = np.r_[hcons,var_arr.reshape((1,100))]
+        h1 = np.r_[h1,var_arr_2.reshape((1,100))]
+        h2 = np.r_[h2,var_arr_3.reshape((1,100))]
         
         logText = "Masks for step " + str(k)
         logText += "=" +str(np.where(mask == 1.)[0])
@@ -2889,6 +2879,9 @@ def plot_tendencias(nReps = 20,
         rErr_err_max[k] = var_arr_3.max()
         rErr_err_avr[k] = var_arr_3.mean()
         rErr_err_min[k] = var_arr_3.min()
+    h1 = h1[1:,:]
+    h2 = h2[1:,:]
+    hcons = hcons[1:,:]
     
     #   Errores de consenso
     fig, ax = plt.subplots()
@@ -2902,7 +2895,8 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,cons_err_max, 
             color = colors[2],
             label= "Max")
-    ax.boxplot(data_cons)
+    ax.violinplot(data_cons)
+    #ax.boxplot(data_cons)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
@@ -2916,7 +2910,52 @@ def plot_tendencias(nReps = 20,
     #plt.show()
     plt.close()
     
-    #   Errores de consenso
+    #   heatmap 
+    #       previous end detect
+    #h1 = np.array(data_tErr)
+    h1[h1 < 0] = 100
+    #h2 = np.array(data_rErr)
+    h2[h2 < 0] = 100
+    test = - np.ones(100, dtype = np.int16)
+    for i in range(100):
+        for j in range(100):
+            if h1[i,j] < 0.1 or h2[i,j] < 0.1:
+                test[i] = j
+    
+    #       Traslacion
+    fig, ax = plt.subplots(figsize=(8, 5))
+    fig.suptitle("Trial errors (T) heatmap", size = 9)
+    
+    h = h1.copy()
+    h[h < 0] = 0
+    ax.invert_yaxis()
+    x = [str(i) for i in range(100)]
+    y = [str(i) for i in range(100)]
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
+    ax.set_xticklabels(x, fontsize = 2.5)
+    ax.set_yticklabels(y, fontsize = 2.5)
+    ax.set_xlabel("Trial", size =4)
+    ax.set_ylabel("Translation error", size = 4)
+    ax.grid(axis='y', linewidth=0.1)
+    ax.set_axisbelow(True)
+    im = ax.imshow(h, cmap = "Purples")
+    fig.colorbar(im, ax = ax, shrink = 0.8)
+    for j in range(len(y)):
+        if test[j] != -1:
+            text = ax.text( test[j], j , 
+                           "X", ha="center", va="center", 
+                           color="k", fontsize =4)
+    
+    plt.tight_layout()
+    plt.savefig(dirBase+'ErrorT_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    
+    return 
+    
+    #   Mask
     fig, ax = plt.subplots()
     fig.suptitle("Number of FOV failed simulations")
     ax.plot(ref,count_mask, 
@@ -3001,10 +3040,10 @@ def main(arg):
     
     ##  Color palettes
     #colorPalette("general.npz", n_colors = 30)
-    #colorPalette("colorPalette_A.npz", n_colors = 4)
-    #colorPalette("colorPalette_B.npz", n_colors = 4)
     #colorPalette("default.npz", n_colors = 4)
-    #return
+    colorPalette("colorPalette_A.npz", n_colors = 4)
+    colorPalette("colorPalette_B.npz", n_colors = 4)
+    return
     
     
     #   reset Log
@@ -3474,56 +3513,65 @@ def main(arg):
     
     
     #   Plot part
-    #for i in range(len(Names)):
-        #colorFile = colorNames[i%2]
-        #plot_tendencias(dirBase = root + Names[i], colorFile = colorFile)
-        
-    #return
-    
-    #   Proc part
-    i = job
-    
-    #  process
-    name = Names[sel]
-    colorFile = colorNames[sel%2]
-    
-    logText = "Set = "+root + name+'\n'
-    write2log(logText)
-    
-    logText = "Repetition = "+str(i)+'\n'
-    write2log(logText)
-    #   circular P 
-    if sel == 0:
-        experiment_local(nReps = 100,
-                         n_points = 30,
-                         activatepdCirc = True,
-                        dTras = 0.1*(i+1),
-                        dRot = (np.pi/20.)*(i+1),
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #   Renad P
-    if sel == 1:
-        experiment_local(nReps = 100,
-                         n_points = 30,
-                        activatepdCirc = False,
-                        dTras = 0.1*(i+1),
-                        dRot = (np.pi/20.)*(i+1),
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    if sel == 2 or sel ==3:
-        experiment_repeat(nReps = 100,
-                        gamma0 = 5.,
-                        gammaInf = 2.,
-                        intGamma0 = 0.2,
-                        intGammaInf = 0.05,
-                        intGammaSteep = 5,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #experiment_plots(dirBase = root + name+str(i)+"/", 
-                     #colorFile = colorFile)
-    
-    
+    plot_tendencias(dirBase = root + "0_Arch_W_02_localRand_P/", 
+                    colorFile = colorNames[0])
     return
+    for i in range(len(Names)):
+        colorFile = colorNames[i%2]
+        plot_tendencias(dirBase = root + Names[i], 
+                        colorFile = colorFile)
+        
+    return
+    
+    ##   Proc part
+    #i = job
+    
+    ##  process
+    #name = Names[sel]
+    #colorFile = colorNames[sel%2]
+    
+    #logText = "Set = "+root + name+'\n'
+    #write2log(logText)
+    
+    #logText = "Repetition = "+str(i)+'\n'
+    #write2log(logText)
+    ##   circular P 
+    #if sel == 0:
+        ##experiment_local(nReps = 100,
+                         ##n_points = 30,
+                         ##activatepdCirc = True,
+                        ##dTras = 0.1*(i+1),
+                        ##dRot = (np.pi/20.)*(i+1),
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##   Renad P
+    #if sel == 1:
+        ##experiment_local(nReps = 100,
+                         ##n_points = 30,
+                        ##activatepdCirc = False,
+                        ##dTras = 0.1*(i+1),
+                        ##dRot = (np.pi/20.)*(i+1),
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    #if sel == 2 or sel ==3:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                        #gamma0 = 5.,
+                        #gammaInf = 2.,
+                        #intGamma0 = 0.2,
+                        #intGammaInf = 0.05,
+                        #intGammaSteep = 5,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##experiment_plots(dirBase = root + name+str(i)+"/", 
+                     ##colorFile = colorFile)
+    
+    
+    #return
     
     #   END Cluster local
     #   BEGIN Gamma tunning 
@@ -3590,40 +3638,26 @@ def main(arg):
     
     #   BEGIN   testing required points
 
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
+    job = int(arg[2])
+    sel_case = int(arg[3])
     
-    #Names= ["W_02_nPoints_Circular/",
-            #"W_02_nPoints_Circular_PIG/",
-            #"W_02_nPoints_Random/",
-            #"W_02_nPoints_Random_PIG/"]
+    Names= ["W_02_nPoints_Circular/",
+            "W_02_nPoints_Circular_PIG/",
+            "W_02_nPoints_Random/",
+            "W_02_nPoints_Random_PIG/"]
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #dirBase = root + Names[sel_case]
-    #nReps = 4   # por nodo
-    #nodos = 25
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    dirBase = root + Names[sel_case]
+    nReps = 4   # por nodo
+    nodos = 25
     
-    #dirBase = root + Names[0]
-    #colorFile = colorNames[0]
-    #plot_minP_data(dirBase, nodos, colorFile = colorFile)
-    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    #dirBase = root + Names[1]
-    #colorFile = colorNames[0]
-    #plot_minP_data(dirBase, nodos, colorFile = colorFile)
-    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    #dirBase = root + Names[3]
-    #colorFile = colorNames[1]
-    #plot_minP_data(dirBase, nodos, colorFile = colorFile)
-    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    #return 
-    
-    ##   Plot part
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(np.floor(sel_case/2))]
-        ##plot_minP_data(dirBase, nodos, colorFile = colorFile)
-        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return
+    #   Plot part
+    for i in range(len(Names)):
+        dirBase = root + Names[i]
+        colorFile = colorNames[int(np.floor(sel_case/2))]
+        plot_minP_data(dirBase, nodos, colorFile = colorFile)
+        experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    return
     
     ##  process
     #logText = "Set = "+str(job)+'\n'

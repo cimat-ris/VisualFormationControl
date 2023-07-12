@@ -1028,7 +1028,7 @@ def experiment(directory = "0",
                 ylimits = [-0.1,1.1],
                 name = directory+"/State_Error",
                 label = "Formation Error",
-                labels = ["traslation","rotation"])
+                labels = ["translation","rotation"])
     
     #   Errores x agentes
     for i in range(n_agents):
@@ -1065,7 +1065,7 @@ def experiment(directory = "0",
                     pos_arr[i,:3,:],
                     #colors,
                     name = directory+"/Traslaciones_"+str(i),
-                    label = "Traslations",
+                    label = "Translations",
                     labels = ["X","Y","Z"])
         mp.plot_time(t_array,
                     pos_arr[i,3:,:],
@@ -1272,6 +1272,12 @@ def colorPalette(name = "colors.npz", n_colors = 30):
 
 def experiment_frontParallel(nReps = 1,
                      t_end = 800,
+                     intGamma0 = None,
+                    intGammaInf = None,
+                    intGammaSteep = 5.,
+                    gamma0 = None,
+                    gammaInf = None,
+                    gammaSteep = 5.,
                      n_points = None,
                     dirBase = "",
                     node = 0,
@@ -1312,6 +1318,12 @@ def experiment_frontParallel(nReps = 1,
         
         write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(node*nReps+k),
+                         gamma0 = gamma0,
+                    gammaInf = gammaInf,
+                    gammaSteep = gammaSteep ,
+                    intGamma0 = intGamma0,
+                    intGammaInf = intGammaInf,
+                    intGammaSteep = intGammaSteep ,
                          repeat = True,
                         t_end = t_end,
                         enablePlot = enablePlotExp)
@@ -2185,7 +2197,7 @@ def experiment_local(nReps = 100,
     logText = "Local testing"
     logText += '\n' +"Test series, pFlat = "+ str( pFlat)
     logText += '\n' +"Testing ranges:"
-    logText += '\n' +"\t Traslation delta / 2 = "+ str(tRange)
+    logText += '\n' +"\t Translation delta / 2 = "+ str(tRange)
     logText += '\n' +"\t Rotation delta / 2 = "+ str(rotRange)
     logText += '\n' +"Local test directory = "+ str(dirBase)
     write2log(logText + '\n')
@@ -2486,7 +2498,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
                 [var_arr_er[i],var_arr_3[i]],
                 alpha = 0.5, color = colors[0],
                 linewidth = 0.5)
-    ax.set_xlabel("Traslation")
+    ax.set_xlabel("Translation")
     ax.set_ylabel("Rotation")
     plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,3.1))
@@ -2539,7 +2551,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
                                 #cmap='PuBu_r',
                               range = [[0., 1.],[0.,3.15]])
     fig, ax = plt.subplots()
-    fig.suptitle("End formation error heatmap")
+    fig.suptitle("Final formation error heatmap")
     
     h = h.T
     ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
@@ -2551,7 +2563,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x)
     ax.set_yticklabels(y)
-    ax.set_xlabel("Traslation")
+    ax.set_xlabel("Translation")
     ax.set_ylabel("Rotation")
     for i in range(len(x)):
         for j in range(len(y)):
@@ -2571,7 +2583,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     var_arr_3 = var_arr_3[var_arr_3 < 0.2]
     h, x, y, img = plt.hist2d(var_arr_2,var_arr_3, cmap = "Purples")
     fig, ax = plt.subplots()
-    fig.suptitle("End formation error heatmap (Zoom)")
+    fig.suptitle("Final formation error heatmap (Zoom)")
     
     h = h.T
     ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
@@ -2601,7 +2613,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("Errores de estado (Zoom)")
     ax.scatter(var_arr_2,var_arr_3, 
             marker = "*", alpha = 0.5,color = colors[0])
-    ax.set_xlabel("Traslation")
+    ax.set_xlabel("Translation")
     ax.set_ylabel("Rotation")
     plt.tight_layout()
     plt.savefig(dirBase+'Formation error_Scatter_zoom.pdf',bbox_inches='tight')
@@ -2651,7 +2663,7 @@ def plot_error_stats(nReps = 100,
     
     ##  Scatter err T, Ce
     fig, ax = plt.subplots()
-    fig.suptitle("Consensus error evolution for each final traslation error")
+    fig.suptitle("Consensus error evolution for each final translation error")
     ax.scatter(var_arr_2,arr_err, 
             marker = "*", alpha = 0.5,color = colors[0],
             label= "Initial")
@@ -2665,12 +2677,12 @@ def plot_error_stats(nReps = 100,
                 linewidth = 0.5)
     
     fig.legend( loc=1)
-    ax.set_xlabel("Traslation error")
+    ax.set_xlabel("Translation error")
     ax.set_ylabel("Consensus error")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,20))
     plt.tight_layout()
-    plt.savefig(dirBase+'Traslation vs consensus.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Translation vs consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
@@ -2701,7 +2713,7 @@ def plot_error_stats(nReps = 100,
     
     ##  Scatter err init, end
     fig, ax = plt.subplots()
-    fig.suptitle("Trastation error evolution fvs each final traslation error")
+    fig.suptitle("Trastation error evolution fvs each final translation error")
     ax.scatter(var_arr_et,var_arr_2, 
             marker = "*", alpha = 0.5,color = colors[0],
             label= "Initial")
@@ -2715,12 +2727,12 @@ def plot_error_stats(nReps = 100,
                 linewidth = 0.5)
     
     fig.legend( loc=1)
-    ax.set_xlabel("Traslation error")
-    ax.set_ylabel("Traslation error")
+    ax.set_xlabel("Translation error")
+    ax.set_ylabel("Translation error")
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,3.1))
     plt.tight_layout()
-    plt.savefig(dirBase+'Traslation error evolution vs final tralation.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Translation error evolution vs final tralation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
@@ -2729,7 +2741,7 @@ def plot_error_stats(nReps = 100,
     fig.suptitle("Rotation error evolution fvs each final rotation error")
     ax.scatter(var_arr_er,var_arr_3, 
             marker = "*", alpha = 0.5,color = colors[0],
-            label= "Traslation")
+            label= "Translation")
     ax.scatter(var_arr_er,var_arr_er, 
             marker = "*", alpha = 0.5,color = colors[1],
             label= "Rotation")
@@ -2745,7 +2757,7 @@ def plot_error_stats(nReps = 100,
     #plt.xlim((-0.1,1.1))
     #plt.ylim((-0.1,3.1))
     plt.tight_layout()
-    plt.savefig(dirBase+'Traslation error evolution vs final tralation.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Translation error evolution vs final tralation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
@@ -2829,6 +2841,8 @@ def plot_tendencias(nReps = 20,
     data_tErr = []
     data_rErr = []
     
+    mask_coords = []
+    
     h1 = np.zeros((1,100))
     h2 = np.zeros((1,100))
     hcons = np.zeros((1,100))
@@ -2864,6 +2878,7 @@ def plot_tendencias(nReps = 20,
         var_arr_er = var_arr_er[selection]
         
         count_mask[k] = mask.sum()
+        mask_coords.append(np.where(mask> 0)[0])
         
         data_cons.append(var_arr)
         cons_err_max[k] = var_arr.max()
@@ -2895,8 +2910,8 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,cons_err_max, 
             color = colors[2],
             label= "Max")
-    ax.violinplot(data_cons)
-    #ax.boxplot(data_cons)
+    #ax.violinplot(data_cons, showextrema = False)
+    ax.boxplot(data_cons)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
@@ -2911,71 +2926,40 @@ def plot_tendencias(nReps = 20,
     plt.close()
     
     #   heatmap 
-    #       previous end detect
-    #h1 = np.array(data_tErr)
-    h1[h1 < 0] = 100
-    #h2 = np.array(data_rErr)
-    h2[h2 < 0] = 100
-    test = - np.ones(100, dtype = np.int16)
-    for i in range(100):
-        for j in range(100):
-            if h1[i,j] < 0.1 or h2[i,j] < 0.1:
-                test[i] = j
+    #       consensus
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fig.suptitle("Translation errors", size = 9)
     
-    #       Traslacion
-    fig, ax = plt.subplots(figsize=(8, 5))
-    fig.suptitle("Trial errors (T) heatmap", size = 9)
-    
-    h = h1.copy()
+    h = hcons.copy()
     h[h < 0] = 0
     ax.invert_yaxis()
     x = [str(i) for i in range(100)]
-    y = [str(i) for i in range(100)]
+    y = [str(i) for i in range(nReps)]
     ax.set_yticks(np.arange(len(y)))
     ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x, fontsize = 2.5)
     ax.set_yticklabels(y, fontsize = 2.5)
-    ax.set_xlabel("Trial", size =4)
-    ax.set_ylabel("Translation error", size = 4)
+    ax.set_xlabel("Scene", size =4)
+    ax.set_ylabel("Step", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
     im = ax.imshow(h, cmap = "Purples")
-    fig.colorbar(im, ax = ax, shrink = 0.8)
+    fig.colorbar(im, ax = ax, shrink = 0.7)
     for j in range(len(y)):
-        if test[j] != -1:
-            text = ax.text( test[j], j , 
+        for i in mask_coords[j]:
+            text = ax.text(i ,  j, 
                            "X", ha="center", va="center", 
-                           color="k", fontsize =4)
+                           color="r", fontsize =4)
     
     plt.tight_layout()
-    plt.savefig(dirBase+'ErrorT_heatmap.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'ErrorC_heatmap.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
     
-    
-    return 
-    
-    #   Mask
-    fig, ax = plt.subplots()
-    fig.suptitle("Number of FOV failed simulations")
-    ax.plot(ref,count_mask, 
-            color = colors[0])
-    
-    ax.set_xlabel("Step")
-    ax.set_ylabel("Failed simulations")
-    #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.1,25))
-    ax.grid(axis='y')
-    ax.set_axisbelow(True)
-    plt.tight_layout()
-    plt.savefig(dirBase+'Mask.pdf',bbox_inches='tight')
-    #plt.show()
-    plt.close()
     
     #   Errores de traslación
     fig, ax = plt.subplots()
-    fig.suptitle("Final traslation error by simulation set")
-    ax.plot([1,nReps],[0.1,0.1],'k--',alpha = 0.5, label = "Threshold")
+    fig.suptitle("Translation error by repetition sets")
     ax.plot(ref,tErr_err_min, 
             color = colors[0],
             label= "Min")
@@ -2985,25 +2969,55 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,tErr_err_max, 
             color = colors[2],
             label= "Max")
+    #ax.violinplot(data_tErr, showextrema = False)
     ax.boxplot(data_tErr)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
-    ax.set_ylabel("Traslation error")
+    ax.set_ylabel("Translation error error")
     #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.01,1.1))
+    plt.ylim((-0.1,1.1))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
-    
     plt.tight_layout()
-    plt.savefig(dirBase+'Traslation.pdf',bbox_inches='tight')
+    plt.savefig(dirBase+'Translation.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
-        
-    #   Errores de rotación
+    
+    #   heatmap 
+    #       Traslacion
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fig.suptitle("Translation errors", size = 9)
+    
+    h = h1.copy()
+    h[h < 0] = 0
+    ax.invert_yaxis()
+    x = [str(i) for i in range(100)]
+    y = [str(i) for i in range(nReps)]
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
+    ax.set_xticklabels(x, fontsize = 2.5)
+    ax.set_yticklabels(y, fontsize = 2.5)
+    ax.set_xlabel("Scene", size =4)
+    ax.set_ylabel("Step", size = 4)
+    ax.grid(axis='y', linewidth=0.1)
+    ax.set_axisbelow(True)
+    im = ax.imshow(h, cmap = "Purples")
+    fig.colorbar(im, ax = ax, shrink = 0.7)
+    for j in range(len(y)):
+        for i in mask_coords[j]:
+            text = ax.text( i ,j, 
+                           "X", ha="center", va="center", 
+                           color="r", fontsize =4)
+    
+    plt.tight_layout()
+    plt.savefig(dirBase+'ErrorT_heatmap.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #   Errores de Rotación
     fig, ax = plt.subplots()
-    fig.suptitle("Final rotation error by simulation set")
-    ax.plot([1,nReps],[0.1,0.1],'k--',alpha = 0.5, label = "Threshold")
+    fig.suptitle("Rotation error by repetition sets")
     ax.plot(ref,rErr_err_min, 
             color = colors[0],
             label= "Min")
@@ -3013,18 +3027,49 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,rErr_err_max, 
             color = colors[2],
             label= "Max")
+    #ax.violinplot(data_rErr, showextrema = False)
     ax.boxplot(data_rErr)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
-    ax.set_ylabel("Rotation error")
+    ax.set_ylabel("Rotation error error")
     #plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,3.2))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
-    
     plt.tight_layout()
     plt.savefig(dirBase+'Rotation.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
+    #   heatmap 
+    #       Traslacion
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fig.suptitle("Rotation errors", size = 9)
+    
+    h = h2.copy()
+    h[h < 0] = 0
+    ax.invert_yaxis()
+    x = [str(i) for i in range(100)]
+    y = [str(i) for i in range(nReps)]
+    ax.set_yticks(np.arange(len(y)))
+    ax.set_xticks(np.arange(len(x)))
+    ax.set_xticklabels(x, fontsize = 2.5)
+    ax.set_yticklabels(y, fontsize = 2.5)
+    ax.set_xlabel("Scene", size =4)
+    ax.set_ylabel("Step", size = 4)
+    ax.grid(axis='y', linewidth=0.1)
+    ax.set_axisbelow(True)
+    im = ax.imshow(h, cmap = "Purples")
+    fig.colorbar(im, ax = ax, shrink = 0.7)
+    for j in range(len(y)):
+        for i in mask_coords[j]:
+            text = ax.text( i ,j, 
+                           "X", ha="center", va="center", 
+                           color="r", fontsize =4)
+    
+    plt.tight_layout()
+    plt.savefig(dirBase+'ErrorR_heatmap.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
         
@@ -3041,9 +3086,9 @@ def main(arg):
     ##  Color palettes
     #colorPalette("general.npz", n_colors = 30)
     #colorPalette("default.npz", n_colors = 4)
-    colorPalette("colorPalette_A.npz", n_colors = 4)
-    colorPalette("colorPalette_B.npz", n_colors = 4)
-    return
+    #colorPalette("colorPalette_A.npz", n_colors = 4)
+    #colorPalette("colorPalette_B.npz", n_colors = 4)
+    #return
     
     
     #   reset Log
@@ -3328,19 +3373,19 @@ def main(arg):
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_02_FrontParallel_Circular_Flat/",
-             #"W_02_FrontParallel_Circular_NFlat/"]
-    #nReps = 4
-    #nodes = 25
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    Names = ["W_02_FrontParallel_Circular_Flat/",
+             "W_02_FrontParallel_Circular_NFlat/"]
+    nReps = 4
+    nodes = 25
     
-    ##   Plot
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[i]
-        #experiment_plots(dirBase =  dirBase,
-                         #kSets = nodes,
-                         #colorFile = colorFile)
+    #   Plot
+    for i in range(len(Names)):
+        dirBase = root + Names[i]
+        colorFile = colorNames[i]
+        experiment_plots(dirBase =  dirBase,
+                         kSets = nodes,
+                         colorFile = colorFile)
         
     #return
     
@@ -3370,30 +3415,31 @@ def main(arg):
     
     
     
-    ##   Local tests  
+    #   Local tests  
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_02_FrontParallel_Random_Flat/",
-             #"W_02_FrontParallel_Random_NFlat/"]
-    #nReps = 4
-    #nodes = 25
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    Names = ["W_02_FrontParallel_Random_Flat/",
+             "W_02_FrontParallel_Random_NFlat/",
+             "W_02_FrontParallel_Random_NFlat_PIG/"]
+    nReps = 4
+    nodes = 25
     
-    ##   Plot
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[i]
-        ##experiment_plots(dirBase =  dirBase,
-                         ##kSets = nodes,
-                         ##colorFile = colorFile)
+    #   Plot
+    for i in range(len(Names)):
+        dirBase = root + Names[i]
+        colorFile = colorNames[int(i>0)]
+        experiment_plots(dirBase =  dirBase,
+                         kSets = nodes,
+                         colorFile = colorFile)
         
-    ##return
+    #return
     
     
     ##  process
     #dirBase = root + Names[sel_case]
-    #colorFile = colorNames[sel_case]
+    #colorFile = colorNames[int(sel_case>0)]
     
     #logText = "Set = "+ dirBase+'\n'
     #write2log(logText)
@@ -3401,14 +3447,25 @@ def main(arg):
     #logText = "Job = "+str(job)+'\n'
     #write2log(logText)
     
-    
-    #experiment_frontParallel(nReps = nReps,
-                     #t_end = 800,
-                     #n_points = 30,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #Flat = (sel_case == 0))
-    
+    #if sel_case < 2:
+        #experiment_frontParallel(nReps = nReps,
+                        #t_end = 800,
+                        #n_points = 30,
+                        #dirBase = dirBase,
+                        #node = job,
+                        #Flat = (sel_case == 0))
+    #else:
+        #experiment_frontParallel(nReps = nReps,
+                        #t_end = 800,
+                        #gamma0 = 8.,
+                        #gammaInf = 2.,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.05,
+                        #intGammaSteep = 5,
+                        #n_points = 30,
+                        #dirBase = dirBase,
+                        #node = job,
+                        #Flat = False)
     #return 
     
     
@@ -3501,9 +3558,9 @@ def main(arg):
     ##   END Cluster Front Parallel
     ##   BEGIN CLUSTER Local
     
-    #   Local tests  
-    job = int(arg[2])
-    sel = int(arg[3])
+    ##   Local tests  
+    #job = int(arg[2])
+    #sel = int(arg[3])
     
     root = "/home/est_posgrado_edgar.chavez/Consenso/"
     Names = ["W_02_localCirc_P/",
@@ -3513,15 +3570,13 @@ def main(arg):
     
     
     #   Plot part
-    plot_tendencias(dirBase = root + "0_Arch_W_02_localRand_P/", 
-                    colorFile = colorNames[0])
-    return
+    
     for i in range(len(Names)):
         colorFile = colorNames[i%2]
         plot_tendencias(dirBase = root + Names[i], 
                         colorFile = colorFile)
         
-    return
+    #return
     
     ##   Proc part
     #i = job
@@ -3638,8 +3693,8 @@ def main(arg):
     
     #   BEGIN   testing required points
 
-    job = int(arg[2])
-    sel_case = int(arg[3])
+    #job = int(arg[2])
+    #sel_case = int(arg[3])
     
     Names= ["W_02_nPoints_Circular/",
             "W_02_nPoints_Circular_PIG/",
@@ -3647,19 +3702,20 @@ def main(arg):
             "W_02_nPoints_Random_PIG/"]
     
     root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    dirBase = root + Names[sel_case]
+    
     nReps = 4   # por nodo
     nodos = 25
     
     #   Plot part
     for i in range(len(Names)):
         dirBase = root + Names[i]
-        colorFile = colorNames[int(np.floor(sel_case/2))]
+        colorFile = colorNames[int(np.floor(i/2))]
         plot_minP_data(dirBase, nodos, colorFile = colorFile)
         experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
     return
     
     ##  process
+    #dirBase = root + Names[sel_case]
     #logText = "Set = "+str(job)+'\n'
     #write2log(logText)
     #experiment_3D_min(nReps = nReps,

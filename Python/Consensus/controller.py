@@ -307,7 +307,7 @@ class agent:
         #   BEGIN With global
         _U = U.copy()
         _U[:3] =  self.camera.R @ U[:3]
-        _U[3:] =  self.camera.R @ U[3:]
+        _U[3:] =  self.camera.R @ U[3:] #   está de más
         
         p[:3] += dt* _U[:3]
         
@@ -413,6 +413,27 @@ class agent:
             self.error_int += dt * error
         
         U = (Ls @ _error) / deg
+        
+        if self.setRectification:
+            
+            U[:3] = cm.rot(self.camera.p[3]-pi,'x') @ U[:3]
+            U[:3] = cm.rot(self.camera.p[4],'y') @ U[:3]
+            
+            #   rotación inducida
+            _R = cm.rot(dt*U[5],'z') 
+            _R = _R @ cm.rot(dt*U[4],'y')
+            _R = _R @ cm.rot(dt*U[3],'x')
+            
+            #   Rectificado -> global
+            
+            _R = _R @ cm.rot(self.camera.p[5],'z') 
+            _R = _R @ cm.rot(pi,'x')
+            
+            #   Global -> local real
+            _R = _R @ self.camera.R
+            
+            [U[3], U[4], U[5]] = get_angles(_R)
+            U[3:] = U[3:] / dt
         
         return  U.reshape(6)
     

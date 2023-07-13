@@ -34,13 +34,13 @@ class camera:
         self.iMsize=[1024, 1024]; #Not working change this
         self.pPrinc=[self.iMsize[0]/2.0, self.iMsize[1]/2.0]; #Not working change this
         
-        self.xymin=-0.9
-        self.xymax=0.9
-        self.zmin=0.8
-        self.zmax=1.8
-        self.angsmin=-30
-        self.angsmax=30
-        self.Ldown=180*pi/180
+        #self.xymin=-0.9
+        #self.xymax=0.9
+        #self.zmin=0.8
+        #self.zmax=1.8
+        #self.angsmin=-30
+        #self.angsmax=30
+        #self.Ldown=180*pi/180
         self.p = np.zeros((6,1))
         self.T = np.eye(4)
         self.K = np.array( [[self.foco/self.rho[0],       0.0, self.pPrinc[0]],

@@ -167,6 +167,7 @@ class agent:
                  gamma0 = None,
                  gammaInf = None,
                  gammaSteep = 5.,
+                 setRectification = False,
                  set_derivative = True,
                  set_consensoRef = True ):
         
@@ -181,13 +182,31 @@ class agent:
         
         self.set_consensoRef = set_consensoRef 
         self.set_derivative = set_derivative
+        self.setRectification = setRectification
         
         self.camera.pose(p_obj)
         self.s_ref = self.camera.project(points)
+        if self.setRectification:
+            points_r = self.camera.Preal @ points
+            points_r[:2,:] =  self.s_ref
+            points_r = cm.rot(self.camera.p[3]-pi,'x') @ points_r
+            points_r = cm.rot(self.camera.p[4],'y') @ points_r
+            #print(points_r)
+            points_r = points_r[:2,:]/points_r[2,:]
+            self.s_ref = points_r
+            
         self.s_ref_n = self.camera.normalize(self.s_ref)
         
         self.camera.pose(p_current)
         self.s_current = self.camera.project(points)
+        if self.setRectification:
+            s_current_n = self.camera.Preal @ points
+            s_current_n[:2,:] =  self.s_current
+            #print(cm.rot(self.camera.p[3]-pi,'x'))
+            #print(cm.rot(self.camera.p[4],'y'))
+            s_current_n = cm.rot(self.camera.p[3]-pi,'x')@s_current_n
+            s_current_n = cm.rot(self.camera.p[4],'y')@s_current_n
+            s_current_n = s_current_n[0:2,:]/s_current_n[2,:]
         self.s_current_n = self.camera.normalize(self.s_current)
         self.dot_s_current_n = np.zeros(self.s_current_n.size)
         
@@ -304,6 +323,14 @@ class agent:
         self.camera.pose(p) 
         
         self.s_current = self.camera.project(points)
+        if self.setRectification:
+            s_current_n = self.s_current.copy()
+            s_current_n = np.r_[s_current_n, Z.reshape((1,self.n_points))]
+            #print(cm.rot(self.camera.p[3]-pi,'x'))
+            #print(cm.rot(self.camera.p[4],'y'))
+            s_current_n = cm.rot(self.camera.p[3]-pi,'x')@s_current_n
+            s_current_n = cm.rot(self.camera.p[4],'y')@s_current_n
+            s_current_n = s_current_n[0:2,:]/s_current_n[2,:]
         self.s_current_n = self.camera.normalize(self.s_current)
         
         if self.set_derivative:
@@ -319,15 +346,30 @@ class agent:
         
     def IBVC(self,control_sel, error,Z,deg,gdl,dt):
         
+        
+        s_current_n = self.s_current_n.copy()
+        Z_current = Z.copy()
+        #if self.setRectification:
+            #s_current_n = self.s_current.copy()
+            #Z_current = Z_current.reshape((1,self.n_points))
+            #s_current_n = np.r_[s_current_n, Z_current]
+            ##print(cm.rot(self.camera.p[3]-pi,'x'))
+            ##print(cm.rot(self.camera.p[4],'y'))
+            ##s_current_n = cm.rot(self.camera.p[3]-pi,'x')@s_current_n
+            ##s_current_n = cm.rot(self.camera.p[4],'y')@s_current_n
+            #Z_current = s_current_n[2,:].copy()
+            #s_current_n = s_current_n[0:2,:]/Z_current
+            #s_current_n = self.camera.normalize(s_current_n)
+            
         if control_sel ==1:
-            Ls = Interaction_Matrix(self.s_current_n,Z,gdl)
+            Ls = Interaction_Matrix(s_current_n,Z_current,gdl)
             self.u, self.s, self.vh  = np.linalg.svd(Ls)
             #Ls = Inv_Moore_Penrose(Ls) 
             Ls = np.linalg.pinv(Ls) 
         elif control_sel ==2:
             Ls = self.inv_Ls_set
         elif control_sel ==3:
-            Ls = Interaction_Matrix(self.s_current_n,Z,gdl)
+            Ls = Interaction_Matrix(s_current_n,Z_current,gdl)
             self.u, self.s, self.vh  = np.linalg.svd(Ls)
             #Ls = Inv_Moore_Penrose(Ls) 
             Ls = np.linalg.pinv(Ls) 

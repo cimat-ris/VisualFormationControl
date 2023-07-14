@@ -550,16 +550,17 @@ def experiment(directory = "0",
         #   BEGIN point modification 
         if len(modified) > 0:
             if modified.__contains__("nPoints"):
-                # kP = 30
                 kP = 30
+                #kP = 16
                 xRange = [-2,2]
                 yRange = [-2,2]
                 zRange = [-1,0]
                 # zRange = [-2,-1]
                 P = np.random.rand(3,kP)
-                P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-                P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-                P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
+                P[0,:] = xRange[0] + P[0,:]*(xRange[1]-xRange[0])
+                P[1,:] = yRange[0] + P[1,:]*(yRange[1]-yRange[0])
+                P[2,:] = zRange[0] + P[2,:]*(zRange[1]-zRange[0])
+                #O[2,:] = 0.0
                 #P = np.r_[P,np.zeros((1,30)),np.ones((1,30))]
                 P = np.r_[P,np.ones((1,kP))]
                 n_points = P.shape[1]
@@ -581,6 +582,35 @@ def experiment(directory = "0",
         #P = np.c_[P,np.array([-0.9,0.5,-0.1,1]).reshape((4,1))]
         #n_points += 1
         #P[:,3] = np.array([-0.32326981])
+        
+        #p0[3,:] = pi
+        #p0[4:,:] = 0.
+        
+        #testAng =  np.pi/4
+        #R = cm.rot(testAng,'y') 
+        
+        #P[:3,:] =  R @ P[:3]
+        
+        #for i in range(4):
+            #_R = cm.rot(p0[5,i],'z') 
+            #_R = _R @ cm.rot(p0[4,i],'y')
+            #_R = _R @ cm.rot(p0[3,i],'x')
+            
+            #_R = R @ _R
+            #[p0[3,i], p0[4,i], p0[5,i]] = ctr.get_angles(_R)
+        #p0[:3,:] = R @ p0[:3,:]
+        
+        
+        ##   rotando la referencia
+        
+        #for i in range(4):
+            #_R = cm.rot(pd[5,i],'z') 
+            #_R = _R @ cm.rot(pd[4,i],'y')
+            #_R = _R @ cm.rot(pd[3,i],'x')
+            
+            #_R = R @ _R
+            #[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
+        #pd[:3,:] = R @ pd[:3,:]
         
         #   END TEST
     else:
@@ -1272,6 +1302,8 @@ def colorPalette(name = "colors.npz", n_colors = 30):
     return
 
 
+
+
 def experiment_frontParallel(nReps = 1,
                      t_end = 800,
                      intGamma0 = None,
@@ -1284,6 +1316,7 @@ def experiment_frontParallel(nReps = 1,
                     dirBase = "",
                     node = 0,
                     Flat = True,
+                    setRectification = False,
                     enablePlotExp = False):
     
     n_agents = 4
@@ -1328,6 +1361,7 @@ def experiment_frontParallel(nReps = 1,
                     intGammaSteep = intGammaSteep ,
                          repeat = True,
                         t_end = t_end,
+                        setRectification = setRectification,
                         enablePlot = enablePlotExp)
         #print(ret)
         [var_arr[:,k], errors, FOVflag] = ret
@@ -3083,15 +3117,71 @@ def plot_tendencias(nReps = 20,
 ################################################################################
 ################################################################################
 
+
+def test_reg():
+    
+    points = np.array([[-0.5, -0.5, 0.5,  0.5],
+                [-0.5,  0.5, 0.5, -0.5],
+                [0.,    0., 0.,  0.],
+                [1, 1, 1, 1]])
+    p_obj = np.array([0,0,1,pi,0,0])
+    #p_current = np.array([0,0,2,pi,0,0])
+    p_current = np.array([0,0,2,pi,0.2,0])
+    #p_current = np.array([0,0,2,pi+0.2,0,0])
+    
+    
+    camera = cm.camera()
+    agent = ctr.agent(camera,
+                 p_obj,
+                 p_current,
+                 points,
+                 setRectification = False)
+    
+    #p_current = np.array([0,0,2,pi,0,0])
+    p_current = np.array([0,0,2,pi,0.2,0])
+    #p_current = np.array([0,0,2,pi+0.2,0,0])
+    
+    camera_r = cm.camera()
+    agent_r = ctr.agent(camera,
+                 p_obj,
+                 p_current,
+                 points,
+                 setRectification = True)
+    
+    
+    fig, ax = plt.subplots()
+    plt.xlim([0,agent.camera.iMsize[0]])
+    plt.ylim([0,agent.camera.iMsize[1]])
+    
+    ax.plot([agent.camera.iMsize[0]/2,agent.camera.iMsize[0]/2],
+            [0,agent.camera.iMsize[0]],
+            color=[0.25,0.25,0.25])
+    ax.plot([0,agent.camera.iMsize[1]],
+            [agent.camera.iMsize[1]/2,agent.camera.iMsize[1]/2],
+            color=[0.25,0.25,0.25])
+    plt.plot(agent.s_current[0,:],agent.s_current[1,:],'*b')
+    plt.plot(agent.s_ref[0,:],agent.s_ref[1,:],'^b')
+    
+    
+    plt.plot(agent_r.s_current[0,:],agent_r.s_current[1,:],'*r')
+    plt.plot(agent_r.s_ref[0,:],agent_r.s_ref[1,:],'*r')
+    
+    plt.show()
+    plt.close()
+    return
+
+
 def main(arg):
     
     ##  Color palettes
-    #colorPalette("general.npz", n_colors = 30)
+    #colorPalette("general.npz", n_colors = 60)
     #colorPalette("default.npz", n_colors = 4)
     #colorPalette("colorPalette_A.npz", n_colors = 4)
     #colorPalette("colorPalette_B.npz", n_colors = 4)
     #return
     
+    #test_reg()
+    #return 
     
     #   reset Log
     global logFile
@@ -3262,9 +3352,15 @@ def main(arg):
     
     #   Desktop
     if selector == 'r':
+        #scene(modify = ["P"],
+              #Pz = [-1,0],
+                #dirBase = arg[3],
+                #n_agents = 4, 
+                #n_points = 30)
         experiment(directory=arg[3],
-                    t_end = 100,
+                    t_end = 10,
                     setRectification = True,
+                    #modified =["nPoints"],
                     #gammaInf = 2.,
                     #gamma0 = 5.,
                     #set_derivative = True,
@@ -3364,7 +3460,55 @@ def main(arg):
     
     #   END UI
     
+    #   BEGIN regularization : FP check
     
+    #   Local tests  
+    job = int(arg[2])
+    sel_case = int(arg[3])
+    
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    Names = ["W_02_regularization_Circular/",
+             "W_02_regularization_Random/",
+             "W_02_regularization_Circular_blanco/",
+             "W_02_regularization_Random_blanco/"]
+    nReps = 4
+    nodes = 25
+    
+    #  Plot
+    for i in range(len(Names)):
+        dirBase = root + Names[i]
+        colorFile = colorNames[i%2]
+        experiment_plots(dirBase =  dirBase,
+                         kSets = nodes,
+                         colorFile = colorFile)
+        
+    return
+    
+    
+    #  process
+    dirBase = root + Names[sel_case]
+    colorFile = colorNames[sel_case%2]
+    
+    logText = "Set = "+ dirBase+'\n'
+    write2log(logText)
+    
+    logText = "Job = "+str(job)+'\n'
+    logText += "Select = "+str(sel_case)+'\n'
+    write2log(logText)
+    
+    
+    experiment_frontParallel(nReps = nReps,
+                     t_end = 800,
+                     n_points = 30,
+                     setRectification = (sel_case <= 1),
+                    dirBase = dirBase,
+                    node = job,
+                    Flat = False)
+    
+    return 
+    
+    
+    #   END regularization : FP check
     
     
     
@@ -3376,19 +3520,19 @@ def main(arg):
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    Names = ["W_02_FrontParallel_Circular_Flat/",
-             "W_02_FrontParallel_Circular_NFlat/"]
-    nReps = 4
-    nodes = 25
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_02_FrontParallel_Circular_Flat/",
+             #"W_02_FrontParallel_Circular_NFlat/"]
+    #nReps = 4
+    #nodes = 25
     
-    #   Plot
-    for i in range(len(Names)):
-        dirBase = root + Names[i]
-        colorFile = colorNames[i]
-        experiment_plots(dirBase =  dirBase,
-                         kSets = nodes,
-                         colorFile = colorFile)
+    ##   Plot
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[i]
+        #experiment_plots(dirBase =  dirBase,
+                         #kSets = nodes,
+                         #colorFile = colorFile)
         
     #return
     
@@ -3422,20 +3566,20 @@ def main(arg):
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    Names = ["W_02_FrontParallel_Random_Flat/",
-             "W_02_FrontParallel_Random_NFlat/",
-             "W_02_FrontParallel_Random_NFlat_PIG/"]
-    nReps = 4
-    nodes = 25
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_02_FrontParallel_Random_Flat/",
+             #"W_02_FrontParallel_Random_NFlat/",
+             #"W_02_FrontParallel_Random_NFlat_PIG/"]
+    #nReps = 4
+    #nodes = 25
     
-    #   Plot
-    for i in range(len(Names)):
-        dirBase = root + Names[i]
-        colorFile = colorNames[int(i>0)]
-        experiment_plots(dirBase =  dirBase,
-                         kSets = nodes,
-                         colorFile = colorFile)
+    ##   Plot
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[int(i>0)]
+        #experiment_plots(dirBase =  dirBase,
+                         #kSets = nodes,
+                         #colorFile = colorFile)
         
     #return
     
@@ -3565,19 +3709,19 @@ def main(arg):
     #job = int(arg[2])
     #sel = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    Names = ["W_02_localCirc_P/",
-             "W_02_localRand_P/",
-             "W_02_localCirc_PIG/",
-             "W_02_localRand_PIG/"]
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_02_localCirc_P/",
+             #"W_02_localRand_P/",
+             #"W_02_localCirc_PIG/",
+             #"W_02_localRand_PIG/"]
     
     
-    #   Plot part
+    ##   Plot part
     
-    for i in range(len(Names)):
-        colorFile = colorNames[i%2]
-        plot_tendencias(dirBase = root + Names[i], 
-                        colorFile = colorFile)
+    #for i in range(len(Names)):
+        #colorFile = colorNames[i%2]
+        #plot_tendencias(dirBase = root + Names[i], 
+                        #colorFile = colorFile)
         
     #return
     
@@ -3699,23 +3843,23 @@ def main(arg):
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
-    Names= ["W_02_nPoints_Circular/",
-            "W_02_nPoints_Circular_PIG/",
-            "W_02_nPoints_Random/",
-            "W_02_nPoints_Random_PIG/"]
+    #Names= ["W_02_nPoints_Circular/",
+            #"W_02_nPoints_Circular_PIG/",
+            #"W_02_nPoints_Random/",
+            #"W_02_nPoints_Random_PIG/"]
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    nReps = 4   # por nodo
-    nodos = 25
+    #nReps = 4   # por nodo
+    #nodos = 25
     
-    #   Plot part
-    for i in range(len(Names)):
-        dirBase = root + Names[i]
-        colorFile = colorNames[int(np.floor(i/2))]
-        plot_minP_data(dirBase, nodos, colorFile = colorFile)
-        experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    return
+    ##   Plot part
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[int(np.floor(i/2))]
+        #plot_minP_data(dirBase, nodos, colorFile = colorFile)
+        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    #return
     
     ##  process
     #dirBase = root + Names[sel_case]

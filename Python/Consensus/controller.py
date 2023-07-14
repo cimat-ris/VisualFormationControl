@@ -152,6 +152,22 @@ def Homography(H, delta_pref,adj_list,gamma):
     U[5]   = han
     return U
 
+
+def rectify(camera, s_norm, Z):
+    
+    n_points = s_norm.shape[1]
+    
+    points_r = s_norm * Z
+    points_r = np.r_[points_r, Z.reshape((1,n_points))]
+    
+    points_r = cm.rot(camera.p[3],'x') @ points_r
+    points_r = cm.rot(camera.p[4],'y') @ points_r
+    points_r = cm.rot(pi,'x') @ points_r
+    points_r = camera.K @ points_r
+    points_r = points_r[0:2,:]/points_r[2,:]
+    
+    return points_r.copy()
+
 class agent:
     
     def __init__(self,
@@ -186,28 +202,45 @@ class agent:
         
         self.camera.pose(p_obj)
         self.s_ref = self.camera.project(points)
-        if self.setRectification:
-            points_r = self.camera.Preal @ points
-            points_r[:2,:] =  self.s_ref
-            points_r = cm.rot(self.camera.p[3]-pi,'x') @ points_r
-            points_r = cm.rot(self.camera.p[4],'y') @ points_r
-            #print(points_r)
-            points_r = points_r[:2,:]/points_r[2,:]
-            self.s_ref = points_r
-            
         self.s_ref_n = self.camera.normalize(self.s_ref)
+        
+        if self.setRectification:
+            #points_r = self.camera.Preal @ points
+            #points_r[:2,:] =  self.s_ref_n* points_r[2,:]
+            #points_r = cm.rot(self.camera.p[3]-pi,'x') @ points_r
+            #points_r = cm.rot(self.camera.p[4],'y') @ points_r
+            ##print(points_r)
+            #points_r = self.camera.K @ points_r
+            #points_r = points_r[:2,:]/points_r[2,:]
+            #self.s_ref = points_r.copy()
+            Z = self.camera.Preal @ points
+            Z = Z[2,:]
+            self.s_ref = rectify(self.camera, self.s_ref_n, Z)
+            self.s_ref_n = self.camera.normalize(self.s_ref)
+            #print(self.s_ref)
+        
         
         self.camera.pose(p_current)
         self.s_current = self.camera.project(points)
-        if self.setRectification:
-            s_current_n = self.camera.Preal @ points
-            s_current_n[:2,:] =  self.s_current
-            #print(cm.rot(self.camera.p[3]-pi,'x'))
-            #print(cm.rot(self.camera.p[4],'y'))
-            s_current_n = cm.rot(self.camera.p[3]-pi,'x')@s_current_n
-            s_current_n = cm.rot(self.camera.p[4],'y')@s_current_n
-            s_current_n = s_current_n[0:2,:]/s_current_n[2,:]
         self.s_current_n = self.camera.normalize(self.s_current)
+        #print("---")
+        #print(self.s_current)
+        if self.setRectification:
+            #points_r = self.camera.Preal @ points
+            #points_r[:2,:] =  self.s_current_n* points_r[2,:]
+            ##print(cm.rot(self.camera.p[3]-pi,'x'))
+            ##print(cm.rot(self.camera.p[4],'y'))
+            #points_r = cm.rot(self.camera.p[3]-pi,'x') @ points_r
+            #points_r = cm.rot(self.camera.p[4],'y') @ points_r
+            #points_r = self.camera.K @ points_r
+            #points_r = points_r[0:2,:]/points_r[2,:]
+            #self.s_current = points_r.copy()
+            Z = self.camera.Preal @ points
+            Z = Z[2,:]
+            self.s_current = rectify(self.camera, self.s_current_n, Z)
+            self.s_current_n = self.camera.normalize(self.s_current)
+            #print(self.s_current)
+        
         self.dot_s_current_n = np.zeros(self.s_current_n.size)
         
         if self.set_consensoRef:
@@ -323,15 +356,25 @@ class agent:
         self.camera.pose(p) 
         
         self.s_current = self.camera.project(points)
-        if self.setRectification:
-            s_current_n = self.s_current.copy()
-            s_current_n = np.r_[s_current_n, Z.reshape((1,self.n_points))]
-            #print(cm.rot(self.camera.p[3]-pi,'x'))
-            #print(cm.rot(self.camera.p[4],'y'))
-            s_current_n = cm.rot(self.camera.p[3]-pi,'x')@s_current_n
-            s_current_n = cm.rot(self.camera.p[4],'y')@s_current_n
-            s_current_n = s_current_n[0:2,:]/s_current_n[2,:]
         self.s_current_n = self.camera.normalize(self.s_current)
+        #print("-------")
+        #print(self.s_current)
+        if self.setRectification:
+            #points_r = self.s_current_n * Z
+            #points_r = np.r_[points_r, Z.reshape((1,self.n_points))]
+            ##print(cm.rot(self.camera.p[3]-pi,'x'))
+            ##print(cm.rot(self.camera.p[4],'y'))
+            #points_r = cm.rot(self.camera.p[3]-pi,'x') @ points_r
+            #points_r = cm.rot(self.camera.p[4],'y') @ points_r
+            #points_r = self.camera.K @ points_r
+            #points_r = points_r[0:2,:]/points_r[2,:]
+            
+            #self.s_current = points_r.copy()
+            
+            self.s_current = rectify(self.camera, self.s_current_n, Z)
+            self.s_current_n = self.camera.normalize(self.s_current)
+            #print(self.s_current)
+        
         
         if self.set_derivative:
             self.dot_s_current_n = (self.s_current_n - tmp)/dt
@@ -426,11 +469,11 @@ class agent:
             
             #   Rectificado -> global
             
-            _R = _R @ cm.rot(self.camera.p[5],'z') 
-            _R = _R @ cm.rot(pi,'x')
+            _R =  cm.rot(pi,'x') @ _R
+            _R =  cm.rot(self.camera.p[5],'z') @ _R
             
             #   Global -> local real
-            _R = _R @ self.camera.R
+            _R =  self.camera.R.T @ _R
             
             [U[3], U[4], U[5]] = get_angles(_R)
             U[3:] = U[3:] / dt

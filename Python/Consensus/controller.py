@@ -162,7 +162,7 @@ def rectify(camera, s_norm, Z):
     
     points_r = cm.rot(camera.p[3],'x') @ points_r
     points_r = cm.rot(camera.p[4],'y') @ points_r
-    points_r = cm.rot(pi,'x') @ points_r
+    points_r = cm.rot(pi,'x').T @ points_r
     points_r = camera.K @ points_r
     points_r = points_r[0:2,:]/points_r[2,:]
     
@@ -338,20 +338,36 @@ class agent:
         
         #   END GLOBAL
         #   BEGIN With global
+        #_U = U.copy()
+        #_U[:3] =  self.camera.R @ U[:3]
+        #_U[3:] =  self.camera.R @ U[3:] #   está de más
+        
+        #p[:3] += dt* _U[:3]
+        
+        #_R = cm.rot(dt*U[5],'z') 
+        #_R = _R @ cm.rot(dt*U[4],'y')
+        #_R = _R @ cm.rot(dt*U[3],'x')
+        
+        #_R = self.camera.R @ _R
+        #[p[3], p[4], p[5]] = get_angles(_R)
+        
+        #   END GLOBAL
+        #   BEGIN GLOBAL skew
         _U = U.copy()
         _U[:3] =  self.camera.R @ U[:3]
-        _U[3:] =  self.camera.R @ U[3:] #   está de más
+        _U[3:] =  self.camera.R @ U[3:]
         
         p[:3] += dt* _U[:3]
         
-        _R = cm.rot(dt*U[5],'z') 
-        _R = _R @ cm.rot(dt*U[4],'y')
-        _R = _R @ cm.rot(dt*U[3],'x')
+        S = np.array([[0,-_U[5],_U[4]],
+                      [_U[5],0,-_U[3]],
+                      [-_U[4],_U[3],0]])
+        _R = dt * S @ self.camera.R + self.camera.R
         
-        _R = self.camera.R @ _R
+        print(np.linalg.det(_R))
         [p[3], p[4], p[5]] = get_angles(_R)
         
-        #   END GLOBAL
+        #   END GLOBAL skew
         tmp = self.s_current_n.copy()
         self.camera.pose(p) 
         
@@ -370,8 +386,9 @@ class agent:
             #points_r = points_r[0:2,:]/points_r[2,:]
             
             #self.s_current = points_r.copy()
-            
-            self.s_current = rectify(self.camera, self.s_current_n, Z)
+            Z_local = self.camera.Preal @ points
+            Z_local = Z_local[2,:]
+            self.s_current = rectify(self.camera, self.s_current_n, Z_local)
             self.s_current_n = self.camera.normalize(self.s_current)
             #print(self.s_current)
         
@@ -456,27 +473,83 @@ class agent:
             self.error_int += dt * error
         
         U = (Ls @ _error) / deg
-        
+        print('---')
+        print(U)
         if self.setRectification:
             
-            U[:3] = cm.rot(self.camera.p[3]-pi,'x') @ U[:3]
-            U[:3] = cm.rot(self.camera.p[4],'y') @ U[:3]
+            #   Rectificado -> Camara
+            _R =  cm.rot(pi,'x')
+            #_R =  np.eye(3)
+            _R =  cm.rot(self.camera.p[4],'y').T @ _R
+            _R =  cm.rot(self.camera.p[3],'x').T @ _R
             
-            #   rotación inducida
-            _R = cm.rot(dt*U[5],'z') 
-            _R = _R @ cm.rot(dt*U[4],'y')
-            _R = _R @ cm.rot(dt*U[3],'x')
+            #   Traslación
+            U[:3] = _R @ U[:3]
+            #U[:3] = .0
+            print(U)
             
-            #   Rectificado -> global
+            #   BEGIN fuerza bruta
+            #U[3:] = _R @ U[3:]
+            U[3:] = _R @ (U[3:]*np.array([0.,0.,1.]))
+            #U[3:] = 0.
+            #   END 
+            #   BEGIN extract angles and apply euler equation 
+            #[phi, theta, psi] = get_angles(_R)
+            ##[phi, theta, psi] = [self.camera.p[3]-pi,self.camera.p[4],0 ]
             
-            _R =  cm.rot(pi,'x') @ _R
-            _R =  cm.rot(self.camera.p[5],'z') @ _R
+            ##_U = np.zeros(3)
+            ##_U[0] = U[3] - U[5] * sin(theta)
+            ##_U[1] = U[5] * cos(theta) * sin(phi) + U[4] * cos(phi)
+            ##_U[2] = U[5] * cos(theta) * cos(phi) - U[4] * sin(phi)
+            ##U[3:] = _U.copy()
             
-            #   Global -> local real
-            _R =  self.camera.R.T @ _R
+            ##A = np.array([[1,         0,           sin(theta)],
+                          ##[0,  cos(phi), -cos(theta) * sin(phi)],
+                          ##[0, sin(phi), cos(theta) * cos(phi)]])
+            #A = np.array([[0, -sin(psi), cos(psi) * sin(theta)],
+                          #[0,  cos(psi), sin(psi) * sin(theta)],
+                          #[1,         0,           cos(theta)]])
             
-            [U[3], U[4], U[5]] = get_angles(_R)
-            U[3:] = U[3:] / dt
+            #U[3:] = A @ (U[3:]*np.array([1.,1.,1.]))
+            #U[3:] = _R @ U[3:]
+            
+            #A = np.eye(3)
+            #A = np.flip(A,1)
+            
+            #U[3:] = inv(A) @ U[3:]
+            
+            #   END
+            #   BEGIN rotación incremental
+            #delta = 0.001
+            ##[U[3], U[4], U[5]] = [0.,0.,0.]
+            ##[U[3], U[4]] = [0.,0.]
+            
+            #R_U = cm.rot(delta*U[3],'x') 
+            #R_U = R_U @ cm.rot(delta*U[4],'y')
+            #R_U = R_U @ cm.rot(delta*U[5],'z')
+            
+            #R_U = _R @ R_U
+            
+            #[U[3], U[4], U[5]] = get_angles(R_U)
+            ##[U[3], U[4], U[5]] = [0.,0.,0.]
+            ##[U[3], U[4]] = [0.,0.]
+            #U[3:] = U[3:] / delta
+            
+            #   END
+            #   BEGIN Skew matrix trasnformation
+            #R_U = np.array([[    0,-U[5], U[4]],
+                            #[ U[5],    0,-U[3]],
+                            #[-U[4], U[3],    0]])
+            
+            #R_U = _R @ R_U
+            
+            #U[3] = R_U[2,1]
+            #U[4] = R_U[0,2]
+            #U[5] = R_U[1,0]
+            #   END
+            
+            #print(R_U)
+            print(U)
         
         return  U.reshape(6)
     

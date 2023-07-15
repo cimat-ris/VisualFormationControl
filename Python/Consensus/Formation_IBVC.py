@@ -584,7 +584,9 @@ def experiment(directory = "0",
         #P[:,3] = np.array([-0.32326981])
         
         #p0[3,:] = pi
-        #p0[4:,:] = 0.
+        #p0[4,:] = 0.
+        p0[5,:] *= 0.8
+        #p0[:3,:] = pd[:3,:].copy()
         
         #testAng =  np.pi/4
         #R = cm.rot(testAng,'y') 
@@ -3358,7 +3360,7 @@ def main(arg):
                 #n_agents = 4, 
                 #n_points = 30)
         experiment(directory=arg[3],
-                    t_end = 10,
+                    t_end = 200,
                     setRectification = True,
                     #modified =["nPoints"],
                     #gammaInf = 2.,

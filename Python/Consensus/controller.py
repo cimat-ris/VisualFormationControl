@@ -364,7 +364,7 @@ class agent:
                       [-_U[4],_U[3],0]])
         _R = dt * S @ self.camera.R + self.camera.R
         
-        print(np.linalg.det(_R))
+        #print(np.linalg.det(_R))
         [p[3], p[4], p[5]] = get_angles(_R)
         
         #   END GLOBAL skew
@@ -473,8 +473,8 @@ class agent:
             self.error_int += dt * error
         
         U = (Ls @ _error) / deg
-        print('---')
-        print(U)
+        #print('---')
+        #print(U)
         if self.setRectification:
             
             #   Rectificado -> Camara
@@ -486,7 +486,7 @@ class agent:
             #   Traslación
             U[:3] = _R @ U[:3]
             #U[:3] = .0
-            print(U)
+            #print(U)
             
             #   BEGIN fuerza bruta
             #U[3:] = _R @ U[3:]
@@ -549,7 +549,7 @@ class agent:
             #   END
             
             #print(R_U)
-            print(U)
+            #print(U)
         
         return  U.reshape(6)
     

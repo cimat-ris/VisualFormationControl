@@ -1398,6 +1398,8 @@ def experiment_repeat(nReps = 1,
                      t_end = 100,
                     dirBase = "",
                     node = 0,
+                    setRectification = False,
+                    gdl = 1,
                     intGamma0 = None,
                     intGammaInf = None,
                     intGammaSteep = 5.,
@@ -1430,6 +1432,8 @@ def experiment_repeat(nReps = 1,
                     intGamma0 = intGamma0,
                     intGammaInf = intGammaInf,
                     intGammaSteep = intGammaSteep ,
+                    setRectification = setRectification,
+                    gdl = gdl,
                     #set_derivative = True,
                     #tanhLimit = True,
                     #depthOp = 4, Z_set = 1.,
@@ -2865,6 +2869,7 @@ def plot_tendencias(nReps = 20,
     #colors = (randint(0,255,3*3)/255.0).reshape((3,3))
     npzfile = np.load(colorFile)
     colors = npzfile["colors"]
+    lw = 0.5
     
     ref = np.arange(nReps)+1
     count_mask = np.zeros(nReps)
@@ -2943,18 +2948,27 @@ def plot_tendencias(nReps = 20,
     hcons = hcons[1:,:]
     
     #   Errores de consenso
-    fig, ax = plt.subplots()
+    #fig, ax = plt.subplots( 2,1,sharex=True,frameon=False)
+    fig, ax = plt.subplots(frameon=False)
     fig.suptitle("Consensus error by repetition sets")
+    ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
+                 extent = (0+0.5,nReps+0.5, -0.0075,-0.0025),
+                 aspect = 'auto',
+                 vmin = 0, vmax = 100)
+    
     ax.plot(ref,cons_err_min, 
             color = colors[0],
-            label= "Min")
+            label= "Min",
+            lw = 0.5)
     ax.plot(ref,cons_err_avr, 
             color = colors[1],
-            label= "Average")
+            label= "Average",
+            lw = 0.5)
     ax.plot(ref,cons_err_max, 
             color = colors[2],
-            label= "Max")
-    #ax.violinplot(data_cons, showextrema = False)
+            label= "Max",
+            lw = 0.5)
+    #ax[0].violinplot(data_cons, showextrema = False)
     ax.boxplot(data_cons)
     
     fig.legend( loc=2)
@@ -2964,7 +2978,13 @@ def plot_tendencias(nReps = 20,
     plt.ylim((-0.01,0.11))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
-    plt.tight_layout()
+    
+    for i in range(nReps):
+        text = ax.text(i +1,  -0.005,str(int(count_mask[i])),
+                          ha="center", va="center", 
+                           color="k", fontsize =4)
+    
+    #plt.tight_layout()
     plt.savefig(dirBase+'Consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
@@ -3004,15 +3024,23 @@ def plot_tendencias(nReps = 20,
     #   Errores de traslación
     fig, ax = plt.subplots()
     fig.suptitle("Translation error by repetition sets")
+    ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
+                 extent = (0+0.5,nReps+0.5, -0.075,-0.025),
+                 aspect = 'auto',
+                 vmin = 0, vmax = 100)
+    
     ax.plot(ref,tErr_err_min, 
             color = colors[0],
-            label= "Min")
+            label= "Min",
+            lw = 0.5)
     ax.plot(ref,tErr_err_avr, 
             color = colors[1],
-            label= "Average")
+            label= "Average",
+            lw = 0.5)
     ax.plot(ref,tErr_err_max, 
             color = colors[2],
-            label= "Max")
+            label= "Max",
+            lw = 0.5)
     #ax.violinplot(data_tErr, showextrema = False)
     ax.boxplot(data_tErr)
     
@@ -3023,6 +3051,12 @@ def plot_tendencias(nReps = 20,
     plt.ylim((-0.1,1.1))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
+    
+    for i in range(nReps):
+        text = ax.text(i +1,  -0.05,str(int(count_mask[i])),
+                          ha="center", va="center", 
+                           color="k", fontsize =4)
+        
     plt.tight_layout()
     plt.savefig(dirBase+'Translation.pdf',bbox_inches='tight')
     #plt.show()
@@ -3062,17 +3096,31 @@ def plot_tendencias(nReps = 20,
     #   Errores de Rotación
     fig, ax = plt.subplots()
     fig.suptitle("Rotation error by repetition sets")
+    
+    ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
+                 extent = (0+0.5,nReps+0.5, -0.075,-0.025),
+                 aspect = 'auto',
+                 vmin = 0, vmax = 100)
+    
     ax.plot(ref,rErr_err_min, 
             color = colors[0],
-            label= "Min")
+            label= "Min",
+            lw = lw)
     ax.plot(ref,rErr_err_avr, 
             color = colors[1],
-            label= "Average")
+            label= "Average",
+            lw = lw)
     ax.plot(ref,rErr_err_max, 
             color = colors[2],
-            label= "Max")
+            label= "Max",
+            lw = lw)
     #ax.violinplot(data_rErr, showextrema = False)
     ax.boxplot(data_rErr)
+    
+    for i in range(nReps):
+        text = ax.text(i +1,  -0.05,str(int(count_mask[i])),
+                          ha="center", va="center", 
+                           color="k", fontsize =4)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
@@ -3471,26 +3519,26 @@ def main(arg):
     
     #   BEGIN regularization : FP check
     
-    #   Local tests  
-    job = int(arg[2])
-    sel_case = int(arg[3])
+    ##   Local tests  
+    #job = int(arg[2])
+    #sel_case = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    Names = ["W_02_regularization_Circular/",
-             "W_02_regularization_Random_PIG/",
-             "W_02_regularization_Circular_blanco/",
-             "W_02_regularization_Random_blanco/"]
-    nReps = 4
-    nodes = 25
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_02_regularization_Circular/",
+             #"W_02_regularization_Random/",
+             #"W_02_regularization_Circular_blanco/",
+             #"W_02_regularization_Random_blanco/"]
+    #nReps = 4
+    #nodes = 25
     
-    #  Plot
-    i = 3
-    dirBase = root + Names[i]
-    colorFile = colorNames[i%2]
-    experiment_plots(dirBase =  dirBase,
-                        kSets = nodes,
-                        colorFile = colorFile)                        
-    return 
+    ##  Plot
+    ##i = 3
+    ##dirBase = root + Names[i]
+    ##colorFile = colorNames[i%2]
+    ##experiment_plots(dirBase =  dirBase,
+                        ##kSets = nodes,
+                        ##colorFile = colorFile)                        
+    ##return 
 
     #for i in range(len(Names)):
         #dirBase = root + Names[i]
@@ -3502,33 +3550,33 @@ def main(arg):
     #return
     
     
-    #  process
-    dirBase = root + Names[sel_case]
-    colorFile = colorNames[sel_case%2]
+    ##  process
+    #dirBase = root + Names[sel_case]
+    #colorFile = colorNames[sel_case%2]
     
-    logText = "Set = "+ dirBase+'\n'
-    write2log(logText)
+    #logText = "Set = "+ dirBase+'\n'
+    #write2log(logText)
     
-    logText = "Job = "+str(job)+'\n'
-    logText += "Select = "+str(sel_case)+'\n'
-    write2log(logText)
+    #logText = "Job = "+str(job)+'\n'
+    #logText += "Select = "+str(sel_case)+'\n'
+    #write2log(logText)
     
     
-    experiment_frontParallel(nReps = nReps,
-                     t_end = 800,
-                     n_points = 30,
-                     setRectification = (sel_case <= 1),
-                     gdl = 2,
-                     #gamma0 = 8.,
-                        #gammaInf = 2.,
-                        #intGamma0 = 0.1,
-                        #intGammaInf = 0.05,
-                        #intGammaSteep = 5,
-                    dirBase = dirBase,
-                    node = job,
-                    Flat = False)
+    #experiment_frontParallel(nReps = nReps,
+                     #t_end = 800,
+                     #n_points = 30,
+                     #setRectification = (sel_case <= 1),
+                     #gdl = 2,
+                     ##gamma0 = 8.,
+                        ##gammaInf = 2.,
+                        ##intGamma0 = 0.1,
+                        ##intGammaInf = 0.05,
+                        ##intGammaSteep = 5,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #Flat = False)
     
-    return 
+    #return 
     
     
     #   END regularization : FP check
@@ -3726,6 +3774,85 @@ def main(arg):
     #return
     
     ##   END Cluster Front Parallel
+    ##   BEGIN CLUSTER Local + rectification
+    
+    #   Local tests  
+    job = int(arg[2])
+    sel = int(arg[3])
+    
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    Names = ["W_02_localCirc_P_r/",
+             "W_02_localRand_P_r/",
+             "W_02_localCirc_PIG_r/",
+             "W_02_localRand_PIG_r/"]
+    
+    
+    #   Plot part
+    
+    for i in range(len(Names)):
+        colorFile = colorNames[i%2]
+        plot_tendencias(dirBase = root + Names[i], 
+                        colorFile = colorFile)
+        
+    return
+    
+    #   Proc part
+    i = job
+    
+    #  process
+    name = Names[sel]
+    colorFile = colorNames[sel%2]
+    
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
+    
+    logText = "Repetition = "+str(i)+'\n'
+    write2log(logText)
+    #   circular P 
+    if sel == 0:
+        #experiment_local(nReps = 100,
+                         #n_points = 30,
+                         #activatepdCirc = True,
+                        #dTras = 0.1*(i+1),
+                        #dRot = (np.pi/20.)*(i+1),
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = True,
+                        gdl = 2,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #   Renad P
+    if sel == 1:
+        #experiment_local(nReps = 100,
+                         #n_points = 30,
+                        #activatepdCirc = False,
+                        #dTras = 0.1*(i+1),
+                        #dRot = (np.pi/20.)*(i+1),
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = True,
+                        gdl = 2,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    if sel == 2 or sel ==3:
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = True,
+                        gdl = 2,
+                        gamma0 = 5.,
+                        gammaInf = 2.,
+                        intGamma0 = 0.2,
+                        intGammaInf = 0.05,
+                        intGammaSteep = 5,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #experiment_plots(dirBase = root + name+str(i)+"/", 
+                     #colorFile = colorFile)
+    
+    
+    return
+    
+    #   END Cluster local + rectification
     ##   BEGIN CLUSTER Local
     
     ##   Local tests  

@@ -555,21 +555,26 @@ class agent:
     
     def reset_int(self):
         self.error_int[:] =  0.0
-        
+    
+    #Revisa si los puntos ingresados están en FOV
+    #   TODO: pasarlo al modelo de cámara
     def count_points_in_FOV(self,P, enableMargin = True):
         
-        Z = self.camera.Preal @ P
-        Z = Z[2,:]
+        PN = self.camera.Preal @ P
+        Z = PN[2,:]
         
         #   BEGIN Only front ckeck
         if not enableMargin:
             return np.count_nonzero(Z > 0.)
         #   END Only front check
         
-        a = abs(self.s_current_n[0,:]) < self.FOVxlim 
-        b = abs(self.s_current_n[1,:]) < self.FOVylim
+        PN = PN[[0,1],:]/Z
+        #a = abs(self.s_current_n[0,:]) < self.FOVxlim 
+        #b = abs(self.s_current_n[1,:]) < self.FOVylim
+        a = abs(PN[0,:]) < self.FOVxlim 
+        b = abs(PN[1,:]) < self.FOVylim
         
         test = []
-        for i in range(self.s_current.shape[1]):
+        for i in range(PN.shape[1]):
             test.append(a[i] and b[i] and Z[i] > 0.0)
         return test.count(True)

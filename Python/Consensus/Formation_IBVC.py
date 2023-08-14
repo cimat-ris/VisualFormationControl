@@ -154,6 +154,7 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
 def plot_3Dcam(ax, camera,
                positionArray,
                init_configuration,
+               end_configuration,
                desired_configuration,
                color, i,
                camera_scale    = 0.02):
@@ -165,6 +166,7 @@ def plot_3Dcam(ax, camera,
             label = str(i),
             color = color) # Plot camera trajectory
     
+    camera.pose(end_configuration)
     camera.draw_camera(ax, scale=camera_scale, color='red')
     ax.text(camera.p[0],camera.p[1],camera.p[2],str(i))
     camera.pose(desired_configuration)
@@ -211,6 +213,7 @@ def view3D(directory,
         plot_3Dcam(ax, cam,
                 pos_arr[i,:,:],
                 p0[:,i],
+                end_position[i,:],
                 pd[:,i],
                 color = colors[i],
                 i = i,
@@ -332,7 +335,7 @@ def agent_review(directory = "",
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
 
-def error_state(reference,  agents, name= None):
+def error_state(reference,  agents, gdl = 1, name= None):
     
     n = reference.shape[1]
     state = np.zeros((6,n))
@@ -384,18 +387,34 @@ def error_state(reference,  agents, name= None):
     
     #   Actualizando rotaciones
     rot_err = np.zeros(n)
-    for i in range(n):
-        
-        #   update new_state
-        _R = R.T @ agents[i].camera.R
-        [new_state[3,i], new_state[4,i], new_state[5,i]] = ctr.get_angles(_R)
-        agents[i].camera.pose(new_state[:,i])
-        
+    if gdl ==1:
+        for i in range(n):
+            
+            #   update new_state
+            _R = R.T @ agents[i].camera.R
+            [new_state[3,i], new_state[4,i], new_state[5,i]] = ctr.get_angles(_R)
+            agents[i].camera.pose(new_state[:,i])
+            
+            #   Get error
+            _R =  cm.rot(new_reference[3,i],'x') @ agents[i].camera.R.T
+            _R = cm.rot(new_reference[4,i],'y') @ _R
+            _R = cm.rot(new_reference[5,i],'z') @ _R
+            _arg = (_R.trace()-1.)/2.
+            if abs(_arg) < 1.:
+                rot_err[i] = np.arccos(_arg)
+            else:
+                rot_err[i] = np.arccos(np.sign(_arg))
+                
+    else:
         #   Get error
-        _R =  cm.rot(new_reference[3,i],'x') @ agents[i].camera.R.T
-        _R = cm.rot(new_reference[4,i],'y') @ _R
-        _R = cm.rot(new_reference[5,i],'z') @ _R
-        rot_err[i] = np.arccos((_R.trace()-1.)/2.)
+        [Rtheta,Rphi,Rpsi] = ctr.get_angles(R)
+        rot_err = state[5,:] - reference[5,:]
+        rot_err += Rpsi
+        rot_err[rot_err < -pi] += 2*pi
+        rot_err[rot_err > pi] -= 2*pi
+        rot_err_plot = rot_err.copy()
+        
+        
     #   RMS
     rot_err = rot_err**2
     rot_err = rot_err.sum()/n
@@ -413,14 +432,32 @@ def error_state(reference,  agents, name= None):
     
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    
-    for i in range(n):
-        agents[i].camera.draw_camera(ax, scale=0.2, color='red')
-        ax.text(agents[i].camera.p[0],agents[i].camera.p[1],agents[i].camera.p[2],str(i))
-        agents[i].camera.pose(new_reference[:,i])
-        agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
-        ax.text(agents[i].camera.p[0],agents[i].camera.p[1],agents[i].camera.p[2],str(i))
-        agents[i].camera.pose(state[:,i])
+    #   TODO plot Z parallel for gdl == 2
+    if gdl ==1 :
+        for i in range(n):
+            agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+            ax.text(agents[i].camera.p[0],agents[i].camera.p[1],agents[i].camera.p[2],str(i))
+            agents[i].camera.pose(new_reference[:,i])
+            agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+            ax.text(agents[i].camera.p[0],agents[i].camera.p[1],agents[i].camera.p[2],str(i))
+            agents[i].camera.pose(state[:,i])
+    else:
+        for i in range(n):
+            #   new_state
+            new_state[3:,i] = np.array([pi,0.,rot_err_plot[i]])
+            agents[i].camera.pose(new_state[:,i])
+            agents[i].camera.draw_camera(ax, scale=0.2, color='red')
+            ax.text(agents[i].camera.p[0],agents[i].camera.p[1],agents[i].camera.p[2],str(i))
+            
+            #   new_reference
+            new_reference[3:,i] = np.array([pi,0.,new_reference[5,i]])
+            agents[i].camera.pose(new_reference[:,i])
+            agents[i].camera.draw_camera(ax, scale=0.2, color='brown')
+            ax.text(agents[i].camera.p[0],agents[i].camera.p[1],agents[i].camera.p[2],str(i))
+            agents[i].camera.pose(state[:,i])
+            
+            
+            
     plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
@@ -431,7 +468,7 @@ def error_state(reference,  agents, name= None):
 #   Difference between agents
 #   It assumes that the states in the array are ordered and are the same
 #   regresa un error de traslación y orientación
-def error_state_equal(  agents, name = None):
+def error_state_equal(  agents, gdl = 1, name = None):
     
     n = len(agents)
     state = np.zeros((6,n))
@@ -442,8 +479,13 @@ def error_state_equal(  agents, name = None):
     
     t_err = reference[:3].reshape((3,1)) - state[:3,:]
     t_err =  (norm(t_err,axis = 0)**2).sum()/n
-    rot_err = reference[3:].reshape((3,1)) - state[3:,:]
-    rot_err =  (norm(rot_err,axis = 0)**2).sum()/n
+    rit_err = None
+    if gdl == 1:
+        rot_err = reference[3:].reshape((3,1)) - state[3:,:]
+        rot_err =  (norm(rot_err,axis = 0)**2).sum()/n
+    else:
+        rot_err = reference[5] - state[5,:]
+        rot_err =  (rot_err**2).sum()/n
     
     if name is None:
         return [t_err, rot_err]
@@ -585,7 +627,7 @@ def experiment(directory = "0",
         #P[:,3] = np.array([-0.32326981])
         
         #p0[3,:] = pi
-        #p0[4,:] = 0.1
+        #p0[4,:] = 0.
         #p0[5,:] *= 0.8
         #p0[:3,:] = pd[:3,:].copy()
         
@@ -698,7 +740,7 @@ def experiment(directory = "0",
             #   Depth calculation
             Z = Z_select(depthOp, agents[i], P,Z_set,p0,pd,i)
             if Z is None:
-                print("Invalid depth selection")
+                print("ERR: Invalid depth selection")
                 return None
             agents[i].set_interactionMat(Z,gdl)
     
@@ -734,7 +776,7 @@ def experiment(directory = "0",
         sinv_store = np.zeros((n_agents,3,steps))
         s_store = np.zeros((n_agents,3,steps))
     FOVflag = False
-    state_err = error_state(pd,agents)
+    state_err = error_state(pd,agents,gdl = gdl)
     
     #   Print simulation data:
     logText = "------------------BEGIN-----------------"
@@ -793,7 +835,7 @@ def experiment(directory = "0",
         error = L @ error
         
         #   save data
-        err_array[:,:,i] = error.copy()
+        #err_array[:,:,i] = error.copy()
         if set_derivative:
             for Li in range(n_agents):
                 for Lj in range(n_agents):
@@ -803,11 +845,12 @@ def experiment(directory = "0",
         #   Leader 
         if not leader is None:
             error[leader,:] = agents[leader].error
+        err_array[:,:,i] = error.copy()
         
         if set_consensoRef:
-            [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents)
+            [serr_array[0,i], serr_array[1,i]] = error_state(pd,agents, gdl = gdl)
         else:
-            [serr_array[0,i], serr_array[1,i]] = error_state_equal(agents)
+            [serr_array[0,i], serr_array[1,i]] = error_state_equal(agents, gdl = gdl)
         
         ####   Image based formation
         if control_type ==2:
@@ -815,6 +858,12 @@ def experiment(directory = "0",
         #   Get control
         for j in range(n_agents):
             
+            #   Detección de choque del plano de cámara y los puntos de escena
+            if agents[j].count_points_in_FOV(P, enableMargin=False) != n_points:
+                if depthFlags[j] == 0. :
+                    depthFlags[j] = i
+                FOVflag = True
+                break
             
             if not int_res is None:
                 if norm(error[j,:])/n_points < int_res:
@@ -855,13 +904,6 @@ def experiment(directory = "0",
             if tanhLimit:
                 U = np.tanh(U)
             
-            #   Detección de choque del plano de cámara y los puntos de escena
-            if agents[j].count_points_in_FOV(P, enableMargin=False) != n_points:
-                if depthFlags[j] == 0. :
-                    depthFlags[j] = i
-                U =  np.array([0.,0.,0.,0.,0.,0.])
-                FOVflag = True
-                break
             
             #   Perturbaciones en U
             #U[1] -= 0.1*(np.sin(t/5))*min(norm(error[j,:]),1.)
@@ -885,6 +927,16 @@ def experiment(directory = "0",
             gamma = A_ds @ gamma #/ 10.0
         
         if FOVflag:
+            if i-1 >= 0:
+                err_array[:,:,i] = err_array[:,:,i-1]
+                serr_array[:,i] = serr_array[:,i-1]
+                for idx in range(j,n_agents):
+                    U_array[idx,:,i] = U_array[idx,:,i-i]
+                    desc_arr[idx,:,i] = desc_arr[idx,:,i-1]
+                    pos_arr[idx,:,i] = pos_arr[idx,:,i-1]
+                    sinv_store[idx,:,i] = sinv_store[idx,:,i-1]
+                    s_store[idx,:,i] = s_store[idx,:,i-1]
+                    svdProy[idx,:,i] = svdProy[idx,:,i-1]
             break
         
     
@@ -926,6 +978,13 @@ def experiment(directory = "0",
         svdProy = svdProy[:,:,:trim]
         s_store = s_store[:,:,:trim]
         sinv_store = sinv_store[:,:,:trim]
+    logText = "Valores propios (Matrix de Interacción) = \n"
+    logText += str(s_store[:,:,-1]) + '\n'
+    logText += "Valores propios (Matrix de Interacción Inversa) = \n"
+    logText += str(sinv_store[:,:,-1]) + '\n'
+    logText += "Proy. Error sobrevectores propios de la inversa) = \n"
+    logText += str(svdProy[:,:6,-1]) + '\n'
+    write2log(logText+'\n')
     
     ####   Plot
     
@@ -938,9 +997,11 @@ def experiment(directory = "0",
         end_position[i,:] = agents[i].camera.p.copy()
         new_agents.append(ctr.agent(cam,pd[:,i],end_position[i,:],P))
     if set_consensoRef:
-        state_err +=  error_state(pd,new_agents,directory+"/3D_error")
+        state_err +=  error_state(pd,new_agents, gdl = gdl, 
+                                  name = directory+"/3D_error")
     else:
-        state_err +=  error_state_equal(new_agents,directory+"/3D_error")
+        state_err +=  error_state_equal(new_agents, gdl = gdl,
+                                        name = directory+"/3D_error")
     
     logText = 'Errores de consenso iniciales\n'
     logText += str(err_array[:,:,0])
@@ -982,14 +1043,32 @@ def experiment(directory = "0",
     ax = plt.axes(projection='3d')
     name = directory+"/3Dplot"
     ax.plot(P[0,:], P[1,:], P[2,:], 'o')
-    for i in range(n_agents):
-        plot_3Dcam(ax, agents[i].camera,
-                pos_arr[i,:,:],
-                p0[:,i],
-                pd[:,i],
-                color = colors[i],
-                i = i,
-                camera_scale    = 0.02)
+    if gdl ==1:
+        for i in range(n_agents):
+            plot_3Dcam(ax, agents[i].camera,
+                        pos_arr[i,:,:],
+                        p0[:,i],
+                        end_position[i,:],
+                        pd[:,i],
+                        color = colors[i],
+                        i = i,
+                        camera_scale    = 0.02)
+    elif gdl == 2:
+        for i in range(n_agents):
+            init = p0[:,i]
+            end = end_position[i,:]
+            ref = pd[:,i]
+            init[3] = end[3] = ref[3] = pi
+            init[4] = end[4] = ref[4] = 0
+            plot_3Dcam(ax, agents[i].camera,
+                        pos_arr[i,:,:],
+                        init,
+                        end,
+                        ref,
+                        color = colors[i],
+                        i = i,
+                        camera_scale    = 0.02)
+            
     #   Plot cammera position at intermediate time
     if midMarker:
         step_sel = int(pos_arr.shape[2]/2)
@@ -1323,6 +1402,7 @@ def experiment_frontParallel(nReps = 1,
                     gdl = 1,
                     Flat = True,
                     setRectification = False,
+                    repeat = False,
                     enablePlotExp = False):
     
     n_agents = 4
@@ -1345,17 +1425,18 @@ def experiment_frontParallel(nReps = 1,
     for k in range(nReps):
         
         #   Modifica aleatoriamente lospuntos de escena
-        nP = None
-        if n_points is None:
-            nP = random.randint(4,11)
-        else:
-            nP = n_points
-        scene(modify = ["P"],
-              Pz = Pz,
-                dirBase = dirBase+str(k+node*nReps),
-                n_agents = 4, 
-                #n_points = random.randint(4,11))
-                n_points = nP)
+        if not repeat:
+            nP = None
+            if n_points is None:
+                nP = random.randint(4,11)
+            else:
+                nP = n_points
+            scene(modify = ["P"],
+                Pz = Pz,
+                    dirBase = dirBase+str(k+node*nReps),
+                    n_agents = 4, 
+                    #n_points = random.randint(4,11))
+                    n_points = nP)
         
         write2log("CASE "+str(k)+'\n')
         ret = experiment(directory=dirBase+str(node*nReps+k),
@@ -1643,7 +1724,6 @@ def experiment_3D_min(nReps = 100,
                           dirBase = "",
                           node = 0,
                           sel_case = 0,
-                          repeat = False,
                           enablePlotExp = True):
 
     gamma0 = None
@@ -1651,10 +1731,10 @@ def experiment_3D_min(nReps = 100,
     intGamma0 = None
     intGammaInf = None
     if sel_case%2 == 1:
-        gamma0 = 5.
-        gammaInf = 2.
-        intGamma0 = 0.2
-        intGammaInf = 0.05
+        gamma0 = 3.
+        gammaInf = 0.1
+        intGamma0 = 0.1
+        intGammaInf = 0.01
     
     
     n_agents = 4
@@ -1669,87 +1749,19 @@ def experiment_3D_min(nReps = 100,
     arr_trial_heat_ang = -np.ones((nReps,100-4))
     arr_trial_heat_cons = -np.ones((nReps,100-4))
     mask = np.zeros(nReps)
-    nP = 0
+    nP = 4
     #Misscount = 0
 
 
-    logText = "Test series, minimun 3D poinst required = "
+    logText = "Test series, minimun 3D points required = "
     write2log(logText+'\n')
 
     for k in range(nReps):
 
         #   Points
-        # Range
-        xRange = [-2,2]
-        yRange = [-2,2]
-        zRange = [-1,0]
-
-        nP = 4
-        arr_n_points[k] = nP
-        P = np.random.rand(3,nP)
-        P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-        P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-        P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
-        Ph = np.r_[P,np.ones((1,nP))]
-
-        #   Cameras
-        
-        p0 = None
-        pd = None
-        
-        if repeat:
-            npzfile = np.load(dirBase+str(k+node*nReps)+'/data.npz')
-            p0 = npzfile["p0"]
-            pd = npzfile["pd"]
-            
-            
-        else:
-            # Range
-            xRange = [-2,2]
-            yRange = [-2,2]
-            zRange = [0,3]
-
-            p0 = np.zeros((6,n_agents))
-            pd = np.zeros((6,n_agents))
-            offset = np.array([xRange[0],yRange[0],zRange[0],-np.pi,-np.pi,-np.pi])
-            dRange = np.array([xRange[1],yRange[1],zRange[1],np.pi,np.pi,np.pi])
-            dRange -= offset
-            for i in range(n_agents):
-
-                tmp = np.random.rand(6)
-                tmp = offset + tmp*dRange
-                tmp[3] = pi
-                tmp[4] = 0.
-                cam = cm.camera()
-                agent = ctr.agent(cam, tmp, tmp,P)
-
-                while agent.count_points_in_FOV(Ph) != nP :
-                    tmp = np.random.rand(6)
-                    tmp = offset + tmp*dRange
-                    tmp[3] = pi
-                    tmp[4] = 0.
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, tmp, tmp,P)
-
-                p0[:,i] = tmp.copy()
-
-                #   Referencias aleatorias
-                tmp = np.random.rand(6)
-                tmp = offset + tmp*dRange
-                tmp[3] = pi
-                tmp[4] = 0.
-                cam = cm.camera()
-                agent = ctr.agent(cam, tmp, tmp,P)
-
-                while agent.count_points_in_FOV(Ph) != nP:
-                    tmp = np.random.rand(6)
-                    tmp = offset + tmp*dRange
-                    tmp[3] = pi
-                    tmp[4] = 0.
-                    cam = cm.camera()
-                    agent = ctr.agent(cam, tmp, tmp,P)
-
-                pd[:,i] = tmp.copy()
+        scene(modify = ["P"],
+                dirBase = dirBase+str(k+node*nReps),
+                n_points = nP)
 
 
         errors = [0.2,0.2,0.2,0.2]
@@ -1762,10 +1774,7 @@ def experiment_3D_min(nReps = 100,
             current_time = time.strftime("%Y-%m-%d %H:%M:%S", t)
             write2log("TIMESTAMP "+current_time+'\n')
             ret = experiment(directory=dirBase+str(k+node*nReps),
-                    #k_int = 0.1,
-                        pd = pd,
-                        p0 = p0,
-                        P = P,
+                        repeat = True,
                         gamma0 = gamma0,
                         gammaInf = gammaInf,
                         intGamma0 = intGamma0,
@@ -1785,19 +1794,12 @@ def experiment_3D_min(nReps = 100,
 
             if (errors[2] > 0.1 and errors[3]> 0.1):
                 #   Points
-                # Range
-                xRange = [-2,2]
-                yRange = [-2,2]
-                zRange = [-1,0]
-
-                nP += 1
                 arr_n_points[k] = nP
+                nP += 1
 
-                P = np.random.rand(3,nP)
-                P[0,:] = xRange[0]+ P[0,:]*(xRange[1]-xRange[0])
-                P[1,:] = yRange[0]+ P[1,:]*(yRange[1]-yRange[0])
-                P[2,:] = zRange[0]+ P[2,:]*(zRange[1]-zRange[0])
-                Ph = np.r_[P,np.ones((1,nP))]
+                scene(modify = ["P"],
+                    dirBase = dirBase+str(k+node*nReps),
+                    n_points = nP)
         #print(ret)
         [var_arr[:,k], errors, FOVflag] = ret
         var_arr_et[k] = errors[0]
@@ -1914,7 +1916,8 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     ax.set_ylabel("Translation error", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
-    im = ax.imshow(h, cmap = "Purples", vmax = 0.11, vmin = 0)
+    im = ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
+                   cmap = "Purples", vmax = 0.11, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.8)
     for j in range(len(y)):
         if test[j] != -1:
@@ -1944,7 +1947,8 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     ax.set_ylabel("Rotation error", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
-    im = ax.imshow(h, cmap = "Purples", vmax = 1.1, vmin = 0)
+    im = ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
+                   cmap = "Purples", vmax = 1.1, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.8)
     for j in range(len(y)):
         if test[j] != -1:
@@ -1974,7 +1978,8 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     ax.set_ylabel("Consensus error", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
-    im = ax.imshow(h, cmap = "Purples", vmax = pi, vmin = 0)
+    im = ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
+                   cmap = "Purples", vmax = 0.2, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.8)
     for j in range(len(y)):
         if test[j] != -1:
@@ -2370,10 +2375,20 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
                     (var_arr_2 > var_arr_et) &
                     (mask == 0.))[0]
     
-    
+    Succsesful = np.where((var_arr_3 < 0.1) &
+                    (var_arr_2 < 0.1) &
+                    (mask == 0.))[0]
     
     #   Masking
     write2log("Failed repeats = "+str( np.where(mask == 1)[0]))
+    logText = '\n' +"Simulations that increased et = "+ str( etsup.shape[0])+  " / "+ str( nReps)
+    logText += '\n' +str(etsup)
+    logText += '\n' +"Simulations that increased er = "+ str( ersup.shape[0])+  " / "+ str( nReps)
+    logText += '\n' +str(ersup)
+    logText += '\n' +"Simulations that increased both err = "+ str( esup.shape[0])+  " / "+ str( nReps)
+    logText += '\n' +str(esup)
+    logText += '\nSuccsesful cases = ' + str(Succsesful.shape[0])
+    write2log(logText + '\n')
     if (np.count_nonzero(mask == 1.) == mask.shape[0]):
         print("Simulations : No data to process")
         return
@@ -2387,13 +2402,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
         
         
     np.set_printoptions(linewidth=np.inf)
-    logText = '\n' +"Simulations that increased et = "+ str( etsup.shape[0])+  " / "+ str( nReps)
-    logText += '\n' +str(etsup)
-    logText += '\n' +"Simulations that increased er = "+ str( ersup.shape[0])+  " / "+ str( nReps)
-    logText += '\n' +str(ersup)
-    logText += '\n' +"Simulations that increased both err = "+ str( esup.shape[0])+  " / "+ str( nReps)
-    logText += '\n' +str(esup)
-    write2log(logText + '\n')
+    
     
     nReps = var_arr.shape[1]
     ref_arr = np.arange(nReps)
@@ -2547,7 +2556,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("Final formation error heatmap")
     
     h = h.T
-    ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
+    ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
                                 cmap='Purples',
                                 vmax = 100, vmin = 0)
     ax.invert_yaxis()
@@ -2580,7 +2589,7 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("Final formation error heatmap (Zoom)")
     
     h = h.T
-    ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
+    ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
                                 cmap='Purples',
                                 vmax = 100, vmin = 0)
     ax.invert_yaxis()
@@ -2899,6 +2908,7 @@ def plot_tendencias(nReps = 20,
     fig, ax = plt.subplots(frameon=False)
     fig.suptitle("Consensus error by repetition sets")
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
+              #norm=mcolors.PowerNorm(gamma=0.5),
                  extent = (0+0.5,nReps+0.5, -0.0075,-0.0025),
                  aspect = 'auto',
                  vmin = 0, vmax = 100)
@@ -2954,7 +2964,8 @@ def plot_tendencias(nReps = 20,
     ax.set_ylabel("Step", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
-    im = ax.imshow(h, cmap = "Purples", vmax = 0.11, vmin = 0)
+    im = ax.imshow(h,# norm=mcolors.PowerNorm(gamma=0.5),
+                   cmap = "Purples", vmax = 0.11, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.7)
     for j in range(len(y)):
         for i in mask_coords[j]:
@@ -2972,6 +2983,7 @@ def plot_tendencias(nReps = 20,
     fig, ax = plt.subplots()
     fig.suptitle("Translation error by repetition sets")
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
+              #norm=mcolors.PowerNorm(gamma=0.5),
                  extent = (0+0.5,nReps+0.5, -0.075,-0.025),
                  aspect = 'auto',
                  vmin = 0, vmax = 100)
@@ -3027,7 +3039,8 @@ def plot_tendencias(nReps = 20,
     ax.set_ylabel("Step", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
-    im = ax.imshow(h, cmap = "Purples", vmax = 1.1, vmin = 0)
+    im = ax.imshow(h,
+                   cmap = "Purples", vmax = 1.1, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.7)
     for j in range(len(y)):
         for i in mask_coords[j]:
@@ -3045,6 +3058,7 @@ def plot_tendencias(nReps = 20,
     fig.suptitle("Rotation error by repetition sets")
     
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
+              #norm=mcolors.PowerNorm(gamma=0.5),
                  extent = (0+0.5,nReps+0.5, -0.075,-0.025),
                  aspect = 'auto',
                  vmin = 0, vmax = 100)
@@ -3099,7 +3113,8 @@ def plot_tendencias(nReps = 20,
     ax.set_ylabel("Step", size = 4)
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
-    im = ax.imshow(h, cmap = "Purples", vmax = pi, vmin = 0)
+    im = ax.imshow(h,
+                   cmap = "Purples", vmax = pi, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.7)
     for j in range(len(y)):
         for i in mask_coords[j]:
@@ -3364,20 +3379,21 @@ def main(arg):
                     #t_end = 800,
                     ##setRectification = True,
                     ##gdl = 2,
-                    #leader = 0,
+                    ##leader = 0,
                     ##lamb = 0.1,
                     ##modified =["nPoints"],
-                    #gamma0 = 5.,
+                    #gamma0 = 3.,
                     #gammaInf = .1,
-                    ##intGamma0 = 0.2,
-                    ##intGammaInf = 0.05,
+                    ##gammaInf = 2.,
+                    #intGamma0 = 0.1,
+                    #intGammaInf = 0.01,
                     ##intGammaSteep = 5,
                     ##set_derivative = True,
                     ##tanhLimit = True,
                     ##k_int = 0.1,
                     ##int_res = 0.2,
                     #repeat = True)
-        #view3D(arg[3])
+        ##view3D(arg[3])
         #return
     #if selector == 'v':
         #view3D(arg[3])
@@ -3545,14 +3561,15 @@ def main(arg):
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     #Names = ["W_02_FrontParallel_Circular_Flat/",
-             #"W_02_FrontParallel_Circular_NFlat/"]
+             #"W_02_FrontParallel_Circular_NFlat/",
+             #"W_02_FrontParallel_Circular_NFlat_PIG/"]
     #nReps = 4
     #nodes = 25
     
-    ##   Plot
+    ###   Plot
     #for i in range(len(Names)):
         #dirBase = root + Names[i]
-        #colorFile = colorNames[i]
+        #colorFile = colorNames[int(i>0)]
         #experiment_plots(dirBase =  dirBase,
                          #kSets = nodes,
                          #colorFile = colorFile)
@@ -3562,7 +3579,7 @@ def main(arg):
     
     ##  process
     #dirBase = root + Names[sel_case]
-    #colorFile = colorNames[sel_case]
+    #colorFile = colorNames[int(sel_case>0)]
     
     #logText = "Set = "+ dirBase+'\n'
     #write2log(logText)
@@ -3570,12 +3587,25 @@ def main(arg):
     #logText = "Job = "+str(job)+'\n'
     #write2log(logText)
     
-    
-    #experiment_frontParallel(nReps = nReps,
+    #if sel_case < 2:
+        #experiment_frontParallel(nReps = nReps,
+                                 ##repeat = True,
                      #t_end = 800,
                     #dirBase = dirBase,
                     #node = job,
                     #Flat = (sel_case == 0))
+    #else:
+        #experiment_frontParallel(nReps = nReps,
+                                 #repeat = True,
+                        #t_end = 800,
+                        #gamma0 = 3.,
+                        #gammaInf = 0.1,
+                        ##intGamma0 = 0.1,
+                        ##intGammaInf = 0.01,
+                        ##intGammaSteep = 5,
+                        #dirBase = dirBase,
+                        #node = job,
+                        #Flat = False)
     
     #return 
     
@@ -3585,7 +3615,7 @@ def main(arg):
     
     
     
-    #   Local tests  
+    ##   Local tests  
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
@@ -3728,13 +3758,13 @@ def main(arg):
     ##   END Cluster Front Parallel
     ##   BEGIN CLUSTER Local
     
-    #   Local tests  
+    #    Local tests  
     job = int(arg[2])
     sel = int(arg[3])
     
     root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    ###   Local
+    ##   Local
     #Names = ["W_02_localCirc_P/",
              #"W_02_localRand_P/",
              #"W_02_localCirc_PIG/",
@@ -3752,14 +3782,33 @@ def main(arg):
     #gdl = 2
     #leader = None
     
-    ### Local + leader
-    Names = ["W_02_localCirc_P_l/",
-             "W_02_localRand_P_l/",
-             "W_02_localCirc_PIG_l/",
-             "W_02_localRand_PIG_l/"]
-    setRectification = False
-    gdl = 1
-    leader = 0
+    ## Local + leader
+    #Names = ["W_02_localCirc_P_l/",
+             #"W_02_localRand_P_l/",
+             #"W_02_localCirc_PIG_l/",
+             #"W_02_localRand_PIG_l/"]
+    #setRectification = False
+    #gdl = 1
+    #leader = 0
+    
+    
+    ## Rectification test, sign metrics
+    Names = ["W_02_localCirc_P_rte/",
+             "W_02_localRand_P_rte/",
+             "W_02_localCirc_PIG_rte/",
+             "W_02_localRand_PIG_rte/"]
+    setRectification = True
+    gdl = 2
+    leader = None
+    
+    ## Rectification test gdl 2 
+    #Names = ["W_02_localCirc_P_rtg/",
+             #"W_02_localRand_P_rtg/",
+             #"W_02_localCirc_PIG_rtg/",
+             #"W_02_localRand_PIG_rtg/"]
+    #setRectification = False
+    #gdl = 2
+    #leader = None
     
     #   Plot part
     
@@ -3782,8 +3831,8 @@ def main(arg):
     
     logText = "Repetition = "+str(i)+'\n'
     write2log(logText)
-    #   circular P 
-    if sel == 0:
+    #   Proporcional
+    if sel == 0 or sel == 1:
         experiment_repeat(nReps = 100,
                           t_end = 800,
                           setRectification = setRectification,
@@ -3791,26 +3840,17 @@ def main(arg):
                           leader = leader,
                         dirBase = root + name+str(i)+"/",
                         enablePlotExp= False)
-    #   Ranad P
-    if sel == 1:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
+    #   PI AG
     if sel == 2 or sel ==3:
         experiment_repeat(nReps = 100,
                           t_end = 800,
                           setRectification = setRectification,
                           gdl = gdl,
                           leader = leader,
-                        gamma0 = 5.,
+                        gamma0 = 3.,
                         gammaInf = 0.1,
-                        #intGamma0 = 0.2,
-                        #intGammaInf = 0.05,
-                        #intGammaSteep = 5,
+                        intGamma0 = 0.1,
+                        intGammaInf = 0.01,
                         dirBase = root + name+str(i)+"/",
                         enablePlotExp= False)
     #experiment_plots(dirBase = root + name+str(i)+"/", 
@@ -3924,12 +3964,12 @@ def main(arg):
     #nodos = 25
     
     ##   Plot part
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[int(np.floor(i/2))]
-        #plot_minP_data(dirBase, nodos, colorFile = colorFile)
-        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    #return
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(np.floor(i/2))]
+        ##plot_minP_data(dirBase, nodos, colorFile = colorFile)
+        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    ##return
     
     ##  process
     #dirBase = root + Names[sel_case]
@@ -3939,7 +3979,6 @@ def main(arg):
                     #dirBase = dirBase,
                     #node = job,
                     #sel_case = sel_case,
-                    #repeat = True,
                     #enablePlotExp = False)
     
     #return

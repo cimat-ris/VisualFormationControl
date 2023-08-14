@@ -183,6 +183,7 @@ class agent:
                  gamma0 = None,
                  gammaInf = None,
                  gammaSteep = 5.,
+                 setleader = False,
                  setRectification = False,
                  set_derivative = True,
                  set_consensoRef = True ):
@@ -490,7 +491,7 @@ class agent:
             
             #   BEGIN fuerza bruta
             #U[3:] = _R @ U[3:]
-            U[3:] = _R @ (U[3:]*np.array([0.,0.,1.]))
+            #U[3:] = _R @ (U[3:]*np.array([0.,0.,1.]))
             #U[3:] = 0.
             #   END 
             #   BEGIN extract angles and apply euler equation 

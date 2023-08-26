@@ -19,26 +19,34 @@ def plot_time(t_array,
               labels = [],
               xlimits = None,
               ylimits = None,
-              ref = None):
+              ref = None,
+              module = None):
     
     n = var_array.shape[0]
     
     npzfile = np.load("general.npz")
     colors = npzfile["colors"]
+    nColors = colors.shape[0]
     
     fig, ax = plt.subplots()
     fig.suptitle(label)
     
     symbols = []
     for i in range(n):
-        ax.plot(t_array,var_array[i,:] , color=colors[i])
-        symbols.append(mpatches.Patch(color=colors[i]))
+        ax.plot(t_array,var_array[i,:] , color=colors[i%nColors])
+        symbols.append(mpatches.Patch(color=colors[i%nColors]))
         
     if not ref is None:
         ax.plot([t_array[0],t_array[-1]],[ref,ref], 
                 'k--', alpha = 0.5)
         symbols.append(mpatches.Patch(color='k'))
         labels.append("Integral treshold")
+    if not module is None:
+        for i in range(len(module)):
+            ax.plot([t_array[0],t_array[-1]],[module[i],module[i]], 
+                'r--', lw = 0.5)
+        symbols.append(mpatches.Patch(color='r'))
+        labels.append("Limits")
     if len(labels) != 0:
         fig.legend(symbols,labels, loc=2)
     if not(xlimits is None):
@@ -69,6 +77,7 @@ def plot_descriptors(descriptors_array,
     
     npzfile = np.load("general.npz")
     colors = npzfile["colors"]
+    nColors = colors.shape[0]
     
     fig, ax = plt.subplots()
     fig.suptitle(label)
@@ -86,17 +95,17 @@ def plot_descriptors(descriptors_array,
     symbols = []
     for i in range(n):
         ax.plot(descriptors_array[2*i,0],descriptors_array[2*i+1,0],
-                '*',color=colors[i])
+                '*',color=colors[i%nColors])
         ax.plot(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1],
-                'o',color=colors[i])
+                'o',color=colors[i%nColors])
         ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
-                color=colors[i])
-        ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i])
+                color=colors[i%nColors])
+        ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i%nColors])
         #print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
         
         #   Hip = predicted endpoints
         ax.plot(pred[2*i],pred[2*i+1],
-                'x',color=colors[i])
+                'x',color=colors[i%nColors])
     
     
     symbols = [mlines.Line2D([0],[0],marker='*',color='k'),

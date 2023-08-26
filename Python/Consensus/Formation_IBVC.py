@@ -124,22 +124,22 @@ def Z_select(depthOp, agent, P, Z_set, p0, pd, j):
     if depthOp ==1:
         Z = agent.camera.Preal @ P
         Z = Z[2,:]
-    elif depthOp == 6:
-        Z = agent.camera.p[2]*np.ones(P.shape[1])
-        Z = Z-P[2,:]
-    elif depthOp ==2: # 
-        Z = p0[2,j]*Z
-        Z = Z-P[2,:]
-    elif depthOp == 3: # distancia al valor inicial
-        Z = pd[2,j]*Z
-        Z = Z-P[2,:]
-    elif depthOp == 4: # fijo al valor de Z_set
-        Z = Z_set * np.ones(P.shape[1])
-    elif depthOp == 5: # equitativo, = promedio
-        tmp = agent.camera.p[2]-np.mean(P[2,:])
-        Z = Z*tmp
+    #elif depthOp == 6:
+        #Z = agent.camera.p[2]*np.ones(P.shape[1])
+        #Z = Z-P[2,:]
+    #elif depthOp ==2: # 
+        #Z = p0[2,j]*Z
+        #Z = Z-P[2,:]
+    #elif depthOp == 3: # distancia al valor inicial
+        #Z = pd[2,j]*Z
+        #Z = Z-P[2,:]
+    #elif depthOp == 4: # fijo al valor de Z_set
+        #Z = Z_set * np.ones(P.shape[1])
+    #elif depthOp == 5: # equitativo, = promedio
+        #tmp = agent.camera.p[2]-np.mean(P[2,:])
+        #Z = Z*tmp
     else:
-        print("Invalid depthOp")
+        write2log("ERR: Invalid depthOp\n")
         return None
     return Z
 
@@ -409,7 +409,7 @@ def error_state(reference,  agents, gdl = 1, name= None):
         #   Get error
         [Rtheta,Rphi,Rpsi] = ctr.get_angles(R)
         rot_err = state[5,:] - reference[5,:]
-        rot_err += Rpsi
+        rot_err -= Rpsi
         rot_err[rot_err < -pi] += 2*pi
         rot_err[rot_err > pi] -= 2*pi
         rot_err_plot = rot_err.copy()
@@ -459,7 +459,7 @@ def error_state(reference,  agents, gdl = 1, name= None):
             
             
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    #plt.show()
+    plt.show()
     plt.close()
     
     return [t_err, rot_err]
@@ -628,6 +628,7 @@ def experiment(directory = "0",
         
         #p0[3,:] = pi
         #p0[4,:] = 0.
+        #p0[5,:] = pi
         #p0[5,:] *= 0.8
         #p0[:3,:] = pd[:3,:].copy()
         
@@ -690,7 +691,22 @@ def experiment(directory = "0",
                 p0 = p0,
                 pd = pd,
                 adjMat = adjMat)
+    
+    #   Adjust p0. pd angles
+    #print(pd)
+    #print(p0)
+    while (pd[3:,:] > pi).any():
+        pd[3:,:][pd[3:,:]> pi] -= 2*pi
+    while (pd[3:,:] < -pi).any():
+        pd[3:,:][pd[3:,:]< -pi] += 2*pi
         
+    while (p0[3:,:] > pi).any():
+        p0[3:,:][p0[3:,:]> pi] -= 2*pi
+    while (p0[3:,:] < -pi).any():
+        p0[3:,:][p0[3:,:]< -pi] += 2*pi
+    #print(pd)
+    #print(p0)
+    #print("out")
     #   Conectivity graph
     G = gr.graph(adjMat)
     L = G.laplacian()
@@ -727,7 +743,7 @@ def experiment(directory = "0",
     for i in range(n_agents):
         if agents[i].count_points_in_FOV(P) != n_points:
             write2log("ERR: invalid configuration\n")
-            return None
+            #return None
     
     #   INIT LOOP
     
@@ -805,7 +821,9 @@ def experiment(directory = "0",
     if set_derivative:
         logText += '\n' +"\t Derivative component enabled"
     if not gamma0 is None:
-        logText += '\n' +"\t Adaptative gain: ["+str(gamma0)+", "+ str(gammaInf)+"]"
+        logText += '\n' +"\t Adaptative gain: ["+str(gamma0)+", "+ str(gammaInf)+","+str(gammaSteep)+"]"
+    if not intGamma0 is None:
+        logText += '\n' +"\t Adaptative gain: ["+str(intGamma0)+", "+ str(intGammaInf)+","+str(intGammaSteep)+"]"
     if tanhLimit:
         logText += '\n' +"Hyperbolic tangent limit enabled"
     logText += '\n' +"Depth estimation = "+depthOp_dict[depthOp]
@@ -815,7 +833,9 @@ def experiment(directory = "0",
     logText += '\n' +"Control selection = "+control_type_dict[control_type]
     logText += '\n' +"Controllable case = "+case_controlable_dict[gdl]
     logText += '\n' +"Directory = "+str( directory)
-    
+    if setRectification:
+        logText += '\n' + "Rectification enabled"
+        
     write2log(logText+'\n')
     
     
@@ -857,7 +877,7 @@ def experiment(directory = "0",
             H = ctr.get_Homographies(agents)
         #   Get control
         for j in range(n_agents):
-            
+            #print("agent "+str(j))
             #   Detección de choque del plano de cámara y los puntos de escena
             if agents[j].count_points_in_FOV(P, enableMargin=False) != n_points:
                 if depthFlags[j] == 0. :
@@ -1192,7 +1212,8 @@ def experiment(directory = "0",
                     #colors,
                     name = directory+"/Angulos_"+str(i),
                     label = "Angles",
-                    labels = ["Roll","Pitch","yaw"])
+                    labels = ["Roll","Pitch","yaw"],
+                    module = [-pi,pi])
     
     #   Valores propios normal
     for i in range(n_agents):
@@ -1759,6 +1780,7 @@ def experiment_3D_min(nReps = 100,
     for k in range(nReps):
 
         #   Points
+        nP = 4
         scene(modify = ["P"],
                 dirBase = dirBase+str(k+node*nReps),
                 n_points = nP)
@@ -1766,6 +1788,7 @@ def experiment_3D_min(nReps = 100,
 
         errors = [0.2,0.2,0.2,0.2]
         ret = None
+        
         while(errors[2] > 0.1 and errors[3]> 0.1 and nP < 100):
 
 
@@ -1784,6 +1807,9 @@ def experiment_3D_min(nReps = 100,
                         #depthOp = 4, Z_set = 1.,
                         t_end = 800,
                         enablePlot = enablePlotExp)
+            if ret is None:
+                write2log("ERR: ret out of experiment\n")
+                return None
             [arr_tmp, errors, FOVflag] = ret
             
             #   si no falla, guardar datos de error
@@ -1800,13 +1826,15 @@ def experiment_3D_min(nReps = 100,
                 scene(modify = ["P"],
                     dirBase = dirBase+str(k+node*nReps),
                     n_points = nP)
-        #print(ret)
-        [var_arr[:,k], errors, FOVflag] = ret
-        var_arr_et[k] = errors[0]
-        var_arr_er[k] = errors[1]
-        var_arr_2[k] = errors[2]
-        var_arr_3[k] = errors[3]
-        arr_nP[k] = nP
+        if ret is None:
+            write2log("ERR: ret out of while at "+str(errors)+" " +str(nP)+'\n')
+        else:    
+            [var_arr[:,k], errors, FOVflag] = ret
+            var_arr_et[k] = errors[0]
+            var_arr_er[k] = errors[1]
+            var_arr_2[k] = errors[2]
+            var_arr_3[k] = errors[3]
+            arr_nP[k] = nP
         if FOVflag:
             mask[k] = 1
 
@@ -1827,15 +1855,15 @@ def experiment_3D_min(nReps = 100,
              arr_trial_heat_cons = arr_trial_heat_cons)
 
 
-def plot_minP_data(dirBase, n, colorFile = "default.npz"):
+def plot_minP_data(dirBase, nodos, nReps, colorFile = "default.npz"):
 
     data = np.array([])
     mask = np.array([])
     arr_trial_heat_t = np.zeros((1,100-4))
     arr_trial_heat_ang = np.zeros((1,100-4))
     arr_trial_heat_cons = np.zeros((1,100-4))
-    for k in range(n):
-        name=dirBase+'/data_'+str(k)+'.npz'
+    for k in range(nodos):
+        name=dirBase.rstrip('/')+'/data_'+str(k)+'.npz'
         npzfile = np.load(name)
         data = np.concatenate((data,npzfile["arr_nP"]))
         mask = np.concatenate((mask,npzfile["mask"]))
@@ -1894,7 +1922,7 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     h2 = arr_trial_heat_ang.copy()
     h2[h2 < 0] = 100
     test = - np.ones(100, dtype = np.int16)
-    for i in range(100):
+    for i in range(nodos*nReps):
         for j in range(96):
             if h1[i,j] < 0.1 or h2[i,j] < 0.1:
                 test[i] = j
@@ -1917,7 +1945,7 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
     im = ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
-                   cmap = "Purples", vmax = 0.11, vmin = 0)
+                   cmap = "Purples", vmax = 1.1, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.8)
     for j in range(len(y)):
         if test[j] != -1:
@@ -1938,7 +1966,7 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     h[h < 0] = 0
     ax.invert_yaxis()
     x = [str(i) for i in range(100-4)]
-    y = [str(i) for i in range(100)]
+    y = [str(i) for i in range(nodos*nReps)]
     ax.set_yticks(np.arange(len(y)))
     ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x, fontsize = 2.5)
@@ -1948,7 +1976,7 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     ax.grid(axis='y', linewidth=0.1)
     ax.set_axisbelow(True)
     im = ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
-                   cmap = "Purples", vmax = 1.1, vmin = 0)
+                   cmap = "Purples", vmax = pi, vmin = 0)
     fig.colorbar(im, ax = ax, shrink = 0.8)
     for j in range(len(y)):
         if test[j] != -1:
@@ -1969,7 +1997,7 @@ def plot_minP_data(dirBase, n, colorFile = "default.npz"):
     h[h < 0] = 0
     ax.invert_yaxis()
     x = [str(i) for i in range(100-4)]
-    y = [str(i) for i in range(100)]
+    y = [str(i) for i in range(nodos*nReps)]
     ax.set_yticks(np.arange(len(y)))
     ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x, fontsize = 2.5)
@@ -2556,9 +2584,9 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("Final formation error heatmap")
     
     h = h.T
-    ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
-                                cmap='Purples',
-                                vmax = 100, vmin = 0)
+    ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
+                                cmap='Purples')
+                                #vmax = 100, vmin = 0)
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
@@ -2589,9 +2617,9 @@ def experiment_plots(dirBase = "", kSets = 0, colorFile = "default.npz"):
     fig.suptitle("Final formation error heatmap (Zoom)")
     
     h = h.T
-    ax.imshow(h, #norm=mcolors.PowerNorm(gamma=0.5),
-                                cmap='Purples',
-                                vmax = 100, vmin = 0)
+    ax.imshow(h, norm=mcolors.PowerNorm(gamma=0.5),
+                                cmap='Purples')
+                                #vmax = 100, vmin = 0)
     ax.invert_yaxis()
     x = [format((x[i+1]+x[i])/2,'.2f') for i in range(x.shape[0]-1)]
     y = [format((y[i+1]+y[i])/2,'.2f') for i in range(y.shape[0]-1)]
@@ -2876,29 +2904,31 @@ def plot_tendencias(nReps = 20,
         
         selection = mask==0. 
         #selection = (mask==0. and arr_n_points > 4)
-        var_arr = var_arr[selection]
-        var_arr_2 = var_arr_2[selection]
-        var_arr_3 = var_arr_3[selection]
-        var_arr_et = var_arr_et[selection]
-        var_arr_er = var_arr_er[selection]
+        if any(selection):
         
-        count_mask[k] = mask.sum()
-        mask_coords.append(np.where(mask> 0)[0])
-        
-        data_cons.append(var_arr)
-        cons_err_max[k] = var_arr.max()
-        cons_err_avr[k] = var_arr.mean()
-        cons_err_min[k] = var_arr.min()
-        
-        data_tErr.append(var_arr_2)
-        tErr_err_max[k] = var_arr_2.max()
-        tErr_err_avr[k] = var_arr_2.mean()
-        tErr_err_min[k] = var_arr_2.min()
-        
-        data_rErr.append(var_arr_3)
-        rErr_err_max[k] = var_arr_3.max()
-        rErr_err_avr[k] = var_arr_3.mean()
-        rErr_err_min[k] = var_arr_3.min()
+            var_arr = var_arr[selection]
+            var_arr_2 = var_arr_2[selection]
+            var_arr_3 = var_arr_3[selection]
+            var_arr_et = var_arr_et[selection]
+            var_arr_er = var_arr_er[selection]
+            
+            count_mask[k] = mask.sum()
+            mask_coords.append(np.where(mask> 0)[0])
+            
+            data_cons.append(var_arr)
+            cons_err_max[k] = var_arr.max()
+            cons_err_avr[k] = var_arr.mean()
+            cons_err_min[k] = var_arr.min()
+            
+            data_tErr.append(var_arr_2)
+            tErr_err_max[k] = var_arr_2.max()
+            tErr_err_avr[k] = var_arr_2.mean()
+            tErr_err_min[k] = var_arr_2.min()
+            
+            data_rErr.append(var_arr_3)
+            rErr_err_max[k] = var_arr_3.max()
+            rErr_err_avr[k] = var_arr_3.mean()
+            rErr_err_min[k] = var_arr_3.min()
     h1 = h1[1:,:]
     h2 = h2[1:,:]
     hcons = hcons[1:,:]
@@ -2924,6 +2954,11 @@ def plot_tendencias(nReps = 20,
     ax.plot(ref,cons_err_max, 
             color = colors[2],
             label= "Max",
+            lw = 0.5)
+    ax.plot([1,nReps],[0.1,0.1], 
+            color = 'red',
+            linestyle = 'dashed',
+            label= "Threshold",
             lw = 0.5)
     #ax[0].violinplot(data_cons, showextrema = False)
     ax.boxplot(data_cons)
@@ -3000,12 +3035,18 @@ def plot_tendencias(nReps = 20,
             color = colors[2],
             label= "Max",
             lw = 0.5)
+    ax.plot([1,nReps],[0.1,0.1], 
+            color = 'red',
+            linestyle = 'dashed',
+            label= "Threshold",
+            lw = 0.5)
+    
     #ax.violinplot(data_tErr, showextrema = False)
     ax.boxplot(data_tErr)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
-    ax.set_ylabel("Translation error error")
+    ax.set_ylabel("Translation error")
     #plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,1.1))
     ax.grid(axis='y')
@@ -3059,7 +3100,7 @@ def plot_tendencias(nReps = 20,
     
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
               #norm=mcolors.PowerNorm(gamma=0.5),
-                 extent = (0+0.5,nReps+0.5, -0.075,-0.025),
+                 extent = (0+0.5,nReps+0.5, -0.225,-0.075),
                  aspect = 'auto',
                  vmin = 0, vmax = 100)
     
@@ -3075,19 +3116,25 @@ def plot_tendencias(nReps = 20,
             color = colors[2],
             label= "Max",
             lw = lw)
+    ax.plot([1,nReps],[0.1,0.1], 
+            color = 'red',
+            linestyle = 'dashed',
+            label= "Threshold",
+            lw = 0.5)
+    
     #ax.violinplot(data_rErr, showextrema = False)
     ax.boxplot(data_rErr)
     
     for i in range(nReps):
-        text = ax.text(i +1,  -0.05,str(int(count_mask[i])),
+        text = ax.text(i +1,  -0.15,str(int(count_mask[i])),
                           ha="center", va="center", 
                            color="k", fontsize =4)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
-    ax.set_ylabel("Rotation error error")
+    ax.set_ylabel("Rotation error")
     #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.1,3.2))
+    plt.ylim((-0.3,3.2))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
     plt.tight_layout()
@@ -3365,123 +3412,125 @@ def main(arg):
     #   END Contrajemplos
     #   BEGIN UI [r | v | Simple | 0-4]
     
-    ##  Arg parser and log INIT
-    #selector = arg[2]
+    #  Arg parser and log INIT
+    selector = arg[2]
     
-    ##   Desktop
-    #if selector == 'r':
-        ##scene(modify = ["P"],
-              ##Pz = [-1,0],
-                ##dirBase = arg[3],
-                ##n_agents = 4, 
-                ##n_points = 30)
-        #experiment(directory=arg[3],
-                    #t_end = 800,
-                    ##setRectification = True,
-                    ##gdl = 2,
-                    ##leader = 0,
-                    ##lamb = 0.1,
-                    ##modified =["nPoints"],
-                    #gamma0 = 3.,
-                    #gammaInf = .1,
-                    ##gammaInf = 2.,
-                    #intGamma0 = 0.1,
-                    #intGammaInf = 0.01,
-                    ##intGammaSteep = 5,
-                    ##set_derivative = True,
-                    ##tanhLimit = True,
-                    ##k_int = 0.1,
-                    ##int_res = 0.2,
-                    #repeat = True)
-        ##view3D(arg[3])
-        #return
-    #if selector == 'v':
+    #   Desktop
+    if selector == 'r':
+        #scene(modify = ["P"],
+              #Pz = [-1,0],
+                #dirBase = arg[3],
+                #n_agents = 4, 
+                #n_points = 30)
+        ret = experiment(directory=arg[3],
+                    t_end = 20,
+                    #setRectification = True,
+                    #gdl = 2,
+                    #leader = 0,
+                    #lamb = 0.1,
+                    #modified =["nPoints"],
+                    gamma0 = 3.,
+                    gammaInf = .1,
+                    #gammaInf = 1.,
+                    #gamma0 = 5.,
+                    intGamma0 = 0.1,
+                    intGammaInf = 0.01,
+                    #intGammaSteep = 5,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #k_int = 0.1,
+                    #int_res = 0.2,
+                    repeat = True)
+        print(ret)
         #view3D(arg[3])
-        #return
+        return
+    if selector == 'v':
+        view3D(arg[3])
+        return
     
-    #if selector =='Simple':
-        #for i in range(20):
-            #logText = "Repetition = "+str(i)+'\n'
-            #write2log(logText)
-            #experiment_repeat(nReps = 100,
-                            ##k_int = 0.1,
-                            ##int_res = 10,
-                            ##gamma0 = 5.,
-                            ##gammaInf = 2.,
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-            #experiment_plots(dirBase = "local/"+str(i)+"/")
-        #plot_tendencias(dirBase = "local/")
-    
-    #if selector =='0':
-        #for i in range(20):
-            #logText = "Repetition = "+str(i)+'\n'
-            #write2log(logText)
-            #experiment_repeat(nReps = 100,
+    if selector =='Simple':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            experiment_repeat(nReps = 100,
                             #k_int = 0.1,
-                            ##int_res = 10,
-                            ##gamma0 = 5.,
-                            ##gammaInf = 2.,
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-            #experiment_plots(dirBase = "local/"+str(i)+"/")
-        #plot_tendencias(dirBase = "local/")
-    
-    #if selector =='1':
-        #for i in range(20):
-            #logText = "Repetition = "+str(i)+'\n'
-            #write2log(logText)
-            #experiment_repeat(nReps = 100,
-                            ##k_int = 0.1,
+                            #int_res = 10,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-            #experiment_plots(dirBase = "local/"+str(i)+"/")
-        #plot_tendencias(dirBase = "local/")
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    if selector =='0':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            experiment_repeat(nReps = 100,
+                            k_int = 0.1,
+                            #int_res = 10,
+                            #gamma0 = 5.,
+                            #gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    if selector =='1':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            experiment_repeat(nReps = 100,
+                            #k_int = 0.1,
+                            gamma0 = 5.,
+                            gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
         
-    #if selector =='2':
-        #for i in range(20):
-            #logText = "Repetition = "+str(i)+'\n'
-            #write2log(logText)
-            #experiment_repeat(nReps = 100,
-                            #k_int = 0.1,
-                            #int_res = 0.2,
-                            ##gamma0 = 5.,
-                            ##gammaInf = 2.,
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-            #experiment_plots(dirBase = "local/"+str(i)+"/")
-        #plot_tendencias(dirBase = "local/")
-    
-    #if selector =='3':
-        #for i in range(20):
-            #logText = "Repetition = "+str(i)+'\n'
-            #write2log(logText)
-            #experiment_repeat(nReps = 100,
-                            #k_int = 0.1,
+    if selector =='2':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            experiment_repeat(nReps = 100,
+                            k_int = 0.1,
+                            int_res = 0.2,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-            #experiment_plots(dirBase = "local/"+str(i)+"/")
-        #plot_tendencias(dirBase = "local/")
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
     
-    #if selector =='4':
-        #for i in range(20):
-            #logText = "Repetition = "+str(i)+'\n'
-            #write2log(logText)
-            #experiment_repeat(nReps = 100,
-                            #k_int = 0.1,
-                            #int_res= 0.2,
-                            #gamma0 = 5.,
-                            #gammaInf = 2.,
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-            #experiment_plots(dirBase = "local/"+str(i)+"/")
-        #plot_tendencias(dirBase = "local/")
+    if selector =='3':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            experiment_repeat(nReps = 100,
+                            k_int = 0.1,
+                            gamma0 = 5.,
+                            gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
     
-    #return
+    if selector =='4':
+        for i in range(20):
+            logText = "Repetition = "+str(i)+'\n'
+            write2log(logText)
+            experiment_repeat(nReps = 100,
+                            k_int = 0.1,
+                            int_res= 0.2,
+                            gamma0 = 5.,
+                            gammaInf = 2.,
+                        dirBase = "local/"+str(i)+"/",
+                        enablePlotExp= False)
+            experiment_plots(dirBase = "local/"+str(i)+"/")
+        plot_tendencias(dirBase = "local/")
+    
+    return
     
     #   END UI
     
@@ -3758,106 +3807,113 @@ def main(arg):
     ##   END Cluster Front Parallel
     ##   BEGIN CLUSTER Local
     
-    #    Local tests  
-    job = int(arg[2])
-    sel = int(arg[3])
+    ##    Local tests  
+    #job = int(arg[2])
+    #sel = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    ##   Local
-    #Names = ["W_02_localCirc_P/",
-             #"W_02_localRand_P/",
-             #"W_02_localCirc_PIG/",
-             #"W_02_localRand_PIG/"]
+    ###   Local
+    #Names = ["W_03_localCirc_P/",
+             #"W_03_localRand_P/",
+             #"W_03_localCirc_PIG/",
+             #"W_03_localRand_PIG/"]
     #setRectification = False
     #gdl = 1
     #leader = None
     
     ## Local + rectification
-    #Names = ["W_02_localCirc_P_r/",
-             #"W_02_localRand_P_r/",
-             #"W_02_localCirc_PIG_r/",
-             #"W_02_localRand_PIG_r/"]
-    #setRectification = True
-    #gdl = 2
-    #leader = None
+    ##Names = ["W_02_localCirc_P_r/",
+             ##"W_02_localRand_P_r/",
+             ##"W_02_localCirc_PIG_r/",
+             ##"W_02_localRand_PIG_r/"]
+    ##setRectification = True
+    ##gdl = 2
+    ##leader = None
     
-    ## Local + leader
-    #Names = ["W_02_localCirc_P_l/",
-             #"W_02_localRand_P_l/",
-             #"W_02_localCirc_PIG_l/",
-             #"W_02_localRand_PIG_l/"]
-    #setRectification = False
-    #gdl = 1
-    #leader = 0
+    ### Local + leader
+    ##Names = ["W_02_localCirc_P_l/",
+             ##"W_02_localRand_P_l/",
+             ##"W_02_localCirc_PIG_l/",
+             ##"W_02_localRand_PIG_l/"]
+    ##setRectification = False
+    ##gdl = 1
+    ##leader = 0
     
     
-    ## Rectification test, sign metrics
-    Names = ["W_02_localCirc_P_rte/",
-             "W_02_localRand_P_rte/",
-             "W_02_localCirc_PIG_rte/",
-             "W_02_localRand_PIG_rte/"]
-    setRectification = True
-    gdl = 2
-    leader = None
+    ### Rectification test, sign metrics
+    ##Names = ["W_02_localCirc_P_rte/",
+             ##"W_02_localRand_P_rte/"]#,
+             ###"W_02_localCirc_PIG_rte/",
+             ###"W_02_localRand_PIG_rte/"]
+    ##setRectification = True
+    ##gdl = 2
+    ##leader = None
     
-    ## Rectification test gdl 2 
-    #Names = ["W_02_localCirc_P_rtg/",
-             #"W_02_localRand_P_rtg/",
-             #"W_02_localCirc_PIG_rtg/",
-             #"W_02_localRand_PIG_rtg/"]
-    #setRectification = False
-    #gdl = 2
-    #leader = None
+    ### Rectification test gdl 2 
+    ##Names = ["W_02_localCirc_P_rtg/",
+             ##"W_02_localRand_P_rtg/"]#,
+             ###"W_02_localCirc_PIG_rtg/",
+             ###"W_02_localRand_PIG_rtg/"]
+    ##setRectification = False
+    ##gdl = 2
+    ##leader = None
     
-    #   Plot part
-    
-    #for i in range(len(Names)):
-        #colorFile = colorNames[i%2]
-        #plot_tendencias(dirBase = root + Names[i], 
-                        #colorFile = colorFile)
-        
+    ##   Plot part
+    #i = 0
+    #colorFile = colorNames[i%2]
+    #plot_tendencias(dirBase = root + Names[i], 
+                    #colorFile = colorFile)
     #return
     
-    #   Proc part
-    i = job
+    ##for i in range(len(Names)):
+        ##colorFile = colorNames[i%2]
+        ##plot_tendencias(dirBase = root + Names[i], 
+                        ##colorFile = colorFile)
+        
+    ##return
     
-    #  process
-    name = Names[sel]
-    colorFile = colorNames[sel%2]
+    ##   Proc part
+    #i = job
     
-    logText = "Set = "+root + name+'\n'
-    write2log(logText)
+    ##  process
+    #name = Names[sel]
+    #colorFile = colorNames[sel%2]
     
-    logText = "Repetition = "+str(i)+'\n'
-    write2log(logText)
-    #   Proporcional
-    if sel == 0 or sel == 1:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #   PI AG
-    if sel == 2 or sel ==3:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        gamma0 = 3.,
-                        gammaInf = 0.1,
-                        intGamma0 = 0.1,
-                        intGammaInf = 0.01,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #experiment_plots(dirBase = root + name+str(i)+"/", 
-                     #colorFile = colorFile)
+    #logText = "Set = "+root + name+'\n'
+    #write2log(logText)
+    
+    #logText = "Repetition = "+str(i)+'\n'
+    #write2log(logText)
+    ##   Proporcional
+    #if sel == 0 or sel == 1:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                          #setRectification = setRectification,
+                          #gdl = gdl,
+                          #leader = leader,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##   PI AG
+    #if sel == 2 or sel ==3:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                          #setRectification = setRectification,
+                          #gdl = gdl,
+                          #leader = leader,
+                        #gamma0 = 3.,
+                        #gammaInf = 0.1,
+                        ##gamma0 = 5.,
+                        ##gammaInf = 2,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.01,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##experiment_plots(dirBase = root + name+str(i)+"/", 
+                     ##colorFile = colorFile)
     
     
-    return
+    #return
     
     #   END Cluster local
     #   BEGIN Cluster local: SETUP
@@ -3961,15 +4017,16 @@ def main(arg):
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
     #nReps = 4   # por nodo
-    #nodos = 25
+    #nodos = 20
+    ##nodos = 25
     
     ##   Plot part
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(np.floor(i/2))]
-        ##plot_minP_data(dirBase, nodos, colorFile = colorFile)
-        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[int(np.floor(i/2))]
+        #plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    #return
     
     ##  process
     #dirBase = root + Names[sel_case]

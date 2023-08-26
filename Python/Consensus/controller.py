@@ -40,21 +40,78 @@ def Interaction_Matrix(points,Z,gdl):
     
     return L.reshape((2*n,m)) 
 
-def get_angles(R):
+def get_angles(R, prev_angs= None):
+    #print(R)
     if (R[2,0] < 1.0):
+    #if (R[2,0] < 0.995):
         if R[2,0] > -1.0:
+        #if R[2,0] > -0.995:
             pitch = np.arcsin(-R[2,0])
-            yaw = np.arctan2(R[1,0],R[0,0])
-            roll = np.arctan2(R[2,1],R[2,2])
+            if not( prev_angs is None):
+                #print(prev_angs)
+                #print("pitch = ", pitch)
+                pitch_alt = np.sign(pitch) *(pi - abs(pitch))
+                #print("pitch_alt = ", pitch_alt)
+                delta_pitch = abs(pitch-prev_angs[1])
+                #print("delta_p = ", delta_pitch)
+                if delta_pitch > pi:
+                    delta_pitch = 2*pi-delta_pitch
+                    #print("delta_p = ", delta_pitch)
+                delta_pitch2 = abs(pitch_alt-prev_angs[1])
+                #print("delta_p2 = ", delta_pitch2)
+                if delta_pitch2 > pi:
+                    delta_pitch2 = 2*pi-delta_pitch2
+                    #print("delta_p2 = ", delta_pitch2)
+                if delta_pitch2 < delta_pitch:
+                    pitch = pitch_alt
+                #print("pitch = ", pitch)
+            cp = cos(pitch)
+            yaw = np.arctan2(R[1,0]/cp,R[0,0]/cp)
+            roll = np.arctan2(R[2,1]/cp,R[2,2]/cp)
         else:
+            print("WARN: rotation not uniqe C1")
             pitch = np.pi/2.
-            yaw = -np.arctan2(-R[1,2],R[1,1])
-            roll = 0.
+            if prev_angs is None:
+                yaw = -np.arctan2(-R[1,2],R[1,1])
+                roll = 0.
+            else:
+                tmp = np.arctan2(-R[1,2],R[1,1])
+                roll = prev_angs[0]
+                yaw = roll - tmp
+                if yaw > pi:
+                    yaw -= 2*pi
+                if yaw < -pi:
+                    yaw += 2*pi
+                #tmp = np.arctan2(-R[1,2],R[1,1])
+                #yaw = prev_angs[2]
+                #roll = yaw + tmp
+                #if roll > pi:
+                    #roll -= 2*pi
+                #if roll < -pi:
+                    #roll += 2*pi
+                
     else:
+        print("WARN: rotation not uniqe C2")
         pitch = -np.pi/2.
-        yaw = -np.arctan2(R[1,2],R[1,1])
-        roll = 0.
-        
+        if prev_angs is None:
+            yaw = np.arctan2(-R[1,2],R[1,1])
+            roll = 0.
+        else:
+            tmp = np.arctan2(-R[1,2],R[1,1])
+            roll = prev_angs[0] 
+            yaw = tmp - roll
+            if yaw > pi:
+                yaw -= 2*pi
+            if yaw < -pi:
+                yaw += 2*pi
+            #tmp = np.arctan2(-R[1,2],R[1,1])
+            #yaw = prev_angs[2] 
+            #roll = tmp - yaw
+            #if roll > pi:
+                #roll -= 2*pi
+            #if roll < -pi:
+                #roll += 2*pi
+                
     return [roll, pitch, yaw]
 
 def Inv_Moore_Penrose(L):
@@ -154,19 +211,25 @@ def Homography(H, delta_pref,adj_list,gamma):
 
 
 def rectify(camera, s_norm, Z):
-    
+    #print("Z_in")
+    #print(Z)
     n_points = s_norm.shape[1]
     
     points_r = s_norm * Z
     points_r = np.r_[points_r, Z.reshape((1,n_points))]
     
-    points_r = cm.rot(camera.p[3],'x') @ points_r
-    points_r = cm.rot(camera.p[4],'y') @ points_r
-    points_r = cm.rot(pi,'x').T @ points_r
+    #points_r = cm.rot(camera.p[3],'x') @ points_r
+    #points_r = cm.rot(camera.p[4],'y') @ points_r
+    _R = cm.rot(camera.p[3],'x')
+    _R = cm.rot(camera.p[4],'y') @ _R
+    _R = cm.rot(pi,'x').T @ _R
+    points_r = _R @ points_r
     points_r = camera.K @ points_r
+    ret_Z = points_r[2,:].copy()
     points_r = points_r[0:2,:]/points_r[2,:]
-    
-    return points_r.copy()
+    #print("zr")
+    #print(ret_Z)
+    return [points_r.copy(),ret_Z]
 
 class agent:
     
@@ -216,7 +279,7 @@ class agent:
             #self.s_ref = points_r.copy()
             Z = self.camera.Preal @ points
             Z = Z[2,:]
-            self.s_ref = rectify(self.camera, self.s_ref_n, Z)
+            [self.s_ref, self.Zr ] = rectify(self.camera, self.s_ref_n, Z)
             self.s_ref_n = self.camera.normalize(self.s_ref)
             #print(self.s_ref)
         
@@ -238,7 +301,7 @@ class agent:
             #self.s_current = points_r.copy()
             Z = self.camera.Preal @ points
             Z = Z[2,:]
-            self.s_current = rectify(self.camera, self.s_current_n, Z)
+            [self.s_current, self.Zr] = rectify(self.camera, self.s_current_n, Z)
             self.s_current_n = self.camera.normalize(self.s_current)
             #print(self.s_current)
         
@@ -331,7 +394,7 @@ class agent:
         
         #   TODO: reconfigurar con momtijano
         p = self.camera.p.T.copy()
-        
+        #print("before",p)
         #   BEGIN local
         #kw = 1.
         #p += dt*np.array([1.,-1.,-1.,kw,-kw,-kw])*U
@@ -351,6 +414,7 @@ class agent:
         
         #_R = self.camera.R @ _R
         #[p[3], p[4], p[5]] = get_angles(_R)
+        #print(p[3:])
         
         #   END GLOBAL
         #   BEGIN GLOBAL skew
@@ -358,24 +422,38 @@ class agent:
         _U[:3] =  self.camera.R @ U[:3]
         _U[3:] =  self.camera.R @ U[3:]
         
+        #print(_U)
+        #print("--")
         p[:3] += dt* _U[:3]
         
         S = np.array([[0,-_U[5],_U[4]],
                       [_U[5],0,-_U[3]],
                       [-_U[4],_U[3],0]])
-        _R = dt * S @ self.camera.R + self.camera.R
-        
+        _R = (dt * S) @ self.camera.R + self.camera.R
+        #_R = _R / (np.linalg.det(_R)**(1/3))
+        #print(self.camera.R)
+        #print("Calculated")
+        #print(_R)
         #print(np.linalg.det(_R))
-        [p[3], p[4], p[5]] = get_angles(_R)
-        
+        #print("U = "+str(_U[3:]))
+        #print("before -> after")
+        #print(p[3:])
+        [p[3], p[4], p[5]] = get_angles(_R,p[3:])
+        #print(p[3:])
+        #print("after",p)
+        #print("")
         #   END GLOBAL skew
         tmp = self.s_current_n.copy()
         self.camera.pose(p) 
-        
+        #print("new")
+        #print(self.camera.R)
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         #print("-------")
         #print(self.s_current)
+        #print(self.s_current)
+        #print(self.s_current_n)
+        #print("--")
         if self.setRectification:
             #points_r = self.s_current_n * Z
             #points_r = np.r_[points_r, Z.reshape((1,self.n_points))]
@@ -389,9 +467,11 @@ class agent:
             #self.s_current = points_r.copy()
             Z_local = self.camera.Preal @ points
             Z_local = Z_local[2,:]
-            self.s_current = rectify(self.camera, self.s_current_n, Z_local)
+            [self.s_current, self.Zr ] = rectify(self.camera, self.s_current_n, Z_local)
             self.s_current_n = self.camera.normalize(self.s_current)
-            #print(self.s_current)
+        #print(self.s_current)
+        #print(self.s_current_n)
+        #print("--")
         
         
         if self.set_derivative:
@@ -410,10 +490,11 @@ class agent:
         
         s_current_n = self.s_current_n.copy()
         Z_current = Z.copy()
+        if self.setRectification:
+            Z_current = self.Zr
+        ##   Recuperar Z
         #if self.setRectification:
-            #s_current_n = self.s_current.copy()
-            #Z_current = Z_current.reshape((1,self.n_points))
-            #s_current_n = np.r_[s_current_n, Z_current]
+            #s_current_n = np.r_[s_current_n*Z_current, Z_current]
             ##print(cm.rot(self.camera.p[3]-pi,'x'))
             ##print(cm.rot(self.camera.p[4],'y'))
             ##s_current_n = cm.rot(self.camera.p[3]-pi,'x')@s_current_n
@@ -475,7 +556,7 @@ class agent:
         
         U = (Ls @ _error) / deg
         #print('---')
-        #print(U)
+        #print(U[3:])
         if self.setRectification:
             
             #   Rectificado -> Camara
@@ -483,6 +564,12 @@ class agent:
             #_R =  np.eye(3)
             _R =  cm.rot(self.camera.p[4],'y').T @ _R
             _R =  cm.rot(self.camera.p[3],'x').T @ _R
+            #print(_R)
+            #_R =  np.eye(3)
+            #_R =  cm.rot(self.camera.p[3],'x').T 
+            #_R =  cm.rot(self.camera.p[4],'y').T @ _R
+            #_R =  cm.rot(pi,'x').T @ _R
+            #_R = _R.T
             
             #   Traslación
             U[:3] = _R @ U[:3]
@@ -490,7 +577,10 @@ class agent:
             #print(U)
             
             #   BEGIN fuerza bruta
-            #U[3:] = _R @ U[3:]
+            #print(U)
+            U[3:] = _R @ U[3:] 
+            #U[3:] = 0.
+            #print(U)
             #U[3:] = _R @ (U[3:]*np.array([0.,0.,1.]))
             #U[3:] = 0.
             #   END 

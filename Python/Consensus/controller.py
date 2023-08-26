@@ -418,31 +418,60 @@ class agent:
         
         #   END GLOBAL
         #   BEGIN GLOBAL skew
+        #_U = U.copy()
+        #_U[:3] =  self.camera.R @ U[:3]
+        #_U[3:] =  self.camera.R @ U[3:]
+        
+        ##print(_U)
+        ##print("--")
+        #p[:3] += dt* _U[:3]
+        
+        #S = np.array([[0,-_U[5],_U[4]],
+                      #[_U[5],0,-_U[3]],
+                      #[-_U[4],_U[3],0]])
+        #_R = (dt * S) @ self.camera.R + self.camera.R
+        ##_R = _R / (np.linalg.det(_R)**(1/3))
+        ##print(self.camera.R)
+        ##print("Calculated")
+        ##print(_R)
+        ##print(np.linalg.det(_R))
+        ##print("U = "+str(_U[3:]))
+        ##print("before -> after")
+        ##print(p[3:])
+        ##tmp_p = p[3:].copy()
+        #[p[3], p[4], p[5]] = get_angles(_R,p[3:])
+        ##print(p[3:])
+        ##print("after",p)
+        ##print("")
+        #   END GLOBAL skew
+        #   BEGIN Quaternion implementation
         _U = U.copy()
         _U[:3] =  self.camera.R @ U[:3]
         _U[3:] =  self.camera.R @ U[3:]
         
-        #print(_U)
-        #print("--")
         p[:3] += dt* _U[:3]
         
-        S = np.array([[0,-_U[5],_U[4]],
-                      [_U[5],0,-_U[3]],
-                      [-_U[4],_U[3],0]])
-        _R = (dt * S) @ self.camera.R + self.camera.R
-        #_R = _R / (np.linalg.det(_R)**(1/3))
-        #print(self.camera.R)
-        #print("Calculated")
-        #print(_R)
-        #print(np.linalg.det(_R))
-        #print("U = "+str(_U[3:]))
-        #print("before -> after")
-        #print(p[3:])
-        [p[3], p[4], p[5]] = get_angles(_R,p[3:])
-        #print(p[3:])
-        #print("after",p)
-        #print("")
-        #   END GLOBAL skew
+        qR = self.camera.R.copy()
+        q = np.array([np.sqrt(qR[0,0]+qR[1,1]+qR[2,2]+1),
+                      np.sign(qR[2,1]-qR[1,2])*np.sqrt(qR[0,0]-qR[1,1]-qR[2,2]+1),
+                      np.sign(qR[0,2]-qR[2,0])*np.sqrt(qR[1,1]-qR[0,0]-qR[2,2]+1),
+                      np.sign(qR[1,0]-qR[0,1])*np.sqrt(qR[2,2]-qR[1,1]-qR[0,0]+1)])
+        q *= 0.5
+        Einv = np.array([[-q[1],-q[2],-q[3]],
+                         [ q[0], q[3],-q[2]],
+                         [-q[3], q[0], q[1]],
+                         [ q[2],-q[1], q[0]]])
+        q += dt*Einv@_U[3:]
+        qx = np.array([[    0,-q[3], q[2]],
+                       [ q[3],    0,-q[1]],
+                       [-q[2], q[1],    0]])
+        qR = np.eye(3) + 2 * q[0] * qx + 2 * qx@qx
+        
+        [p[3], p[4], p[5]] = get_angles(qR,p[3:])
+        print(qR)
+        print(p[3:])
+        print("--")
+        #   END Quaternion implementation
         tmp = self.s_current_n.copy()
         self.camera.pose(p) 
         #print("new")

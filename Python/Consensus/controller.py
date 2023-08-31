@@ -69,7 +69,7 @@ def get_angles(R, prev_angs= None):
             yaw = np.arctan2(R[1,0]/cp,R[0,0]/cp)
             roll = np.arctan2(R[2,1]/cp,R[2,2]/cp)
         else:
-            print("WARN: rotation not uniqe C1")
+            #print("WARN: rotation not uniqe C1")
             pitch = np.pi/2.
             if prev_angs is None:
                 yaw = -np.arctan2(-R[1,2],R[1,1])
@@ -91,7 +91,7 @@ def get_angles(R, prev_angs= None):
                     #roll += 2*pi
                 
     else:
-        print("WARN: rotation not uniqe C2")
+        #print("WARN: rotation not uniqe C2")
         pitch = -np.pi/2.
         if prev_angs is None:
             yaw = np.arctan2(-R[1,2],R[1,1])
@@ -429,7 +429,8 @@ class agent:
         #S = np.array([[0,-_U[5],_U[4]],
                       #[_U[5],0,-_U[3]],
                       #[-_U[4],_U[3],0]])
-        #_R = (dt * S) @ self.camera.R + self.camera.R
+        ##_R = (dt * S) @ self.camera.R + self.camera.R
+        #_R = self.camera.R @ (dt * S) + self.camera.R
         ##_R = _R / (np.linalg.det(_R)**(1/3))
         ##print(self.camera.R)
         ##print("Calculated")
@@ -452,25 +453,36 @@ class agent:
         p[:3] += dt* _U[:3]
         
         qR = self.camera.R.copy()
-        q = np.array([np.sqrt(qR[0,0]+qR[1,1]+qR[2,2]+1),
-                      np.sign(qR[2,1]-qR[1,2])*np.sqrt(qR[0,0]-qR[1,1]-qR[2,2]+1),
-                      np.sign(qR[0,2]-qR[2,0])*np.sqrt(qR[1,1]-qR[0,0]-qR[2,2]+1),
-                      np.sign(qR[1,0]-qR[0,1])*np.sqrt(qR[2,2]-qR[1,1]-qR[0,0]+1)])
+        q = np.array([qR[0,0]+qR[1,1]+qR[2,2]+1,
+                      qR[0,0]-qR[1,1]-qR[2,2]+1,
+                      qR[1,1]-qR[0,0]-qR[2,2]+1,
+                      qR[2,2]-qR[1,1]-qR[0,0]+1])
+        q[q<0] = 0
+        q = np.sqrt(q)
+        q *= np.array([1.,
+                      np.sign(qR[2,1]-qR[1,2]),
+                      np.sign(qR[0,2]-qR[2,0]),
+                      np.sign(qR[1,0]-qR[0,1])])
+        #q = np.array([np.sqrt(qR[0,0]+qR[1,1]+qR[2,2]+1),
+                      #np.sign(qR[2,1]-qR[1,2])*np.sqrt(qR[0,0]-qR[1,1]-qR[2,2]+1),
+                      #np.sign(qR[0,2]-qR[2,0])*np.sqrt(qR[1,1]-qR[0,0]-qR[2,2]+1),
+                      #np.sign(qR[1,0]-qR[0,1])*np.sqrt(qR[2,2]-qR[1,1]-qR[0,0]+1)])
         q *= 0.5
         Einv = np.array([[-q[1],-q[2],-q[3]],
                          [ q[0], q[3],-q[2]],
                          [-q[3], q[0], q[1]],
                          [ q[2],-q[1], q[0]]])
         q += dt*Einv@_U[3:]
+        q /= np.linalg.norm(q)
         qx = np.array([[    0,-q[3], q[2]],
                        [ q[3],    0,-q[1]],
                        [-q[2], q[1],    0]])
         qR = np.eye(3) + 2 * q[0] * qx + 2 * qx@qx
         
         [p[3], p[4], p[5]] = get_angles(qR,p[3:])
-        print(qR)
-        print(p[3:])
-        print("--")
+        #print(qR)
+        #print(p[3:])
+        #print("--")
         #   END Quaternion implementation
         tmp = self.s_current_n.copy()
         self.camera.pose(p) 

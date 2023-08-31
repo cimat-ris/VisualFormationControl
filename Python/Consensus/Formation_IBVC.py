@@ -710,7 +710,7 @@ def experiment(directory = "0",
     #   Conectivity graph
     G = gr.graph(adjMat)
     L = G.laplacian()
-    G.plot()
+    #G.plot()
     
     [U,S,V]=svd(L)
     lam_n=S[0]
@@ -1752,8 +1752,8 @@ def experiment_3D_min(nReps = 100,
     intGamma0 = None
     intGammaInf = None
     if sel_case%2 == 1:
-        gamma0 = 3.
-        gammaInf = 0.1
+        gamma0 = 5.
+        gammaInf = 2.
         intGamma0 = 0.1
         intGammaInf = 0.01
     
@@ -3412,125 +3412,125 @@ def main(arg):
     #   END Contrajemplos
     #   BEGIN UI [r | v | Simple | 0-4]
     
-    #  Arg parser and log INIT
-    selector = arg[2]
+    ##  Arg parser and log INIT
+    #selector = arg[2]
     
-    #   Desktop
-    if selector == 'r':
-        #scene(modify = ["P"],
-              #Pz = [-1,0],
-                #dirBase = arg[3],
-                #n_agents = 4, 
-                #n_points = 30)
-        ret = experiment(directory=arg[3],
-                    t_end = 100,
-                    #setRectification = True,
-                    #gdl = 2,
-                    #leader = 0,
-                    #lamb = 0.1,
-                    #modified =["nPoints"],
-                    #gamma0 = 3.,
-                    #gammaInf = .1,
-                    ##gammaInf = 1.,
-                    ##gamma0 = 5.,
-                    #intGamma0 = 0.1,
-                    #intGammaInf = 0.01,
-                    #intGammaSteep = 5,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #k_int = 0.1,
-                    #int_res = 0.2,
-                    repeat = True)
-        print(ret)
+    ##   Desktop
+    #if selector == 'r':
+        ##scene(modify = ["P"],
+              ##Pz = [-1,0],
+                ##dirBase = arg[3],
+                ##n_agents = 4, 
+                ##n_points = 30)
+        #ret = experiment(directory=arg[3],
+                    #t_end = 100,
+                    ##setRectification = True,
+                    ##gdl = 2,
+                    ##leader = 0,
+                    ##lamb = 0.1,
+                    ##modified =["nPoints"],
+                    ##gamma0 = 3.,
+                    ##gammaInf = .1,
+                    ###gammaInf = 1.,
+                    ###gamma0 = 5.,
+                    ##intGamma0 = 0.1,
+                    ##intGammaInf = 0.01,
+                    ##intGammaSteep = 5,
+                    ##set_derivative = True,
+                    ##tanhLimit = True,
+                    ##k_int = 0.1,
+                    ##int_res = 0.2,
+                    #repeat = True)
+        #print(ret)
+        ##view3D(arg[3])
+        #return
+    #if selector == 'v':
         #view3D(arg[3])
-        return
-    if selector == 'v':
-        view3D(arg[3])
-        return
+        #return
     
-    if selector =='Simple':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            experiment_repeat(nReps = 100,
+    #if selector =='Simple':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #experiment_repeat(nReps = 100,
+                            ##k_int = 0.1,
+                            ##int_res = 10,
+                            ##gamma0 = 5.,
+                            ##gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
+    
+    #if selector =='0':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #experiment_repeat(nReps = 100,
                             #k_int = 0.1,
-                            #int_res = 10,
+                            ##int_res = 10,
+                            ##gamma0 = 5.,
+                            ##gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
+    
+    #if selector =='1':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #experiment_repeat(nReps = 100,
+                            ##k_int = 0.1,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
-    
-    if selector =='0':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            experiment_repeat(nReps = 100,
-                            k_int = 0.1,
-                            #int_res = 10,
-                            #gamma0 = 5.,
-                            #gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
-    
-    if selector =='1':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            experiment_repeat(nReps = 100,
-                            #k_int = 0.1,
-                            gamma0 = 5.,
-                            gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
         
-    if selector =='2':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            experiment_repeat(nReps = 100,
-                            k_int = 0.1,
-                            int_res = 0.2,
+    #if selector =='2':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #experiment_repeat(nReps = 100,
+                            #k_int = 0.1,
+                            #int_res = 0.2,
+                            ##gamma0 = 5.,
+                            ##gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
+    
+    #if selector =='3':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #experiment_repeat(nReps = 100,
+                            #k_int = 0.1,
                             #gamma0 = 5.,
                             #gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
     
-    if selector =='3':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            experiment_repeat(nReps = 100,
-                            k_int = 0.1,
-                            gamma0 = 5.,
-                            gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
+    #if selector =='4':
+        #for i in range(20):
+            #logText = "Repetition = "+str(i)+'\n'
+            #write2log(logText)
+            #experiment_repeat(nReps = 100,
+                            #k_int = 0.1,
+                            #int_res= 0.2,
+                            #gamma0 = 5.,
+                            #gammaInf = 2.,
+                        #dirBase = "local/"+str(i)+"/",
+                        #enablePlotExp= False)
+            #experiment_plots(dirBase = "local/"+str(i)+"/")
+        #plot_tendencias(dirBase = "local/")
     
-    if selector =='4':
-        for i in range(20):
-            logText = "Repetition = "+str(i)+'\n'
-            write2log(logText)
-            experiment_repeat(nReps = 100,
-                            k_int = 0.1,
-                            int_res= 0.2,
-                            gamma0 = 5.,
-                            gammaInf = 2.,
-                        dirBase = "local/"+str(i)+"/",
-                        enablePlotExp= False)
-            experiment_plots(dirBase = "local/"+str(i)+"/")
-        plot_tendencias(dirBase = "local/")
-    
-    return
+    #return
     
     #   END UI
     
@@ -3609,21 +3609,21 @@ def main(arg):
     #sel_case = int(arg[3])
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_02_FrontParallel_Circular_Flat/",
-             #"W_02_FrontParallel_Circular_NFlat/",
-             #"W_02_FrontParallel_Circular_NFlat_PIG/"]
+    #Names = ["W_03_FrontParallel_Circular_Flat/",
+             #"W_03_FrontParallel_Circular_NFlat/",
+             #"W_03_FrontParallel_Circular_NFlat_PIG/"]
     #nReps = 4
     #nodes = 25
     
-    ###   Plot
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[int(i>0)]
-        #experiment_plots(dirBase =  dirBase,
-                         #kSets = nodes,
-                         #colorFile = colorFile)
+    ##   Plot
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(i>0)]
+        ##experiment_plots(dirBase =  dirBase,
+                         ##kSets = nodes,
+                         ##colorFile = colorFile)
         
-    #return
+    ##return
     
     
     ##  process
@@ -3647,8 +3647,8 @@ def main(arg):
         #experiment_frontParallel(nReps = nReps,
                                  #repeat = True,
                         #t_end = 800,
-                        #gamma0 = 3.,
-                        #gammaInf = 0.1,
+                        #gamma0 = 5.,
+                        #gammaInf = 2.,
                         ##intGamma0 = 0.1,
                         ##intGammaInf = 0.01,
                         ##intGammaSteep = 5,
@@ -3669,21 +3669,21 @@ def main(arg):
     #sel_case = int(arg[3])
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_02_FrontParallel_Random_Flat/",
-             #"W_02_FrontParallel_Random_NFlat/",
-             #"W_02_FrontParallel_Random_NFlat_PIG/"]
+    #Names = ["W_03_FrontParallel_Random_Flat/",
+             #"W_03_FrontParallel_Random_NFlat/",
+             #"W_03_FrontParallel_Random_NFlat_PIG/"]
     #nReps = 4
     #nodes = 25
     
     ##   Plot
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[int(i>0)]
-        #experiment_plots(dirBase =  dirBase,
-                         #kSets = nodes,
-                         #colorFile = colorFile)
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(i>0)]
+        ##experiment_plots(dirBase =  dirBase,
+                         ##kSets = nodes,
+                         ##colorFile = colorFile)
         
-    #return
+    ##return
     
     
     ##  process
@@ -3707,8 +3707,8 @@ def main(arg):
         #experiment_frontParallel(nReps = nReps,
                         #t_end = 800,
                         #gamma0 = 8.,
-                        #gammaInf = 2.,
-                        #intGamma0 = 0.1,
+                        #gammaInf = 5.,
+                        #intGamma0 = 2.,
                         #intGammaInf = 0.05,
                         #intGammaSteep = 5,
                         #n_points = 30,
@@ -3807,13 +3807,13 @@ def main(arg):
     ##   END Cluster Front Parallel
     ##   BEGIN CLUSTER Local
     
-    ##    Local tests  
-    #job = int(arg[2])
-    #sel = int(arg[3])
+    #    Local tests  
+    job = int(arg[2])
+    sel = int(arg[3])
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    ###   Local
+    ##   Local
     #Names = ["W_03_localCirc_P/",
              #"W_03_localRand_P/",
              #"W_03_localCirc_PIG/",
@@ -3823,97 +3823,104 @@ def main(arg):
     #leader = None
     
     ## Local + rectification
-    ##Names = ["W_02_localCirc_P_r/",
-             ##"W_02_localRand_P_r/",
-             ##"W_02_localCirc_PIG_r/",
-             ##"W_02_localRand_PIG_r/"]
-    ##setRectification = True
-    ##gdl = 2
-    ##leader = None
+    #Names = ["W_03_localCirc_P_r/",
+             #"W_03_localRand_P_r/",
+             #"W_03_localCirc_PIG_r/",
+             #"W_03_localRand_PIG_r/"]
+    #setRectification = True
+    #gdl = 2
+    #leader = None
+    
+    ## Local + leader
+    Names = ["W_03_localCirc_P_l_rev/",
+             "W_03_localRand_P_l_rev/",
+             "W_03_localCirc_PIG_l_rev/",
+             "W_03_localRand_PIG_l_rev/"]
+    setRectification = False
+    gdl = 1
+    leader = 0
     
     ### Local + leader
-    ##Names = ["W_02_localCirc_P_l/",
-             ##"W_02_localRand_P_l/",
-             ##"W_02_localCirc_PIG_l/",
-             ##"W_02_localRand_PIG_l/"]
-    ##setRectification = False
-    ##gdl = 1
-    ##leader = 0
+    #Names = ["W_03_localCirc_P_l/",
+             #"W_03_localRand_P_l/",
+             #"W_03_localCirc_PIG_l/",
+             #"W_03_localRand_PIG_l/"]
+    #setRectification = False
+    #gdl = 1
+    #leader = 0
     
     
-    ### Rectification test, sign metrics
-    ##Names = ["W_02_localCirc_P_rte/",
-             ##"W_02_localRand_P_rte/"]#,
-             ###"W_02_localCirc_PIG_rte/",
-             ###"W_02_localRand_PIG_rte/"]
-    ##setRectification = True
-    ##gdl = 2
-    ##leader = None
+    ## Rectification test, sign metrics
+    #Names = ["W_02_localCirc_P_rte/",
+             #"W_02_localRand_P_rte/"]#,
+             ##"W_02_localCirc_PIG_rte/",
+             ##"W_02_localRand_PIG_rte/"]
+    #setRectification = True
+    #gdl = 2
+    #leader = None
     
-    ### Rectification test gdl 2 
-    ##Names = ["W_02_localCirc_P_rtg/",
-             ##"W_02_localRand_P_rtg/"]#,
-             ###"W_02_localCirc_PIG_rtg/",
-             ###"W_02_localRand_PIG_rtg/"]
-    ##setRectification = False
-    ##gdl = 2
-    ##leader = None
+    ## Rectification test gdl 2 
+    #Names = ["W_02_localCirc_P_rtg/",
+             #"W_02_localRand_P_rtg/"]#,
+             ##"W_02_localCirc_PIG_rtg/",
+             ##"W_02_localRand_PIG_rtg/"]
+    #setRectification = False
+    #gdl = 2
+    #leader = None
     
     ##   Plot part
-    #i = 0
+    #i = 1
     #colorFile = colorNames[i%2]
     #plot_tendencias(dirBase = root + Names[i], 
                     #colorFile = colorFile)
     #return
     
-    ##for i in range(len(Names)):
-        ##colorFile = colorNames[i%2]
-        ##plot_tendencias(dirBase = root + Names[i], 
-                        ##colorFile = colorFile)
+    for i in range(len(Names)):
+        colorFile = colorNames[i%2]
+        plot_tendencias(dirBase = root + Names[i], 
+                        colorFile = colorFile)
         
-    ##return
+    return
     
-    ##   Proc part
-    #i = job
+    #   Proc part
+    i = job
     
-    ##  process
-    #name = Names[sel]
-    #colorFile = colorNames[sel%2]
+    #  process
+    name = Names[sel]
+    colorFile = colorNames[sel%2]
     
-    #logText = "Set = "+root + name+'\n'
-    #write2log(logText)
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
     
-    #logText = "Repetition = "+str(i)+'\n'
-    #write2log(logText)
-    ##   Proporcional
-    #if sel == 0 or sel == 1:
-        #experiment_repeat(nReps = 100,
-                          #t_end = 800,
-                          #setRectification = setRectification,
-                          #gdl = gdl,
-                          #leader = leader,
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    ##   PI AG
-    #if sel == 2 or sel ==3:
-        #experiment_repeat(nReps = 100,
-                          #t_end = 800,
-                          #setRectification = setRectification,
-                          #gdl = gdl,
-                          #leader = leader,
-                        #gamma0 = 3.,
-                        #gammaInf = 0.1,
-                        ##gamma0 = 5.,
-                        ##gammaInf = 2,
-                        #intGamma0 = 0.1,
-                        #intGammaInf = 0.01,
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    ##experiment_plots(dirBase = root + name+str(i)+"/", 
-                     ##colorFile = colorFile)
+    logText = "Repetition = "+str(i)+'\n'
+    write2log(logText)
+    #   Proporcional
+    if sel == 0 or sel == 1:
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = setRectification,
+                          gdl = gdl,
+                          leader = leader,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #   PI AG
+    if sel == 2 or sel ==3:
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = setRectification,
+                          gdl = gdl,
+                          leader = leader,
+                        gamma0 = 5.,
+                        gammaInf = 2,
+                        intGamma0 = 0.1,
+                        intGammaInf = 0.01,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #experiment_plots(dirBase = root + name+str(i)+"/", 
+                     #colorFile = colorFile)
     
-    
-    #return
+    write2log("LOG FINISHED \n")
+    return
     
     #   END Cluster local
     #   BEGIN Cluster local: SETUP
@@ -4009,24 +4016,30 @@ def main(arg):
     #job = int(arg[2])
     #sel_case = int(arg[3])
     
-    #Names= ["W_02_nPoints_Circular/",
-            #"W_02_nPoints_Circular_PIG/",
-            #"W_02_nPoints_Random/",
-            #"W_02_nPoints_Random_PIG/"]
+    #Names= ["W_03_nPoints_Circular/",
+            #"W_03_nPoints_Circular_PIG/",
+            #"W_03_nPoints_Random/",
+            #"W_03_nPoints_Random_PIG/"]
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    #nReps = 4   # por nodo
+    #nReps = 5   # por nodo
     #nodos = 20
     ##nodos = 25
     
     ##   Plot part
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[int(np.floor(i/2))]
-        #plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
-        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    #return
+    ##i = 2
+    ##dirBase = root + Names[i]
+    ##colorFile = colorNames[int(np.floor(i/2))]
+    ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+    ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    ##return 
+    ##for i in range(len(Names)):
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(np.floor(i/2))]
+        ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    ##return
     
     ##  process
     #dirBase = root + Names[sel_case]
@@ -4037,6 +4050,8 @@ def main(arg):
                     #node = job,
                     #sel_case = sel_case,
                     #enablePlotExp = False)
+    
+    #write2log("LOG FINISHED \n")
     
     #return
 

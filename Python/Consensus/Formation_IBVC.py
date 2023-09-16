@@ -459,7 +459,7 @@ def error_state(reference,  agents, gdl = 1, name= None):
             
             
     plt.savefig(name+'.pdf',bbox_inches='tight')
-    plt.show()
+    #plt.show()
     plt.close()
     
     return [t_err, rot_err]
@@ -938,6 +938,7 @@ def experiment(directory = "0",
             
             
             U_array[j,:,i] = U
+            #if j == 0:
             agents[j].update(U,dt,P, Z)
         
         #   Update
@@ -1303,7 +1304,7 @@ def scene(modify = [],
     else:
         
         modify = ['P','pd','p0']
-    
+    #print("log P")
     if modify.__contains__("P"):
         if inP is None:
             P = np.random.rand(3,n_points)
@@ -1313,7 +1314,7 @@ def scene(modify = [],
             P =  np.r_[P,np.ones((1,n_points))]
         else:
             P = inP.copy()
-    
+    #print("log Pd")
     if modify.__contains__("pd"):
         if inpd is None:
             pd = np.zeros((6,n_agents))
@@ -1338,14 +1339,14 @@ def scene(modify = [],
                 pd[:,i] = tmp.copy()
         else:
             pd = inpd.copy()
-            
+    #print("log P0")
     if modify.__contains__("p0"):
         if inp0 is None:
             p0 = np.zeros((6,n_agents))
             offset = np.array([X[0],X[0],Z[0],roll[0],pitch[0],yaw[0]])
             dRange = np.array([X[1],X[1],Z[1],roll[1],pitch[1],yaw[1]])
             dRange -= offset
-            
+            #print(dRange)
             
             
             for i in range(n_agents):
@@ -1374,7 +1375,7 @@ def scene(modify = [],
     for i in range(n_agents):
         if agents[i].count_points_in_FOV(P) != n_points:
             testing = True
-    
+    #print("log")
     while testing:
         testing = False
         
@@ -3423,16 +3424,18 @@ def main(arg):
                 ##n_agents = 4, 
                 ##n_points = 30)
         #ret = experiment(directory=arg[3],
-                    #t_end = 100,
+                    #t_end = 10,
                     ##setRectification = True,
                     ##gdl = 2,
                     ##leader = 0,
                     ##lamb = 0.1,
                     ##modified =["nPoints"],
-                    ##gamma0 = 3.,
+                    ##gamma0 = 1.,
                     ##gammaInf = .1,
-                    ###gammaInf = 1.,
-                    ###gamma0 = 5.,
+                    ##gammaInf = 2.,
+                    ##gamma0 = 5.,
+                    ##gammaInf = 2.,
+                    ##gamma0 = 5.,
                     ##intGamma0 = 0.1,
                     ##intGammaInf = 0.01,
                     ##intGammaSteep = 5,
@@ -3534,70 +3537,17 @@ def main(arg):
     
     #   END UI
     
-    #   BEGIN regularization : FP check
     
-    ##   Local tests  
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_02_regularization_Circular/",
-             #"W_02_regularization_Random/",
-             #"W_02_regularization_Circular_blanco/",
-             #"W_02_regularization_Random_blanco/"]
-    #nReps = 4
-    #nodes = 25
+    #   BEGIN read npz
     
-    ##  Plot
-    ##i = 3
-    ##dirBase = root + Names[i]
-    ##colorFile = colorNames[i%2]
-    ##experiment_plots(dirBase =  dirBase,
-                        ##kSets = nodes,
-                        ##colorFile = colorFile)                        
-    ##return 
-
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[i%2]
-        #experiment_plots(dirBase =  dirBase,
-                         #kSets = nodes,
-                         #colorFile = colorFile)
-        
+    #directory = arg[2]
+    #npzfile = np.load(directory+'/data.npz')
+    #print(npzfile['pd'])
+    
     #return
     
-    
-    ##  process
-    #dirBase = root + Names[sel_case]
-    #colorFile = colorNames[sel_case%2]
-    
-    #logText = "Set = "+ dirBase+'\n'
-    #write2log(logText)
-    
-    #logText = "Job = "+str(job)+'\n'
-    #logText += "Select = "+str(sel_case)+'\n'
-    #write2log(logText)
-    
-    
-    #experiment_frontParallel(nReps = nReps,
-                     #t_end = 800,
-                     #n_points = 30,
-                     #setRectification = (sel_case <= 1),
-                     #gdl = 2,
-                     ##gamma0 = 8.,
-                        ##gammaInf = 2.,
-                        ##intGamma0 = 0.1,
-                        ##intGammaInf = 0.05,
-                        ##intGammaSteep = 5,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #Flat = False)
-    
-    #return 
-    
-    
-    #   END regularization : FP check
-    
+    #   END read npz
     
     
     #   BEGIN Front parallel Part: set Circular
@@ -3609,11 +3559,11 @@ def main(arg):
     #sel_case = int(arg[3])
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_03_FrontParallel_Circular_Flat/",
-             #"W_03_FrontParallel_Circular_NFlat/",
-             #"W_03_FrontParallel_Circular_NFlat_PIG/"]
-    #nReps = 4
-    #nodes = 25
+    #Names = ["W_04_FrontParallel_Circular_Flat/",
+             #"W_04_FrontParallel_Circular_NFlat/",
+             #"W_04_FrontParallel_Circular_NFlat_PIG/"]
+    #nReps = 5
+    #nodes = 20
     
     ##   Plot
     ##for i in range(len(Names)):
@@ -3638,7 +3588,7 @@ def main(arg):
     
     #if sel_case < 2:
         #experiment_frontParallel(nReps = nReps,
-                                 ##repeat = True,
+                                 #repeat = True, #   Only if already created
                      #t_end = 800,
                     #dirBase = dirBase,
                     #node = job,
@@ -3653,9 +3603,8 @@ def main(arg):
                         ##intGammaInf = 0.01,
                         ##intGammaSteep = 5,
                         #dirBase = dirBase,
-                        #node = job,
-                        #Flat = False)
-    
+                        #node = job)
+    #write2log("LOG FINISHED \n")
     #return 
     
     
@@ -3669,11 +3618,11 @@ def main(arg):
     #sel_case = int(arg[3])
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_03_FrontParallel_Random_Flat/",
-             #"W_03_FrontParallel_Random_NFlat/",
-             #"W_03_FrontParallel_Random_NFlat_PIG/"]
-    #nReps = 4
-    #nodes = 25
+    #Names = ["W_04_FrontParallel_Random_Flat/",
+             #"W_04_FrontParallel_Random_NFlat/",
+             #"W_04_FrontParallel_Random_NFlat_PIG/"]
+    #nReps = 5
+    #nodes = 20
     
     ##   Plot
     ##for i in range(len(Names)):
@@ -3700,227 +3649,134 @@ def main(arg):
         #experiment_frontParallel(nReps = nReps,
                         #t_end = 800,
                         #n_points = 30,
+                        #repeat = True, #   Only if already created
                         #dirBase = dirBase,
                         #node = job,
                         #Flat = (sel_case == 0))
     #else:
         #experiment_frontParallel(nReps = nReps,
                         #t_end = 800,
-                        #gamma0 = 8.,
-                        #gammaInf = 5.,
-                        #intGamma0 = 2.,
-                        #intGammaInf = 0.05,
-                        #intGammaSteep = 5,
-                        #n_points = 30,
+                         #gamma0 = 5.,
+                        #gammaInf = 2.,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.01,
+                        #repeat = True,
                         #dirBase = dirBase,
-                        #node = job,
-                        #Flat = False)
+                        #node = job)
+    #write2log("LOG FINISHED \n")
     #return 
     
     
     #   END Front parallel Part: set Random
     
-    #   BEGIN CLUSTER Front paralle
     
-    ##   Local tests  
-    #job = int(arg[2])
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/W_01_FrontParallel/"
-    #Names = ["Circular_Coplanar/",
-             #"Random_Coplanar/",
-             #"Circular_NCoplanar_P/",
-             #"Random_NCoplanar_P/",
-             #"Circular_NCoplanar_PIG/",
-             #"Random_NCoplanar_PIG/"]
-        
-    ##  process
-    #name = Names[job]
-    #colorFile = colorNames[job%2]
-    
-    #logText = "Set = "+root + name+'\n'
-    #write2log(logText)
-    
-    #logText = "Job = "+str(job)+'\n'
-    #write2log(logText)
-    
-    
-    ###   Only repeats
-    ##if job < 4:
-        ##experiment_repeat(nReps = 100,
-                        ##dirBase = root + name,
-                        ##enablePlotExp = False)
-    ##else:
-        ##experiment_repeat(nReps = 100,
-                    ##gamma0 = 5.,
-                    ##gammaInf = 2.,
-                    ##intGamma0 = 0.2,
-                    ##intGammaInf = 0.05,
-                    ##intGammaSteep = 5,
-                    ##dirBase = root + name,
-                    ##enablePlotExp= False)
-    ##experiment_plots(dirBase = root + name, colorFile = colorFile)
-    ##return 
-    
-    ##   Circular coplanar
-    #if job == 0:
-        #experiment_all_random(nReps = 100,
-                              #pFlat = True,
-                              #conditions = 3,
-                              #dirBase = root + name,
-                              #enablePlotExp = False)
-    ##   Random coplanar
-    #if job == 1:
-        #experiment_all_random(nReps = 100,
-                              #pFlat = True,
-                              #conditions = 1,
-                              #dirBase = root + name,
-                              #enablePlotExp = False)
-    ##   Circular No coplanar
-    #if job == 2:
-        #experiment_all_random(nReps = 100,
-                              #conditions = 3,
-                              #dirBase = root + name,
-                              #enablePlotExp = False)
-    
-    ##   Random No coplanar
-    #if job == 3:
-        #experiment_all_random(nReps = 100,
-                              #conditions = 1,
-                              #dirBase = root + name,
-                              #enablePlotExp = False)
-                              
-    #if job == 4 or job == 5:
-        #experiment_repeat(nReps = 100,
-                    #gamma0 = 5.,
-                    #gammaInf = 2.,
-                    #intGamma0 = 0.2,
-                    #intGammaInf = 0.05,
-                    #intGammaSteep = 5,
-                    #dirBase = root + name,
-                    #enablePlotExp= False)
-    
-    #experiment_plots(dirBase = root + name, colorFile = colorFile)
-    
-    
-    #return
-    
-    ##   END Cluster Front Parallel
     ##   BEGIN CLUSTER Local
     
-    #    Local tests  
-    job = int(arg[2])
-    sel = int(arg[3])
+    ##    Local tests  
+    #job = int(arg[2])
+    #sel = int(arg[3])
     
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    ##   Local
-    #Names = ["W_03_localCirc_P/",
-             #"W_03_localRand_P/",
-             #"W_03_localCirc_PIG/",
-             #"W_03_localRand_PIG/"]
+    ###   Local
+    #Names = ["W_04_localCirc_P/",
+             #"W_04_localRand_P/",
+             #"W_04_localCirc_PIG/",
+             #"W_04_localRand_PIG/"]
     #setRectification = False
     #gdl = 1
     #leader = None
     
     ## Local + rectification
-    #Names = ["W_03_localCirc_P_r/",
-             #"W_03_localRand_P_r/",
-             #"W_03_localCirc_PIG_r/",
-             #"W_03_localRand_PIG_r/"]
-    #setRectification = True
-    #gdl = 2
-    #leader = None
-    
-    ## Local + leader
-    Names = ["W_03_localCirc_P_l_rev/",
-             "W_03_localRand_P_l_rev/",
-             "W_03_localCirc_PIG_l_rev/",
-             "W_03_localRand_PIG_l_rev/"]
-    setRectification = False
-    gdl = 1
-    leader = 0
+    ##Names = ["W_04_localCirc_P_r/",
+             ##"W_04_localRand_P_r/",
+             ##"W_04_localCirc_PIG_r/",
+             ##"W_04_localRand_PIG_r/"]
+    ##setRectification = True
+    ##gdl = 2
+    ##leader = None
     
     ### Local + leader
-    #Names = ["W_03_localCirc_P_l/",
-             #"W_03_localRand_P_l/",
-             #"W_03_localCirc_PIG_l/",
-             #"W_03_localRand_PIG_l/"]
-    #setRectification = False
-    #gdl = 1
-    #leader = 0
+    ##Names = ["W_04_localCirc_P_l/",
+             ##"W_04_localRand_P_l/",
+             ##"W_04_localCirc_PIG_l/",
+             ##"W_04_localRand_PIG_l/"]
+    ##setRectification = False
+    ##gdl = 1
+    ##leader = 0
     
     
-    ## Rectification test, sign metrics
-    #Names = ["W_02_localCirc_P_rte/",
-             #"W_02_localRand_P_rte/"]#,
-             ##"W_02_localCirc_PIG_rte/",
-             ##"W_02_localRand_PIG_rte/"]
-    #setRectification = True
-    #gdl = 2
-    #leader = None
+    #### Rectification test, sign metrics
+    ###Names = ["W_02_localCirc_P_rte/",
+             ###"W_02_localRand_P_rte/"]#,
+             ####"W_02_localCirc_PIG_rte/",
+             ####"W_02_localRand_PIG_rte/"]
+    ###setRectification = True
+    ###gdl = 2
+    ###leader = None
     
-    ## Rectification test gdl 2 
-    #Names = ["W_02_localCirc_P_rtg/",
-             #"W_02_localRand_P_rtg/"]#,
-             ##"W_02_localCirc_PIG_rtg/",
-             ##"W_02_localRand_PIG_rtg/"]
-    #setRectification = False
-    #gdl = 2
-    #leader = None
+    #### Rectification test gdl 2 
+    ###Names = ["W_02_localCirc_P_rtg/",
+             ###"W_02_localRand_P_rtg/"]#,
+             ####"W_02_localCirc_PIG_rtg/",
+             ####"W_02_localRand_PIG_rtg/"]
+    ###setRectification = False
+    ###gdl = 2
+    ###leader = None
     
-    ##   Plot part
-    #i = 1
-    #colorFile = colorNames[i%2]
-    #plot_tendencias(dirBase = root + Names[i], 
-                    #colorFile = colorFile)
-    #return
+    ####   Plot part
+    ###i = 1
+    ###colorFile = colorNames[i%2]
+    ###plot_tendencias(dirBase = root + Names[i], 
+                    ###colorFile = colorFile)
+    ###return
     
-    for i in range(len(Names)):
-        colorFile = colorNames[i%2]
-        plot_tendencias(dirBase = root + Names[i], 
-                        colorFile = colorFile)
+    ##for i in range(len(Names)):
+        ##colorFile = colorNames[i%2]
+        ##plot_tendencias(dirBase = root + Names[i], 
+                        ##colorFile = colorFile)
         
-    return
+    ##return
     
-    #   Proc part
-    i = job
+    ##   Proc part
+    #i = job
     
-    #  process
-    name = Names[sel]
-    colorFile = colorNames[sel%2]
+    ##  process
+    #name = Names[sel]
+    #colorFile = colorNames[sel%2]
     
-    logText = "Set = "+root + name+'\n'
-    write2log(logText)
+    #logText = "Set = "+root + name+'\n'
+    #write2log(logText)
     
-    logText = "Repetition = "+str(i)+'\n'
-    write2log(logText)
-    #   Proporcional
-    if sel == 0 or sel == 1:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #   PI AG
-    if sel == 2 or sel ==3:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        gamma0 = 5.,
-                        gammaInf = 2,
-                        intGamma0 = 0.1,
-                        intGammaInf = 0.01,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #experiment_plots(dirBase = root + name+str(i)+"/", 
-                     #colorFile = colorFile)
+    #logText = "Repetition = "+str(i)+'\n'
+    #write2log(logText)
+    ##   Proporcional
+    #if sel == 0 or sel == 1:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                          #setRectification = setRectification,
+                          #gdl = gdl,
+                          #leader = leader,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##   PI AG
+    #if sel == 2 or sel ==3:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                          #setRectification = setRectification,
+                          #gdl = gdl,
+                          #leader = leader,
+                        #gamma0 = 5.,
+                        #gammaInf = 2,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.01,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##experiment_plots(dirBase = root + name+str(i)+"/", 
+                     ##colorFile = colorFile)
     
-    write2log("LOG FINISHED \n")
-    return
+    #write2log("LOG FINISHED \n")
+    #return
     
     #   END Cluster local
     #   BEGIN Cluster local: SETUP
@@ -3949,280 +3805,57 @@ def main(arg):
     
     
     #   END Cluster local: SETUP
-    #   BEGIN Gamma tunning 
-    #job = int(arg[2])
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/W_Gamma_Tunning/"
-    
-    #Names = ["gamma_3_5/"]
-    ##Names = ["gamma_1_3/",
-             ##"gamma_1_5/",
-             ##"gamma_2_3/",
-             ##"gamma_2_5/"]
-    
-    ##   Plot part
-    #for name in Names:
-        #plot_tendencias(dirBase = root + name)
-        
-    #return
-    
-    ##   Proc part
-    #intGamma0 = [0.3]
-    #intGammaInf = [0.05]
-    #intGammaSteep = [5]
-    ##intGamma0 = [0.1]*2+[0.2]*2
-    ##intGammaInf = [0.05]*4
-    ##intGammaSteep = [3,5]*2
-    
-    ##j = job % 4
-    ##init = 0
-    ##end = 0
-    ##if job < 4:
-        ##init = 0
-        ##end = 10
-    ##else:
-        ##init = 10
-        ##end = 20
-    
-    #j = 0
-    #init = job * 4
-    #end =  init + 4
-    ##  process
-    #name = Names[j]
-    #logText = "Set = "+root + name+'\n'
-    #write2log(logText)
-    #for i in range(init, end):
-        #logText = "Repetition = "+str(i)+'\n'
-        #write2log(logText)
-        #experiment_local(nReps = 50,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.,
-                        #intGamma0 = intGamma0[j],
-                        #intGammaInf = intGammaInf[j],
-                        #intGammaSteep = intGammaSteep[j] ,
-                        #pFlat = False,
-                        #dTras = 0.1*(i+1),
-                        #dRot = (np.pi/20.)*(i+1),
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-        #experiment_plots(dirBase = root + name+str(i)+"/")
-    
-    #return
-    
-    #   END Gamma tunning
     
     #   BEGIN   testing required points
 
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
+    job = int(arg[2])
+    sel_case = int(arg[3])
     
-    #Names= ["W_03_nPoints_Circular/",
-            #"W_03_nPoints_Circular_PIG/",
-            #"W_03_nPoints_Random/",
-            #"W_03_nPoints_Random_PIG/"]
+    Names= ["W_04_nPoints_Circular/",
+            "W_04_nPoints_Circular_PIG/",
+            "W_04_nPoints_Random/",
+            "W_04_nPoints_Random_PIG/"]
     
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
+    nReps = 4   # por nodo
     #nReps = 5   # por nodo
+    nodos = 25
     #nodos = 20
-    ##nodos = 25
     
-    ##   Plot part
-    ##i = 2
-    ##dirBase = root + Names[i]
-    ##colorFile = colorNames[int(np.floor(i/2))]
-    ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
-    ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return 
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(np.floor(i/2))]
-        ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
-        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return
+    #   Plot part
+    #i = 2
+    #dirBase = root + Names[i]
+    #colorFile = colorNames[int(np.floor(i/2))]
+    #plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+    #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    #return 
+    for i in range(len(Names)):
+        dirBase = root + Names[i]
+        colorFile = colorNames[int(np.floor(i/2))]
+        plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+        experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+    return
     
-    ##  process
-    #dirBase = root + Names[sel_case]
-    #logText = "Set = "+str(job)+'\n'
-    #write2log(logText)
-    #experiment_3D_min(nReps = nReps,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #sel_case = sel_case,
-                    #enablePlotExp = False)
+    #  process
+    dirBase = root + Names[sel_case]
+    logText = "Set = "+str(job)+'\n'
+    write2log(logText)
+    experiment_3D_min(nReps = nReps,
+                    dirBase = dirBase,
+                    node = job,
+                    sel_case = sel_case,
+                    enablePlotExp = False)
     
-    #write2log("LOG FINISHED \n")
+    write2log("LOG FINISHED \n")
     
-    #return
+    return
 
     #   END testing required points
-    #   BEGIN   testing angle effect
+    
 
 
-    #   Local tests
-    #job = int(arg[2])
-
-    #name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_angles_test/"
-    ##name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_angles_test_PIG/"
-    #colorFile = colorNames[0] # 0 or 1
-    
-    ##   Plot part
-    #plot_tendencias(dirBase =  name, colorFile = colorFile)
-    ##plot_tendencias(dirBase =  name, colorFile = colorFile)
-    #return
-
-    ##   Proc part
-    #i = job
-
-    ##  process
-
-    #logText = "Set = "+ name+'\n'
-    #write2log(logText)
-    #logText = "Repetition = "+str(i)+'\n'
-    #write2log(logText)
-    #experiment_angles(nReps = 100,
-                        #ang = i*pi/40,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.,
-                        #intGamma0 = 0.2,
-                        #intGammaInf = 0.05,
-                        #intGammaSteep = 5,
-                        #dirBase =  name+str(i)+"/",
-                        #enablePlotExp= False)
-
-    #experiment_plots(dirBase =  name+str(i)+"/", colorFile = colorFile)
-    #return
-    #   END testing angle effect
-
-
-    #   BEGIN test final state
-    
-    #repeats = np.array([10, 22, 34, 41, 58, 84])
-    
-    #for i in repeats:
-        ##experiment(directory=str(i),
-                ##t_end = 100,
-                ##repeat = True)
-        #for j in range(4):
-            #agent_review(str(i),j)
-            
-    #return
-    
-    #   END test final state
-    
-    #   BEGIN test final state - mod: más puntos
-    
-#     # i =  141
-#
-#     # name = "141_patologico"
-#     name = "coplanar_34"
-#     # name = str(i)
-#     # view3D(name)
-#     # return
-# #
-#     experiment(directory=name,
-#                 t_end = 800,
-#                 # modified = ["height","nPoints"],
-#                 modified = ["nPoints"],
-#                 gamma0 = 8.,
-#                 gammaInf = 2.,
-#                 # intGamma0 = 0.2,
-#                 # intGammaInf = 0.05,
-#                 # intGammaSteep = 5,
-#                 repeat = True)
-#     # for j in range(4):
-#     #     agent_review(name,j)
-#     view3D(name)
-#     return
-#
-#     repeats = np.array([110, 122, 134, 141, 158, 184])
-#
-#     for i in repeats:
-#         experiment(directory=str(i),
-#                 # t_end = 100,
-#                 t_end = 800,
-#                 modified = "nPoints",
-#                 gamma0 = 8.,
-#                 gammaInf = 2.,
-#                 intGamma0 = 0.3,
-#                 intGammaInf = 0.05,
-#                 intGammaSteep = 5,
-#                 repeat = True)
-#         for j in range(4):
-#             agent_review(str(i),j)
-#
-#     return
-    
-    #   END test final state - mod: más puntos
-    
-    #   BEGIN test final state - mod: más puntos custer
-    
-    ##   Repitiendo los casos Random_Coplanar con 30 puntos 3D
-    ##   Local tests
-    #job = int(arg[2])
-    #sel = int(arg[3])
-
-    #name = "/home/est_posgrado_edgar.chavez/Consenso/W_01_FrontParallel/"
-    
-    #Names = ["Random_Coplanar_3D30_P/",
-             #"Random_Coplanar_3D30_PIG/",
-             #"Random_Coplanar_3D30_PG/"]
-    
-    
-    #nodes = 25 
-    #nReps = 4
-    
-    ##   Plot part
-    ##for iN in Names:
-        ##dirBase = name + iN
-        ##experiment_plots(dirBase = dirBase, kSets = nodes)
-    ##return
-    ##experiment_plots(dirBase = name+Names[2], kSets = nodes)
-    ##return
-
-    #logText = "Set = "+ name+'\n'
-    #write2log(logText)
-    #logText = "Repetition = "+str(job)+'\n'
-    #logText = "Name = "+Names[sel]+'\n'
-    #write2log(logText)
-    
-    ##   proc part
-    #dirBase = name + Names[sel]
-    #init = job*nReps
-    #end = init + nReps
-    #repeats = np.arange(init, end,1,dtype = np.int16)
-    
-    ##   Proporcional
-    #if sel ==0:
-        #experiment_rep_3D(dirBase=dirBase,
-                          #nReps = nReps,
-                        ## t_end = 100,
-                        #t_end = 800,
-                        #node = job)
-            
-    ##   Proporcional + gamma + Integral
-    #if sel ==1:
-        #experiment_rep_3D(dirBase=dirBase ,
-                          #nReps = nReps,
-                        ## t_end = 100,
-                        #t_end = 800,
-                        #node = job,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.,
-                        #intGamma0 = 0.2,
-                        #intGammaInf = 0.05,
-                        #intGammaSteep = 5)
-    #if sel ==2:
-        #experiment_rep_3D(dirBase=dirBase ,
-                          #nReps = nReps,
-                        ## t_end = 100,
-                        #t_end = 800,
-                        #node = job,
-                        #gamma0 = 5.,
-                        #gammaInf = 2.)
-    #return
-        
-    #   END test final state - mod: más puntos cluster
+    # 
     
     #   BEGIN singular repeats
     #n = 84
@@ -4375,48 +4008,7 @@ def main(arg):
     #return
     
     #   END Singular repeats
-    #   BEGIN Batch local
     
-    
-    ##  Repetición de xperimentos locales
-    #for i in range(20):
-        #experiment_repeat(nReps = 100,
-                     #k_int = 0.1,
-                     ##gamma0 = 5.,
-                     ##gammaInf = 2.,
-                    #dirBase = "local/"+str(i)+"/",
-                    #enablePlotExp= False)
-        #experiment_plots(dirBase = "local/"+str(i)+"/")
-    #plot_tendencias(dirBase = "local/")
-    #return
-    
-    #experiment_local(nReps = 100,
-                        #pFlat = True,
-                        ##pFlat = False,
-                        ##k_int = 0.1,
-                        ##gamma0 = 5.,
-                        ##gammaInf = 2.,
-                        ##dTras = 1,
-                        #dTras = 2,
-                        #dRot = np.pi,
-                        ##dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-    #experiment_plots()#dirBase = "local/"+str(i)+"/")
-    #return
-    ###  Experimentos locales
-    #for i in range(20):
-        #experiment_local(nReps = 10,
-                        #pFlat = True,
-                        ##pFlat = False,
-                        #dTras = 0.1*(i+1),
-                        #dRot = (np.pi/20.)*(i+1),
-                        #dirBase = "local/"+str(i)+"/",
-                        #enablePlotExp= False)
-        #experiment_plots(dirBase = "local/"+str(i)+"/")
-    #plot_tendencias(dirBase = "local/")
-    #return
-    
-    #   END Batch local
     
     #   BEGIN repeat folder experiments
     
@@ -4430,163 +4022,7 @@ def main(arg):
 
     #   END repeat folder experiments
     
-    #   BEGIN Batch random
     
-    ##  Experimentos con posiciones iniciales y/o referencias aleatorias
-    
-    ##k_int = 0.
-    ##intMatSel = 2
-    
-    ##   Experimento con puntos planos, 10 puntos, all random
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 1,
-                          ##pFlat = True,
-                          ##dirBase = "rand_flat_10/",
-                          ##nP = 10,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "rand_flat_10/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "rand_flat_10/")
-    
-    
-    ###   Experimento con puntos planos, 4 puntos, all random
-    ###experiment_all_random(nReps = 100, 
-                          ###conditions = 1,
-                          ###pFlat = True,
-                          ###dirBase = "rand_flat_4/",
-                          ###nP = 4,
-                          ###enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "rand_flat_4/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "rand_flat_4/")
-    
-    
-    ##   Experimento con  10 puntos, all random
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 1,
-                          ##dirBase = "rand_10/",
-                          ##nP = 10,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "rand_10/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "rand_10/")
-    
-    
-    ##   Experimento con  4 puntos, all random
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 1,
-                          ##dirBase = "rand_4/",
-                          ##nP = 4,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "rand_4/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "rand_4/")
-    
-    ##   Experimento con  10 puntos, circle
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 3,
-                          ##dirBase = "circ_10/",
-                          ##nP = 10,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "circ_10/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "circ_10/")
-    
-    
-    ##   Experimento con  4 puntos, circle
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 3,
-                          ##dirBase = "circ_4/",
-                          ##nP = 4,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "circ_4/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "circ_4/")
-    
-    
-    ##   Experimento con  10 puntos planos, circle
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 3,
-                          ##pFlat = True,
-                          ##dirBase = "circ_flat_10/",
-                          ##nP = 10,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "circ_flat_10/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "circ_flat_10/")
-    
-    
-    ##   Experimento con  4 puntos planos, circle
-    ##experiment_all_random(nReps = 100, 
-                          ##conditions = 3,
-                          ##pFlat = True,
-                          ##dirBase = "circ_flat_4/",
-                          ##nP = 4,
-                          ##enablePlotExp= False)
-    #experiment_repeat(nReps = 100,
-                      #dirBase = "circ_flat_4/",
-                      #k_int = k_int ,
-                      #intMatSel = intMatSel,
-                        #enablePlotExp = False)
-    #experiment_plots(dirBase = "circ_flat_4/")
-    
-    
-    #return
-    
-    #   Experimento exhaustivo de posiciones y referencias random
-    #experiment_all_random(nReps = 100, 
-                          #enablePlotExp= False)
-    
-    #   Experimento anterior con profundidad constante
-    #experiment_repeat(nReps = 10,
-                      #enablePlotExp = False)
-    
-    #   Plot data
-    #experiment_plots(dirBase = "rand_flat_10/")
-    
-    #return
-    
-    #   Comparaciones de errores finales bajo condiciones de inicio
-    ##experiment_plots(dirBase = "circ_4/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_4/")
-    ##experiment_plots(dirBase = "circ_flat_4/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_flat_4/")
-    ##experiment_plots(dirBase = "rand_4/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_4/")
-    ##experiment_plots(dirBase = "rand_flat_4/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_flat_4/")
-    ##experiment_plots(dirBase = "circ_10/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_10/")
-    ##experiment_plots(dirBase = "circ_flat_10/")
-    #plot_error_stats(nReps = 100, dirBase = "circ_flat_10/")
-    ##experiment_plots(dirBase = "rand_10/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_10/")
-    ##experiment_plots(dirBase = "rand_flat_10/")
-    #plot_error_stats(nReps = 100, dirBase = "rand_flat_10/")
-    
-    #return
-    #   END Batch random
     
     
     #   BEGIN Experimento singular

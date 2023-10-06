@@ -51,7 +51,15 @@
     <rosparam command="load" 
     file="$(find image_based_formation_control)/config/params.yaml"/>
   </group>
-
+ <group ns="$(arg node_name)3">
+    <node name="$(arg node_name)"
+    pkg="$(arg node_name)"
+    type="$(arg node_name)"
+    args="3 $(arg control) $(arg matching) $(arg verbose)"
+    output="screen"/>
+    <rosparam command="load"
+    file="$(find image_based_formation_control)/config/params.yaml"/>
+  </group>
   
 
 

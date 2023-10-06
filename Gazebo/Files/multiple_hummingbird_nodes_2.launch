@@ -1,10 +1,8 @@
 <launch>
-<!--   <arg name="world_name" default="librarybased_1_2"/> -->
-<!-- <arg name="world_name" default="librarybased_2"/> -->
-<!--   <arg name="world_name" default="BlenderTerrain"/> -->
-  <arg name="world_name" default="ArUco_2"/>
+  <arg name="world_name" default="librarybased_1_2"/>
+  <arg name="world_name" default="librarybased2"/>
+  <arg name="world_name" default="BlenderTerrain"/>
 <!--   <arg name="world_name" default="ground"/> -->
-
   <arg name="enable_logging" default="false"/>
   <arg name="enable_ground_truth" default="true"/>
   <arg name="mav_name" default="hummingbird" />
@@ -26,18 +24,15 @@
       <arg name="enable_logging" value="$(arg enable_logging)" />
       <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
       <arg name="log_file" value="$(arg mav_name)0"/>
-      <arg name="x" value="-1.0"/>
-      <arg name="y" value="0.0"/>
-      <arg name="z" value="0.1"/>
+      <arg name="y" value="1.0"/>
+      <arg name="z" value="2.1"/>
     </include>
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">
       <rosparam command="load" file="$(find rotors_gazebo)/resource/lee_controller_$(arg mav_name).yaml" />
       <rosparam command="load" file="$(find rotors_gazebo)/resource/$(arg mav_name).yaml" />
       <remap from="odometry" to="odometry_sensor1/odometry" />
     </node>
-    <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1 3 1.5 0 0"/>
-<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1.5 2.5 2 30 0"/> -->
-<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1 3 2 0 0"/> -->
+    <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="-1 0 3 0 0"/>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   </group>
@@ -50,17 +45,15 @@
       <arg name="enable_logging" value="$(arg enable_logging)" />
       <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
       <arg name="log_file" value="$(arg mav_name)1"/>
-      <arg name="x" value="-1.0"/>
-      <arg name="y" value="1.0"/>
-      <arg name="z" value="0.1"/>
+      <arg name="y" value="2.0"/>
+      <arg name="z" value="2.1"/>
     </include>
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">
       <rosparam command="load" file="$(find rotors_gazebo)/resource/lee_controller_$(arg mav_name).yaml" />
       <rosparam command="load" file="$(find rotors_gazebo)/resource/$(arg mav_name).yaml" />
       <remap from="odometry" to="odometry_sensor1/odometry" />
     </node>
-    <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="2.5 1.5 2 0 1"/>
-<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="3 1 2 0 0"/> -->
+    <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0 1 3 0 0"/>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   </group>
@@ -73,18 +66,15 @@
       <arg name="enable_logging" value="$(arg enable_logging)" />
       <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
       <arg name="log_file" value="$(arg mav_name)2"/>
-      <arg name="x" value="-1.0"/>
-      <arg name="y" value="2.0"/>
-      <arg name="z" value="0.1"/>
+      <arg name="y" value="3.0"/>
+      <arg name="z" value="2.1"/>
     </include>
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">
       <rosparam command="load" file="$(find rotors_gazebo)/resource/lee_controller_$(arg mav_name).yaml" />
       <rosparam command="load" file="$(find rotors_gazebo)/resource/$(arg mav_name).yaml" />
       <remap from="odometry" to="odometry_sensor1/odometry" />
     </node>
-    <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1 2 2.5 0 2"/>
-<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1.5 1.5 2 310 2"/> -->
-<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1 1 2 0 0"/> -->
+    <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1 0 3 0 0"/>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   </group>

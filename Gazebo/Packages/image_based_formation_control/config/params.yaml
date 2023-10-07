@@ -25,9 +25,7 @@ patchSize: 30
 fastThreshold: 20
 flann_ratio: 0.7
 
-# Directories
-input_dir: "/home/bloodfield/catkin_ws/src/image_based_formation_control/src/input/"
-output_dir: "/home/bloodfield/catkin_ws/src/image_based_formation_control/src/output/"
+
 # Formation Laplacian
 n_agents: 4
 Laplacian: [-3, 1, 1, 1,

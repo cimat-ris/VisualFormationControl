@@ -106,23 +106,23 @@ In a fourth terminal,
 > roslaunch vc_controller  homography.launch
 ```
 
-#   test formation_control
+#   test image_based_formation_control
 
 In terminal 1: Launch gazebo whit drones:
 ```bash
-roslaunch rotors_gazebo multiple_hummingbird_nodes.launch
+roslaunch rotors_gazebo multiple_hummingbird_nodes_3.launch world_name:=ArUco_2
 ```
 
 In terminal 2: Launch thecontrol:
 ```bash
-roslaunch formation_control controllers.launch
+roslaunch image_based_formation_control controllers.launch
 ```
 
 The second controll has a default set of arguments in the file `controllers.launch`
 However, the control can be changed in the launch command:
 
 ```bash
-roslaunch formation_control controllers.launch control:=1
+roslaunch image_based_formation_control controllers.launch control:=1 matching:=0 verbose:=0
 ```
 
 Such controllers are:

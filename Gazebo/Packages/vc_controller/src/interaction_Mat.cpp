@@ -12,33 +12,58 @@ cv::Mat vcc::interaction_Mat(cv::Mat & p, cv::Mat & Z ){
         std::cout << "Z vector mismatches dimetions \n" <<  std::flush;
         return cv::Mat();
     }
+
+    //  BEGIN 4 DOF
 //     cv::Mat L= cv::Mat::zeros(n,12,CV_64F) ;
-    cv::Mat L= cv::Mat::zeros(n,12,type) ;
-    
+    cv::Mat L= cv::Mat::zeros(n,8,type) ;
+
     //  Calculos
     //   -1/Z
 //     L.col(0) = - cv::Mat::ones(n,1,CV_64F)/Z;
     L.col(0) = - cv::Mat::ones(n,1,type)/Z;
-//     L.col(1) =
+//     L.col(1) = 0
     //  p[0,:]/Z
     L.col(2) = p.col(0)/Z;
-    //  p[0,:]*p[1,:]
-    L.col(3) = p.col(0).mul(p.col(1));
-    //  -(1+p[0,:]**2)
-    L.col(4) = -1.0*(1.0+p.col(0).mul(p.col(0)));
     //  p[1,:]
-    p.col(1).copyTo(L.col(5));
-//     L.col(6) =
+    p.col(1).copyTo(L.col(3));
+//     L.col(4) = 0
     //  -1/Z
-    L.col(0).copyTo(L.col(7));
+    L.col(0).copyTo(L.col(5));
     //  p[1,:]/Z
-    L.col(8) = p.col(1)/Z;
-    //  1+p[1,:]**2
-    L.col(9) =  1.0+p.col(1).mul(p.col(1));
-    //  -p[0,:]*p[1,:]
-    L.col(10) = -1.0*p.col(0).mul(p.col(1));
+    L.col(6) = p.col(1)/Z;
     //  -p[0,:]
-    L.col(11) = -1.0 * p.col(0);
+    L.col(7) = -1.0 * p.col(0);
+    //  END 4 DOF
+    // std::cout << " -- L_D1 = " << L << std::endl << std::flush;
 
+//     //  BEGIN 6 DOF
+// //     cv::Mat L= cv::Mat::zeros(n,12,CV_64F) ;
+//     cv::Mat L= cv::Mat::zeros(n,12,type) ;
+//
+//     //  Calculos
+//     //   -1/Z
+// //     L.col(0) = - cv::Mat::ones(n,1,CV_64F)/Z;
+//     L.col(0) = - cv::Mat::ones(n,1,type)/Z;
+// //     L.col(1) = 0
+//     //  p[0,:]/Z
+//     L.col(2) = p.col(0)/Z;
+//     //  p[0,:]*p[1,:]
+//     L.col(3) = p.col(0).mul(p.col(1));
+//     //  -(1+p[0,:]**2)
+//     L.col(4) = -1.0*(1.0+p.col(0).mul(p.col(0)));
+//     //  p[1,:]
+//     p.col(1).copyTo(L.col(5));
+// //     L.col(6) = 0
+//     //  -1/Z
+//     L.col(0).copyTo(L.col(7));
+//     //  p[1,:]/Z
+//     L.col(8) = p.col(1)/Z;
+//     //  1+p[1,:]**2
+//     L.col(9) =  1.0+p.col(1).mul(p.col(1));
+//     //  -p[0,:]*p[1,:]
+//     L.col(10) = -1.0*p.col(0).mul(p.col(1));
+//     //  -p[0,:]
+//     L.col(11) = -1.0 * p.col(0);
+//     //  END 6 DOF
     return L.reshape(1,2*n);
 }

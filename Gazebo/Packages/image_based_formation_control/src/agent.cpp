@@ -558,11 +558,11 @@ void fvc::agent::execControl(double dt)
 
     double det=0.0;
     L = vcc::Moore_Penrose_PInv(L,det);
-    if (det < 1e-9)
+    if (det < 1e-14)
     {
         std::cout << label << " --- Controller error" << std::endl;
-        return;
-        
+        // return;
+
     }
     
     std::cout << label << " -- det = " << det << std::endl << std::flush;
@@ -575,7 +575,8 @@ void fvc::agent::execControl(double dt)
     States[label].Vx += (float) U.at<float>(1,0);
     States[label].Vy += (float) U.at<float>(0,0);
     States[label].Vz += (float) U.at<float>(2,0);
-    States[label].Vyaw += (float) U.at<float>(5,0);
+    States[label].Vyaw += (float) U.at<float>(3,0);
+    // States[label].Vyaw += (float) U.at<float>(5,0); // 6DOF
     
 //     if(ret !=0)
 //     {

@@ -20,6 +20,7 @@ def plot_time(t_array,
               xlimits = None,
               ylimits = None,
               ref = None,
+              refLab = "Threshold",
               module = None):
     
     n = var_array.shape[0]
@@ -40,7 +41,7 @@ def plot_time(t_array,
         ax.plot([t_array[0],t_array[-1]],[ref,ref], 
                 'k--', alpha = 0.5)
         symbols.append(mpatches.Patch(color='k'))
-        labels.append("Integral treshold")
+        labels.append(refLab)
     if not module is None:
         for i in range(len(module)):
             ax.plot([t_array[0],t_array[-1]],[module[i],module[i]], 

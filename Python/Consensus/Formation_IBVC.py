@@ -164,7 +164,8 @@ def plot_3Dcam(ax, camera,
             positionArray[1,:],
             positionArray[2,:],
             label = str(i),
-            color = color) # Plot camera trajectory
+            color = color,
+            s = 0.1 ) # Plot camera trajectory
     
     camera.pose(end_configuration)
     camera.draw_camera(ax, scale=camera_scale, color='red')
@@ -206,7 +207,8 @@ def view3D(directory,
     ax = plt.axes(projection='3d')
     name = directory+"/3Dplot"
     #fig.suptitle(label)
-    ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    #ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    ax.scatter(P[0,:], P[1,:], P[2,:], s = 3)
     for i in range(n_agents):
         cam = cm.camera()
         cam.pose(end_position[i,:])
@@ -219,20 +221,65 @@ def view3D(directory,
                 i = i,
                 camera_scale    = 0.02)
     
-    #f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
-    lfact = 1.1
-    x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
-    x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
-    y_min = lfact*min(p0[1,:].min(),pd[1,:].min())
-    y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
-    z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
+    ##f_size = 1.1*max(abs(p0[:2,:]).max(),abs(pd[:2,:]).max())
+    #lfact = 1.1
+    #x_min = lfact*min(p0[0,:].min(),pd[0,:].min())
+    #x_max = lfact*max(p0[0,:].max(),pd[0,:].max())
+    #y_min = lfact*min(p0[1,:].min(),pd[1,:].min())
+    #y_max = lfact*max(p0[1,:].max(),pd[1,:].max())
+    #z_max = lfact*max(p0[2,:].max(),pd[2,:].max())
     
-    if not xLimit is None:
-        ax.set_xlim(xLimit[0],xLimit[1])
-    if not yLimit is None:
-        ax.set_ylim(yLimit[0],yLimit[1])
-    if not zLimit is None:
-        ax.set_zlim(zLimit[0],zLimit[1])
+    #if not xLimit is None:
+        #ax.set_xlim(xLimit[0],xLimit[1])
+    #if not yLimit is None:
+        #ax.set_ylim(yLimit[0],yLimit[1])
+    #if not zLimit is None:
+        #ax.set_zlim(zLimit[0],zLimit[1])
+    
+    
+   
+    
+    lfact = 1.1
+    x_min = min(p0[0,:].min(),
+                pd[0,:].min(),
+                pos_arr[:,0,-1].min(),
+                P[0,:].min())
+    x_max = max(p0[0,:].max(),
+                pd[0,:].max(),
+                pos_arr[:,0,-1].max(),
+                P[0,:].max())
+    y_min = min(p0[1,:].min(),
+                pd[1,:].min(),
+                pos_arr[:,1,-1].min(),
+                P[1,:].min())
+    y_max = max(p0[1,:].max(),
+                pd[1,:].max(),
+                pos_arr[:,1,-1].max(),
+                P[1,:].max())
+    z_max = max(p0[2,:].max(),
+                pd[2,:].max(),
+                pos_arr[:,2,-1].max(),
+                P[2,:].max())
+    z_min = min(p0[2,:].min(),
+                pd[2,:].min(),
+                pos_arr[:,2,-1].min(),
+                P[2,:].min())
+    
+    width = x_max - x_min
+    height = y_max - y_min
+    depth = z_max - z_min
+    sqrfact = max(width,height,depth)
+    
+    x_min -= (sqrfact - width )/2
+    x_max += (sqrfact - width )/2
+    y_min -= (sqrfact - height )/2
+    y_max += (sqrfact - height )/2
+    z_min -= (sqrfact - depth )/2
+    z_max += (sqrfact - depth )/2
+    ax.set_xlim(x_min,x_max)
+    ax.set_ylim(y_min,y_max)
+    ax.set_zlim(z_min,z_max)
+    
     
     fig.legend( loc=1)
     plt.show()
@@ -983,7 +1030,7 @@ def experiment(directory = "0",
         logText += '\n' +"X_"+str(j)+" = "+str(agents[j].camera.p)
     for j in range(n_agents):
         logText += '\n' +"V_"+str(j)+" = "+str(U_array[j,:,-1])
-    
+    logText += '\n' +"CMRS = "+str(norm(ret_err)/n_agents)
     logText += '\n' +"Mean inital heights = "+str(np.mean(p0[2,:]))
     logText += '\n' +"Mean camera heights = " +str(np.mean(np.r_[p0[2,:],pd[2,:]]))
     
@@ -1068,7 +1115,8 @@ def experiment(directory = "0",
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     name = directory+"/3Dplot"
-    ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    #ax.plot(P[0,:], P[1,:], P[2,:], 'o')
+    ax.scatter(P[0,:], P[1,:], P[2,:], s = 10)
     if gdl ==1:
         for i in range(n_agents):
             plot_3Dcam(ax, agents[i].camera,
@@ -1078,7 +1126,7 @@ def experiment(directory = "0",
                         pd[:,i],
                         color = colors[i],
                         i = i,
-                        camera_scale    = 0.02)
+                        camera_scale    = 0.05)
     elif gdl == 2:
         for i in range(n_agents):
             init = p0[:,i]
@@ -1172,6 +1220,8 @@ def experiment(directory = "0",
                 serr_array[:,:],
                 #colors,
                 ylimits = [-0.1,1.1],
+                ref = 0.1,
+                refLab = "Threshold",
                 name = directory+"/State_Error",
                 label = "Formation Error",
                 labels = ["translation","rotation"])
@@ -1191,6 +1241,7 @@ def experiment(directory = "0",
                 tmp,
                 #colors,
                 ref = int_res,
+                refLab = "Integral threshold",
                 ylimits = [-1,1],
                 name = directory+"/Norm_Feature_Error",
                 label = "Features Error")
@@ -1200,7 +1251,8 @@ def experiment(directory = "0",
         mp.plot_time(t_array,
                     U_array[i,:,:],
                     #colors,
-                    ylimits = [-1,1],
+                    #ylimits = [-1,1],
+                    ylimits = [-.1,.1],
                     name = directory+"/Velocidades_"+str(i),
                     label = "Velocities",
                     labels = ["X","Y","Z","Wx","Wy","Wz"])
@@ -3010,7 +3062,7 @@ def plot_tendencias(nReps = 20,
     ax.set_xlabel("Step")
     ax.set_ylabel("Consensus error")
     #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.01,0.11))
+    plt.ylim((-0.001,0.01))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
     
@@ -3279,7 +3331,7 @@ def test_reg():
     return
 
 
-def main(arg):
+def mainLocal(arg):
     
     ##  Color palettes
     #colorPalette("general.npz", n_colors = 60)
@@ -3458,7 +3510,7 @@ def main(arg):
     
     
     
-    #   END plot circle reference
+    
     #Pxy = 0.6
     #P = [[-Pxy, -Pxy, Pxy,  Pxy],
         #[-Pxy,  Pxy, Pxy, -Pxy],
@@ -3494,507 +3546,52 @@ def main(arg):
     #plt.close()
     
     #return
+    #   END plot circle reference
     
     #   BEGIN UI [r | v | Simple | 0-4]
     
-    ##  Arg parser and log INIT
-    #selector = arg[2]
+    #  Arg parser and log INIT
+    selector = arg[2]
     
-    ##   Desktop
-    #if selector == 'r':
-        ##scene(modify = ["P"],
-              ##Pz = [-1,0],
-                ##dirBase = arg[3],
-                ##n_agents = 4, 
-                ##n_points = 30)
-        #ret = experiment(directory=arg[3],
-                    #t_end = 50,
-                    ##setRectification = True,
-                    ##gdl = 2,
-                    ##leader = 0,
-                    ##lamb = 0.1,
-                    ###modified =["nPoints"],
-                    ##gamma0 = 3.,
-                    ##gammaInf = .1,
-                    ##intGamma0 = 0.1,
-                    ##intGammaInf = 0.01,
-                    ##intGammaSteep = 5,
-                    ##set_derivative = True,
-                    ##tanhLimit = True,
-                    ##k_int = 0.1,
-                    ##int_res = 0.2,
-                    #repeat = True)
-        #print(ret)
-        ##view3D(arg[3])
-        #return
-    #if selector == 'v':
+    #   Desktop
+    if selector == 'r':
+        #scene(modify = ["P"],
+              #Pz = [-1,0],
+                #dirBase = arg[3],
+                #n_agents = 4, 
+                #n_points = 30)
+        ret = experiment(directory=arg[3],
+                    t_end = 400,
+                    #setRectification = True,
+                    #gdl = 2,
+                    #leader = 0,
+                    #lamb = 0.1,
+                    ##modified =["nPoints"],
+                    #gamma0 = 3.,
+                    #gammaInf = .1,
+                    #intGamma0 = 0.1,
+                    #intGammaInf = 0.01,
+                    #intGammaSteep = 5,
+                    #set_derivative = True,
+                    #tanhLimit = True,
+                    #k_int = 0.1,
+                    #int_res = 0.2,
+                    repeat = True)
+        print(ret)
         #view3D(arg[3])
-        #return
+        return
+    if selector == 'v':
+        view3D(arg[3])
+        return
     
     
     
-    #return
+    return
     
     #   END UI
     
     
     
-    #   BEGIN read npz
-    
-    ##   TODO: test the consenus of hte good cases 
-    ##directory = arg[2]
-    ##npzfile = np.load(directory+'/data.npz')
-    ##arr = []
-    #for i in range(20):
-        #npzfile = np.load(str(i)+'/data.npz')
-        ##npzfile = np.load('data_'+str(i)+'.npz')
-        ##print(npzfile['var_arr_2'].max())
-        ##print(npzfile['var_arr_3'].max())
-        #tmp = npzfile['var_arr']
-        #et = npzfile['var_arr_2']
-        #ew = npzfile['var_arr_3']
-        #mask = npzfile['mask']
-        #tmp = np.linalg.norm(tmp,axis = 0)/4
-        ##if i == 15:
-            ##print(tmp)
-        #tmp = tmp[mask == 0]
-        #et = et[mask == 0]
-        #ew = ew[mask == 0]
-        #tmp_max = tmp.max()
-        ##print(tmp_max)
-        #idx = np.argmax(tmp)
-        ##print(idx)
-        ##idx = idx[0]
-        #print('ec = ' + str(tmp[idx]) + '\tet = ' +str(et[idx]) + '\tew = ' +str(ew[idx]))
-        ##print('--')
-        
-        ##if i == 16:
-            ##print(tmp)
-        
-        ##   Min 3d analysis
-        ##npzfile = np.load('data_'+str(i)+'.npz')
-        ##arr_nP = npzfile['arr_nP']
-        ##mask = npzfile['mask']
-        ##arr_nP = np.array(arr_nP, np.int64)
-        ##arr_nP -= 4
-        ##arr_trial_heat_cons = npzfile['arr_trial_heat_cons']
-        ##for j in range(4):
-            ###if mask[j] == 0. and arr_nP[j] <95:
-            ##if mask[j] == 0. :
-                ##if arr_nP[j] == 96:
-                    ##arr_nP[j] = 95
-                ##arr.append(arr_trial_heat_cons[j,arr_nP[j]])
-        ##print(arr_nP)
-        ##print(arr_trial_heat_cons[:,arr_nP])
-        ##print('--')
-       
-    ##print(arr)
-    ##print(max(arr))
-    #return
-    
-    #   END read npz
-    
-    #   BEGIN plot fail cases comparison 
-    
-    #Names = ["W_04_localCirc_Rectification_P/",
-             #"W_04_localRand_Rectification_P/",
-             #"W_04_localCirc_Rectification_PIG/",
-             #"W_04_localRand_Rectification_PIG/"]
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    
-    #nReps = 20
-    #count_mask = np.zeros((4,nReps),dtype = np.int_)
-    #for i in range(len(Names)):
-        #dirBase = root + Names[i]
-        #for k in range(nReps):
-            
-            #npzfile = np.load(dirBase+str(k)+'/data.npz')
-            #mask = npzfile['mask']
-            #count_mask[i,k] = mask.sum()
-    
-    #from matplotlib.ticker import MaxNLocator, FuncFormatter
-    
-    #fig, ax = plt.subplots(frameon=False)
-    #fig.suptitle("Failed cases by step")
-    ##ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    #ref = np.arange(nReps)+1
-    #ax.set_xticks(ref)
-    
-    
-    #npzfile = np.load("default.npz")
-    #colors = npzfile["colors"]
-    #ax.plot(ref,count_mask[0,:], color = colors[0], label= "EHR-P")#,lw = 0.5)
-    #ax.plot(ref,count_mask[1,:], color = colors[1], label= "DHR-P")#,lw = 0.5)
-    #ax.plot(ref,count_mask[2,:], color = colors[2], label= "EHR-PI-AG")#,lw = 0.5)
-    #ax.plot(ref,count_mask[3,:], color = colors[3], label= "DHR-PI-AG")#,lw = 0.5)
-    
-    
-    #fig.legend( loc=2)
-    #ax.set_xlabel("Step")
-    #ax.set_ylabel("Failed simulations")
-    ##plt.xlim((-0.1,1.1))
-    ##plt.ylim((-0.01,0.11))
-    #ax.grid(axis='y')
-    #ax.set_axisbelow(True)
-    
-    
-    #plt.tight_layout()
-    #plt.savefig('Rectification_count.pdf',bbox_inches='tight')
-    ##plt.show()
-    #plt.close()
-    #return 
-
-    #   END plot fail cases comparison 
-    
-    #   BEGIN Front parallel Part: set Circular
-    
-    
-    
-    ##   Local tests  
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_04_FrontParallel_Circular_Flat/",
-             #"W_04_FrontParallel_Circular_NFlat/",
-             #"W_04_FrontParallel_Circular_NFlat_PIG/"]
-    #nReps = 5
-    #nodes = 20
-    
-    ###   Plot
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(i>0)]
-        ##experiment_plots(dirBase =  dirBase,
-                         ##kSets = nodes,
-                         ##colorFile = colorFile)
-        
-    ##return
-    
-    
-    ##  process
-    #dirBase = root + Names[sel_case]
-    #colorFile = colorNames[int(sel_case>0)]
-    
-    #logText = "Set = "+ dirBase+'\n'
-    #write2log(logText)
-    
-    #logText = "Job = "+str(job)+'\n'
-    #write2log(logText)
-    
-    #if sel_case < 2:
-        #experiment_frontParallel(nReps = nReps,
-                                 #repeat = True, #   Only if already created
-                     #t_end = 800,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #Flat = (sel_case == 0))
-    #else:
-        #experiment_frontParallel(nReps = nReps,
-                                 #repeat = True,
-                        #t_end = 800,
-                        #gamma0 = 3.,
-                        #gammaInf = .1,
-                        #intGamma0 = 0.1,
-                        #intGammaInf = 0.01,
-                        #intGammaSteep = 5,
-                        #dirBase = dirBase,
-                        #node = job)
-    #write2log("LOG FINISHED \n")
-    #return 
-    
-    
-    #   END Front parallel Part: set Circular
-    #   BEGIN Front parallel Part: set Random
-    
-    
-    
-    ##   Local tests  
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_04_FrontParallel_Random_Flat/",
-             #"W_04_FrontParallel_Random_NFlat/",
-             #"W_04_FrontParallel_Random_NFlat_PIG/"]
-    #nReps = 5
-    #nodes = 20
-    
-    ##   Plot
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(i>0)]
-        ##experiment_plots(dirBase =  dirBase,
-                         ##kSets = nodes,
-                         ##colorFile = colorFile)
-        
-    ##return
-    
-    
-    ##  process
-    #dirBase = root + Names[sel_case]
-    #colorFile = colorNames[int(sel_case>0)]
-    
-    #logText = "Set = "+ dirBase+'\n'
-    #write2log(logText)
-    
-    #logText = "Job = "+str(job)+'\n'
-    #write2log(logText)
-    
-    #if sel_case < 2:
-        #experiment_frontParallel(nReps = nReps,
-                        #t_end = 800,
-                        #n_points = 30,
-                        #repeat = True, #   Only if already created
-                        #dirBase = dirBase,
-                        #node = job,
-                        #Flat = (sel_case == 0))
-    #else:
-        #experiment_frontParallel(nReps = nReps,
-                        #t_end = 800,
-                         #gamma0 = 3.,
-                        #gammaInf = .1,
-                        #intGamma0 = 0.1,
-                        #intGammaInf = 0.01,
-                        #repeat = True,
-                        #dirBase = dirBase,
-                        #node = job)
-    #write2log("LOG FINISHED \n")
-    #return 
-    
-    
-    #   END Front parallel Part: set Random
-    
-    
-    ##   BEGIN CLUSTER Local
-    
-    ##    Local tests  
-    #job = int(arg[2])
-    #sel = int(arg[3])
-    #series = int(arg[4])
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    
-    ###   Local
-    #if series == 0:
-        #Names = ["W_04_localCirc_P/",
-                #"W_04_localRand_P/",
-                #"W_04_localCirc_PIG/",
-                #"W_04_localRand_PIG/"]
-        #setRectification = False
-        #gdl = 1
-        #leader = None
-        
-    #if series == 5:
-        #Names = ["W_04_localCirc_P_omega/",
-                #"W_04_localRand_P_omega/",
-                #"W_04_localCirc_PIG_omega/",
-                #"W_04_localRand_PIG_omega/"]
-        #setRectification = False
-        #gdl = 1
-        #leader = None
-    
-    ## Local + rectification
-    #if series == 1:
-        #Names = ["W_04_localCirc_P_r/",
-                #"W_04_localRand_P_r/",
-                #"W_04_localCirc_PIG_r/",
-                #"W_04_localRand_PIG_r/"]
-        #setRectification = True
-        #gdl = 2
-        #leader = None
-    
-    ## Local + rectification
-    #if series == 3:
-        #Names = ["W_04_localCirc_Rectification_P/",
-             #"W_04_localRand_Rectification_P/",
-             #"W_04_localCirc_Rectification_PIG/",
-             #"W_04_localRand_Rectification_PIG/"]
-        #setRectification = True
-        #gdl = 2
-        #leader = None
-    
-    ## Local + rectification + yaw < 90 °
-    #if series == 4:
-        #Names = ["W_04_localCirc_RectificationYaw_P/",
-             #"W_04_localRand_RectificationYaw_P/",
-             #"W_04_localCirc_RectificationYaw_PIG/",
-             #"W_04_localRand_RectificationYaw_PIG/"]
-        #setRectification = True
-        #gdl = 2
-        #leader = None
-    
-    
-    ### Local + leader
-    #if series == 2:
-        #Names = ["W_04_localCirc_P_l/",
-                #"W_04_localRand_P_l/",
-                #"W_04_localCirc_PIG_l/",
-                #"W_04_localRand_PIG_l/"]
-        #setRectification = False
-        #gdl = 1
-        #leader = 0
-    
-    
-    #### Rectification test, sign metrics
-    ###Names = ["W_02_localCirc_P_rte/",
-             ###"W_02_localRand_P_rte/"]#,
-             ####"W_02_localCirc_PIG_rte/",
-             ####"W_02_localRand_PIG_rte/"]
-    ###setRectification = True
-    ###gdl = 2
-    ###leader = None
-    
-    #### Rectification test gdl 2 
-    ###Names = ["W_02_localCirc_P_rtg/",
-             ###"W_02_localRand_P_rtg/"]#,
-             ####"W_02_localCirc_PIG_rtg/",
-             ####"W_02_localRand_PIG_rtg/"]
-    ###setRectification = False
-    ###gdl = 2
-    ###leader = None
-    
-    ####   Plot part
-    ###i = 1
-    ###colorFile = colorNames[i%2]
-    ###plot_tendencias(dirBase = root + Names[i], 
-                    ###colorFile = colorFile)
-    ###return
-    
-    ##for i in range(len(Names)):
-        ##colorFile = colorNames[i%2]
-        ##plot_tendencias(dirBase = root + Names[i], 
-                        ##colorFile = colorFile)
-        
-    ##return
-    
-    ##   Proc part
-    #i = job
-    
-    ##  process
-    #name = Names[sel]
-    #colorFile = colorNames[sel%2]
-    
-    #logText = "Set = "+root + name+'\n'
-    #write2log(logText)
-    
-    #logText = "Repetition = "+str(i)+'\n'
-    #write2log(logText)
-    ##   Proporcional
-    #if sel == 0 or sel == 1:
-        #experiment_repeat(nReps = 100,
-                          #t_end = 800,
-                          #setRectification = setRectification,
-                          #gdl = gdl,
-                          #leader = leader,
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    ##   PI AG
-    #if sel == 2 or sel ==3:
-        #experiment_repeat(nReps = 100,
-                          #t_end = 800,
-                          #setRectification = setRectification,
-                          #gdl = gdl,
-                          #leader = leader,
-                        #gamma0 = 3.,
-                        #gammaInf = .1,
-                        #intGamma0 = 0.1,
-                        #intGammaInf = 0.01,
-                        #dirBase = root + name+str(i)+"/",
-                        #enablePlotExp= False)
-    ##experiment_plots(dirBase = root + name+str(i)+"/", 
-                     ##colorFile = colorFile)
-    
-    #write2log("LOG FINISHED \n")
-    #return
-    
-    #   END Cluster local
-    #   BEGIN Cluster local: SETUP
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    ##name = "W_02_localCirc_Ref/"
-    #name = "W_04_localCirc_RectificationYaw_P/"
-             
-    #for i in range(100):
-        #experiment_local(n_points = 30,
-                    #dirBase = root+name,
-                    #caseId = i,
-                    #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
-                                   #np.linspace(0.1,2.,20).reshape((1,20)),
-                                   #np.linspace(0.1,2.,20).reshape((1,20)),
-                                   #np.linspace(0.1,np.pi/6,20).reshape((1,20)),
-                                   #np.zeros((1,20)),
-                                   #(np.pi/2) * np.ones(20).reshape((1,20))],
-                    #activatepdCirc = True)    
-    
-    ##name = "W_02_localRand_Ref/"
-    #name = "W_04_localRand_RectificationYaw_P/"
-    #for i in range(100):
-        #experiment_local(n_points = 30,
-                    #dirBase = root+name,
-                    #caseId = i,
-                    #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
-                                   #np.linspace(0.1,2.,20).reshape((1,20)),
-                                   #np.linspace(0.1,2.,20).reshape((1,20)),
-                                   #np.linspace(0.1,np.pi/6,20).reshape((1,20)),
-                                   #np.zeros((1,20)),
-                                   #(np.pi/2) * np.ones(20).reshape((1,20))],
-                    #activatepdCirc = False)    
-        
-    #return
-    
-    
-    #   END Cluster local: SETUP
-    
-    #   BEGIN   testing required points
-
-    #job = int(arg[2])
-    #sel_case = int(arg[3])
-    
-    #Names= ["W_04_nPoints_Circular/",
-            #"W_04_nPoints_Circular_PIG/",
-            #"W_04_nPoints_Random/",
-            #"W_04_nPoints_Random_PIG/"]
-    
-    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    
-    #nReps = 4   # por nodo
-    ##nReps = 5   # por nodo
-    #nodos = 25
-    ##nodos = 20
-    
-    ##   Plot part
-    ##i = 2
-    ##dirBase = root + Names[i]
-    ##colorFile = colorNames[int(np.floor(i/2))]
-    ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
-    ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return 
-    ##for i in range(len(Names)):
-        ##dirBase = root + Names[i]
-        ##colorFile = colorNames[int(np.floor(i/2))]
-        ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
-        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-    ##return
-    
-    ##  process
-    #dirBase = root + Names[sel_case]
-    #logText = "Set = "+str(job)+'\n'
-    #write2log(logText)
-    #experiment_3D_min(nReps = nReps,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #sel_case = sel_case,
-                    #enablePlotExp = False)
-    
-    #write2log("LOG FINISHED \n")
-    
-    #return
-
-    #   END testing required points
-    
-
-
     # 
     
     #   BEGIN singular repeats
@@ -4247,8 +3844,454 @@ def main(arg):
     #   END Experimento singular
     
     
+def main(arg):
+    
+    ##  Color palettes
+    #colorPalette("general.npz", n_colors = 60)
+    #colorPalette("default.npz", n_colors = 4)
+    #colorPalette("colorPalette_A.npz", n_colors = 4)
+    #colorPalette("colorPalette_B.npz", n_colors = 4)
+    #return
+    
+    #test_reg()
+    #return 
+    
+    #   reset Log
+    global logFile
+    logFile = arg[1]
+    
+    try:
+        with open(logFile,'w') as file:
+            file.write("Log file INIT\n")
+    except IOError:
+        print("Logfile Error."+logFile+" OUT")
+        return
+    
+    #   BEGIN read npz
+    
+    ##   TODO: test the consenus of hte good cases 
+    ##directory = arg[3]
+    ##npzfile = np.load(directory+'/data.npz')
+    ##arr = []
+    #for i in range(20):
+        #npzfile = np.load(str(i)+'/data.npz')
+        ##npzfile = np.load('data_'+str(i)+'.npz')
+        ##print(npzfile['var_arr_2'].max())
+        ##print(npzfile['var_arr_3'].max())
+        #tmp = npzfile['var_arr']
+        #et = npzfile['var_arr_2']
+        #ew = npzfile['var_arr_3']
+        #mask = npzfile['mask']
+        #tmp = np.linalg.norm(tmp,axis = 0)/4
+        ##if i == 15:
+            ##print(tmp)
+        #tmp = tmp[mask == 0]
+        #et = et[mask == 0]
+        #ew = ew[mask == 0]
+        #tmp_max = tmp.max()
+        ##print(tmp_max)
+        #idx = np.argmax(tmp)
+        ##print(idx)
+        ##idx = idx[0]
+        #print('ec = ' + str(tmp[idx]) + '\tet = ' +str(et[idx]) + '\tew = ' +str(ew[idx]))
+        ##print('--')
+        
+        ##if i == 16:
+            ##print(tmp)
+        
+        ##   Min 3d analysis
+        ##npzfile = np.load('data_'+str(i)+'.npz')
+        ##arr_nP = npzfile['arr_nP']
+        ##mask = npzfile['mask']
+        ##arr_nP = np.array(arr_nP, np.int64)
+        ##arr_nP -= 4
+        ##arr_trial_heat_cons = npzfile['arr_trial_heat_cons']
+        ##for j in range(4):
+            ###if mask[j] == 0. and arr_nP[j] <95:
+            ##if mask[j] == 0. :
+                ##if arr_nP[j] == 96:
+                    ##arr_nP[j] = 95
+                ##arr.append(arr_trial_heat_cons[j,arr_nP[j]])
+        ##print(arr_nP)
+        ##print(arr_trial_heat_cons[:,arr_nP])
+        ##print('--')
+       
+    ##print(arr)
+    ##print(max(arr))
+    #return
+    
+    #   END read npz
+    
+    #   BEGIN plot fail cases comparison 
+    
+    #Names = ["W_04_localCirc_Rectification_P/",
+             #"W_04_localRand_Rectification_P/",
+             #"W_04_localCirc_Rectification_PIG/",
+             #"W_04_localRand_Rectification_PIG/"]
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    
+    #nReps = 20
+    #count_mask = np.zeros((4,nReps),dtype = np.int_)
+    #for i in range(len(Names)):
+        #dirBase = root + Names[i]
+        #for k in range(nReps):
+            
+            #npzfile = np.load(dirBase+str(k)+'/data.npz')
+            #mask = npzfile['mask']
+            #count_mask[i,k] = mask.sum()
+    
+    #from matplotlib.ticker import MaxNLocator, FuncFormatter
+    
+    #fig, ax = plt.subplots(frameon=False)
+    #fig.suptitle("Failed cases by step")
+    ##ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    #ref = np.arange(nReps)+1
+    #ax.set_xticks(ref)
+    
+    
+    #npzfile = np.load("default.npz")
+    #colors = npzfile["colors"]
+    #ax.plot(ref,count_mask[0,:], color = colors[0], label= "EHR-P")#,lw = 0.5)
+    #ax.plot(ref,count_mask[1,:], color = colors[1], label= "DHR-P")#,lw = 0.5)
+    #ax.plot(ref,count_mask[2,:], color = colors[2], label= "EHR-PI-AG")#,lw = 0.5)
+    #ax.plot(ref,count_mask[3,:], color = colors[3], label= "DHR-PI-AG")#,lw = 0.5)
+    
+    
+    #fig.legend( loc=2)
+    #ax.set_xlabel("Step")
+    #ax.set_ylabel("Failed simulations")
+    ##plt.xlim((-0.1,1.1))
+    ##plt.ylim((-0.01,0.11))
+    #ax.grid(axis='y')
+    #ax.set_axisbelow(True)
+    
+    
+    #plt.tight_layout()
+    #plt.savefig('Rectification_count.pdf',bbox_inches='tight')
+    ##plt.show()
+    #plt.close()
+    #return 
+
+    #   END plot fail cases comparison 
+    
+    #   BEGIN Front parallel Part: set Circular
+    
+    
+    
+    ##   Local tests  
+    
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_04_FrontParallel_Circular_Flat/",
+             #"W_04_FrontParallel_Circular_NFlat/",
+             #"W_04_FrontParallel_Circular_NFlat_PIG/"]
+    #nReps = 5
+    #nodes = 20
+    
+    ##   Plot
+    #if arg[2] == 'p':
+        #for i in range(len(Names)):
+            #dirBase = root + Names[i]
+            #colorFile = colorNames[int(i>0)]
+            #experiment_plots(dirBase =  dirBase,
+                            #kSets = nodes,
+                            #colorFile = colorFile)
+            
+        #return
+    
+    #job = int(arg[3])
+    #sel_case = int(arg[4])
+    
+    ##  process
+    #dirBase = root + Names[sel_case]
+    #colorFile = colorNames[int(sel_case>0)]
+    
+    #logText = "Set = "+ dirBase+'\n'
+    #write2log(logText)
+    
+    #logText = "Job = "+str(job)+'\n'
+    #write2log(logText)
+    
+    #if sel_case < 2:
+        #experiment_frontParallel(nReps = nReps,
+                                 #repeat = True, #   Only if already created
+                     #t_end = 800,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #Flat = (sel_case == 0))
+    #else:
+        #experiment_frontParallel(nReps = nReps,
+                                 #repeat = True,
+                        #t_end = 800,
+                        #gamma0 = 3.,
+                        #gammaInf = .1,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.01,
+                        #intGammaSteep = 5,
+                        #dirBase = dirBase,
+                        #node = job)
+    #write2log("LOG FINISHED \n")
+    #return 
+    
+    
+    #   END Front parallel Part: set Circular
+    #   BEGIN Front parallel Part: set Random
+    
+    
+    
+    ##   Local tests  
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    #Names = ["W_04_FrontParallel_Random_Flat/",
+             #"W_04_FrontParallel_Random_NFlat/",
+             #"W_04_FrontParallel_Random_NFlat_PIG/"]
+    #nReps = 5
+    #nodes = 20
+    
+    ##   Plot
+    #if arg[2] == 'p':
+        #for i in range(len(Names)):
+            #dirBase = root + Names[i]
+            #colorFile = colorNames[int(i>0)]
+            #experiment_plots(dirBase =  dirBase,
+                            #kSets = nodes,
+                            #colorFile = colorFile)
+            
+        #return
+    
+    #job = int(arg[3])
+    #sel_case = int(arg[4])
+    
+    ##  process
+    #dirBase = root + Names[sel_case]
+    #colorFile = colorNames[int(sel_case>0)]
+    
+    #logText = "Set = "+ dirBase+'\n'
+    #write2log(logText)
+    
+    #logText = "Job = "+str(job)+'\n'
+    #write2log(logText)
+    
+    #if sel_case < 2:
+        #experiment_frontParallel(nReps = nReps,
+                        #t_end = 800,
+                        #n_points = 30,
+                        #repeat = True, #   Only if already created
+                        #dirBase = dirBase,
+                        #node = job,
+                        #Flat = (sel_case == 0))
+    #else:
+        #experiment_frontParallel(nReps = nReps,
+                        #t_end = 800,
+                         #gamma0 = 3.,
+                        #gammaInf = .1,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.01,
+                        #repeat = True,
+                        #dirBase = dirBase,
+                        #node = job)
+    #write2log("LOG FINISHED \n")
+    #return 
+    
+    
+    #   END Front parallel Part: set Random
+    
+    
+    ##   BEGIN CLUSTER Local
+    
+    #    Local tests  
+    series = int(arg[3])
+    
+    root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    
+    ##   Local
+    if series == 0:
+        Names = ["W_05_localCirc_P/",
+                "W_05_localRand_P/",
+                "W_05_localCirc_PIG/",
+                "W_05_localRand_PIG/"]
+        setRectification = False
+        gdl = 1
+        leader = None
+        
+    
+    # Local + rectification
+    if series == 1:
+        Names = ["W_05_localCirc_P_r/",
+                "W_05_localRand_P_r/",
+                "W_05_localCirc_PIG_r/",
+                "W_05_localRand_PIG_r/"]
+        setRectification = True
+        gdl = 2
+        leader = None
+    
+    
+    ## Local + leader
+    if series == 2:
+        Names = ["W_05_localCirc_P_l/",
+                "W_05_localRand_P_l/",
+                "W_05_localCirc_PIG_l/",
+                "W_05_localRand_PIG_l/"]
+        setRectification = False
+        gdl = 1
+        leader = 0
+    
+    
+    ###   Plot part
+    if arg[2] == 'p':
+        #i = 1
+        #colorFile = colorNames[i%2]
+        #plot_tendencias(dirBase = root + Names[i], 
+                        #colorFile = colorFile)
+        #return
+        
+        for i in range(len(Names)):
+            colorFile = colorNames[i%2]
+            plot_tendencias(dirBase = root + Names[i], 
+                            colorFile = colorFile)
+            
+        return
+    
+    #   Proc part
+    job = int(arg[3])
+    sel = int(arg[4])
+    i = job
+    
+    #  process
+    name = Names[sel]
+    colorFile = colorNames[sel%2]
+    
+    logText = "Set = "+root + name+'\n'
+    write2log(logText)
+    
+    logText = "Repetition = "+str(i)+'\n'
+    write2log(logText)
+    #   Proporcional
+    if sel == 0 or sel == 1:
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = setRectification,
+                          gdl = gdl,
+                          leader = leader,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #   PI AG
+    if sel == 2 or sel ==3:
+        experiment_repeat(nReps = 100,
+                          t_end = 800,
+                          setRectification = setRectification,
+                          gdl = gdl,
+                          leader = leader,
+                        gamma0 = 3.,
+                        gammaInf = .1,
+                        intGamma0 = 0.1,
+                        intGammaInf = 0.01,
+                        dirBase = root + name+str(i)+"/",
+                        enablePlotExp= False)
+    #experiment_plots(dirBase = root + name+str(i)+"/", 
+                     #colorFile = colorFile)
+    
+    write2log("LOG FINISHED \n")
+    return
+    
+    #   END Cluster local
+    #   BEGIN Cluster local: SETUP
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    
+    ##   Span:
+    ##   local
+    ##names = ["W_05_localCirc_Ref/",
+             ##"W_05_localRand_Ref/"]
+    ##dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
+                    ##np.linspace(0.1,2.,20).reshape((1,20)),
+                    ##np.linspace(0.1,2.,20).reshape((1,20)),
+                    ##np.linspace(0.1,np.pi/2,20).reshape((1,20)),
+                    ##np.linspace(0.1,np.pi/2,20).reshape((1,20)),
+                    ##np.linspace(0.1,np.pi/2,20).reshape((1,20))]
+    ###   Reference
+    #names = ["W_05_localCirc_Ref_r/",
+             #"W_05_localRand_Ref_r/"]
+    #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
+                    #np.linspace(0.1,2.,20).reshape((1,20)),
+                    #np.linspace(0.1,2.,20).reshape((1,20)),
+                    #np.linspace(0.1,np.pi/6,20).reshape((1,20)),
+                    #np.zeros((1,20)),
+                    #(np.pi/2) * np.ones(20).reshape((1,20))]
+             
+    #for i in range(100):
+        #experiment_local(n_points = 30,
+                    #dirBase = root+names[0],
+                    #caseId = i,
+                    #dArray = dArray,
+                    #activatepdCirc = True)    
+    
+    #for i in range(100):
+        #experiment_local(n_points = 30,
+                    #dirBase = root+names[1],
+                    #caseId = i,
+                    #dArray = dArray,
+                    #activatepdCirc = False)    
+        
+    #return
+    
+    
+    #   END Cluster local: SETUP
+    
+    #   BEGIN   testing required points
+
+    
+    #Names= ["W_04_nPoints_Circular/",
+            #"W_04_nPoints_Circular_PIG/",
+            #"W_04_nPoints_Random/",
+            #"W_04_nPoints_Random_PIG/"]
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    
+    #nReps = 4   # por nodo
+    ##nReps = 5   # por nodo
+    #nodos = 25
+    ##nodos = 20
+    
+    ##   Plot part
+    #if arg[2] == 'p':
+        #i = 2
+        #dirBase = root + Names[i]
+        #colorFile = colorNames[int(np.floor(i/2))]
+        #plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+        #return 
+        #for i in range(len(Names)):
+            #dirBase = root + Names[i]
+            #colorFile = colorNames[int(np.floor(i/2))]
+            #plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+            #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+        #return
+    
+    ##  process
+    #job = int(arg[3])
+    #sel_case = int(arg[4])
+    
+    #dirBase = root + Names[sel_case]
+    #logText = "Set = "+str(job)+'\n'
+    #write2log(logText)
+    #experiment_3D_min(nReps = nReps,
+                    #dirBase = dirBase,
+                    #node = job,
+                    #sel_case = sel_case,
+                    #enablePlotExp = False)
+    
+    #write2log("LOG FINISHED \n")
+    
+    #return
+
+    #   END testing required points
+    
+    return
 
 if __name__ ==  "__main__":
     
-    
-    main(sys.argv)
+    if os.getlogin( ) == 'bloodfield':
+        mainLocal(sys.argv)
+    else:
+        main(sys.argv)

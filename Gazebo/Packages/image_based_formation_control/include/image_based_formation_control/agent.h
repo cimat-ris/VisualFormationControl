@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cmath>
 
 #include <ros/ros.h>
 #include <opencv2/aruco.hpp>
@@ -43,7 +44,6 @@ namespace fvc
         int n_agents= 0;
         int n_neighbors= 0;
         int * neighbors = nullptr;
-        double * gamma = nullptr;
         bool *velContributions = nullptr;
         
         //  Variables 
@@ -52,6 +52,12 @@ namespace fvc
         std::vector<cv::Mat> errors_2;
         std::vector<std::vector<cv::Point2f>> complements;
         
+        //  Control modifications
+        bool PIAG_ENABLE=false;
+        cv::Mat errors_integral;
+        double gamma_0, gamma_inf, gamma_d;
+        double gammaIntegral_0, gammaIntegral_inf, gammaIntegral_d;
+
         //  directorios
         std::string input_dir;
         std::string output_dir;
@@ -88,6 +94,11 @@ namespace fvc
         bool isUpdated();
         //  check if the velocity array is sincomplete
         bool incompleteComputedVelocities();
+        //  Adaptive gamma
+        double adaptGamma(double _gamma_0, double _gamma_inf, double _gamma_d,
+                          cv::Mat _errors);
+        //  Error Integral
+        void integrateError(double dt);
         
         //  save data
         void save_state(double time);
@@ -97,6 +108,7 @@ namespace fvc
         bool imageRead();
         
         //  Interface and debuging
+        bool VERBOSE_ENABLE = false;
         cv::Mat image_store;
         sensor_msgs::ImagePtr image_msg;
         

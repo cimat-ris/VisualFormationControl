@@ -27,8 +27,6 @@ fvc::agent::~agent()
     if (neighbors != nullptr)
         delete neighbors;
     
-    if (gamma != nullptr)
-        delete gamma;
     if (velContributions != nullptr)
         delete velContributions;
     
@@ -44,9 +42,16 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     tmp_State.load(nh);
     // Load Laplacian rows
     n_agents = nh.param(std::string("n_agents"),0);
+    PIAG_ENABLE = nh.param(std::string("enablePIAG"),false);
+    VERBOSE_ENABLE = nh.param(std::string("debug"),false);
+    gamma_0 = nh.param(std::string("gamma_0"),false);
+    gamma_inf = nh.param(std::string("gamma_inf"),false);
+    gamma_d = nh.param(std::string("gamma_d"),false);
+    gammaIntegral_0 = nh.param(std::string("gammaIntegral_0"),false);
+    gammaIntegral_inf = nh.param(std::string("gammaIntegral_inf"),false);
+    gammaIntegral_d = nh.param(std::string("gammaIntegral_d"),false);
     
     neighbors = new int[n_agents];
-    gamma = new double[n_agents];
     velContributions = new bool[n_agents];
     States = new vcc::state [n_agents];
     
@@ -101,6 +106,9 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     output_dir = output_dir + "/";
     std::cout << input_dir << std::endl;
     std::cout << output_dir << std::endl;
+
+    //  TODO enable PIAG
+    //  TODO enable verbose
 }
 
 //  reads the reference images
@@ -158,37 +166,37 @@ bool fvc::agent::imageRead()
 }
 
 void fvc::agent::setPose(const geometry_msgs::Pose::ConstPtr& msg){	
-	if (!POSITION_UPDATED)
-    {
-        //creating quaternion
-        tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
-        //creatring rotation matrix ffrom quaternion
-        tf::Matrix3x3 rot_mat(q);
-        //obtaining euler angles
-        double _x, _y, _z;
-        double roll, pitch, yaw;
-        rot_mat.getEulerYPR(yaw, pitch, roll);
-        //saving the data obtained
-        _x = msg->position.x;
-        _y = msg->position.y;
-        _z = msg->position.z;
-    
-    
+	if (POSITION_UPDATED) return;
+
+    //creating quaternion
+    tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+    //creatring rotation matrix ffrom quaternion
+    tf::Matrix3x3 rot_mat(q);
+    //obtaining euler angles
+    double _x, _y, _z;
+    double roll, pitch, yaw;
+    rot_mat.getEulerYPR(yaw, pitch, roll);
+    //saving the data obtained
+    _x = msg->position.x;
+    _y = msg->position.y;
+    _z = msg->position.z;
+
+
 //         State.initialize(_x,_y,_z,yaw);
-        for (int i = 0; i < n_agents; i ++)
-            States[i].initialize(_x,_y,_z,yaw);
-        
-        POSITION_UPDATED = true;
-    
-        std::cout << "Init pose drone " << label << std::endl;
-        std::cout << "X: " << _x << std::endl;
-        std::cout << "Y: " << _y << std::endl;
-        std::cout << "Z: " << _z << std::endl;
-        std::cout << "Roll: " << roll << std::endl;
-        std::cout << "Pitch: " << pitch << std::endl;
-        std::cout << "Yaw: " << yaw << std::endl ;
-        std::cout << "-------------" << std::endl;	
-    }
+    for (int i = 0; i < n_agents; i ++)
+        States[i].initialize(_x,_y,_z,yaw);
+
+    POSITION_UPDATED = true;
+
+    std::cout << "Init pose drone " << label << std::endl;
+    std::cout << "X: " << _x << std::endl;
+    std::cout << "Y: " << _y << std::endl;
+    std::cout << "Z: " << _z << std::endl;
+    std::cout << "Roll: " << roll << std::endl;
+    std::cout << "Pitch: " << pitch << std::endl;
+    std::cout << "Yaw: " << yaw << std::endl ;
+    std::cout << "-------------" << std::endl;
+
 }
 
 void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
@@ -255,7 +263,6 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
 {
     int j = msg->j;
     
-//     std::vector<cv::Point2f> complement(4);
     std::vector<cv::Point2f> complement(4);
     
     //  consenso
@@ -325,6 +332,7 @@ image_based_formation_control::corners fvc::agent::getArUco(){
         corners_msg.data[3].x = corners[3].x;
         corners_msg.data[3].y = corners[3].y;
     }else{
+        std::cout << "ERR: Null ArUco was send" << std::endl << std::flush;
         corners_msg.data[0].x = 0.;
         corners_msg.data[0].y = 0.;
         corners_msg.data[1].x = 0.;
@@ -355,8 +363,8 @@ bool fvc::agent::incompleteComputedVelocities(){
 
 void fvc::agent::execControl(double dt)
 {
-    if(ARUCO_COMPUTED)
-    {
+    if(!ARUCO_COMPUTED) return;
+
     States[label].Vx = 0.;
     States[label].Vy = 0.;
     States[label].Vz = 0.;
@@ -375,61 +383,6 @@ void fvc::agent::execControl(double dt)
     {
         if (isNeighbor(i))
         {
-//             //  local speed controll
-//             //  Add velocity contribution
-//             vcc::matching_result result;
-//             cv::Mat tmp1 = cv::Mat(corners).reshape(1);
-//             tmp1.copyTo(result.p2);
-//             cv::Mat tmp2 = cv::Mat(aruco_refs[label]).reshape(1);
-//             tmp2.copyTo(result.p1);
-//             
-//             vcc::matching_result result_agent;
-//             cv::Mat tmp3 = cv::Mat(complements[i]).reshape(1);
-//             tmp3.copyTo(result_agent.p2);
-//             cv::Mat tmp4 = cv::Mat(aruco_refs[i]).reshape(1);
-//             tmp4.copyTo(result_agent.p1);
-//         
-//             //  save error 
-//             errors[i] = (tmp2 -tmp1)-(tmp4-tmp3);
-//             if (errors[label].empty())
-//                 errors[i].copyTo(errors[label]);
-//             else
-//                 errors[label] = errors[label] + errors[i];
-//             
-//             //  reset partials
-//             States[i].Vx = 0.;
-//             States[i].Vy = 0.;
-//             States[i].Vz = 0.;
-//             States[i].Vroll = 0.;
-//             States[i].Vpitch = 0.;
-//             States[i].Vyaw = 0.;
-//             
-//             vcc::state State_tmp = States[i];
-//             
-//             int ret = controllers[1](States[i],result);
-//             ret += controllers[1](State_tmp,result_agent);
-//             
-//             if(ret !=0)
-//             {
-//                 std::cout << "Controller error" << std::endl;
-//                 return;
-//             }
-//             
-//             //  add new contribution
-//             States[i].Vx -= State_tmp.Vx;
-//             States[i].Vy -= State_tmp.Vy;
-//             States[i].Vz -= State_tmp.Vz;
-//             States[i].Vroll -= State_tmp.Vroll;
-//             States[i].Vpitch -= State_tmp.Vpitch;
-//             States[i].Vyaw -= State_tmp.Vyaw;
-// 
-//             //  add new contribution
-//             States[label].Vx += States[i].Vx;
-//             States[label].Vy += States[i].Vy;
-//             States[label].Vz += States[i].Vz;
-//             States[label].Vroll += States[i].Vroll;
-//             States[label].Vpitch += States[i].Vpitch;
-//             States[label].Vyaw += States[i].Vyaw;
             
             //  real  control
             //  Add velocity contribution
@@ -452,85 +405,11 @@ void fvc::agent::execControl(double dt)
             
             
             
-//             //  doable  control
-//             //  Add velocity contribution
-//             vcc::matching_result result;
-//             cv::Mat tmp1 = cv::Mat(corners).reshape(1);
-//             tmp1.copyTo(result.p2);
-//             cv::Mat tmp2 = cv::Mat(complements[i]).reshape(1);
-//             tmp2.copyTo(result.p1);
-//         
-//             //  save error 
-//             errors[i] = tmp2 -tmp1;
-//             if (errors[label].empty())
-//                 errors[i].copyTo(errors[label]);
-//             else
-//                 errors[label] = errors[label] + errors[i];
-//             
-//             //  reset partials
-//             States[i].Vx = 0.;
-//             States[i].Vy = 0.;
-//             States[i].Vz = 0.;
-//             States[i].Vroll = 0.;
-//             States[i].Vpitch = 0.;
-//             States[i].Vyaw = 0.;
-//             
-//     //         int ret = controllers[1](State,result);
-//             int ret = controllers[1](States[i],result);
-//             
-//             if(ret !=0)
-//             {
-//                 std::cout << label << " Controller error" << std::endl;
-//                 return;
-//             }
-//             
-//             //  add new contribution
-//             States[label].Vx += States[i].Vx;
-//             States[label].Vy += States[i].Vy;
-//             States[label].Vz += States[i].Vz;
-//             States[label].Vroll += States[i].Vroll;
-//             States[label].Vpitch += States[i].Vpitch;
-//             States[label].Vyaw += States[i].Vyaw;
         }
     }
     
-//  //  Simpla state update V1
-//     State.update();
-//     std::cout << State.Vx << ", " <<
-//     State.Vy << ", " <<
-//     State.Vz << ", " <<
-//     State.Vyaw << std::endl << std::flush;
-//     
 
-//  //  Rotated state update V1
-//     double yaw = State.Yaw;
-// //     cv::Mat Rz = cv::rotationZ(State.Yaw);
-//     cv::Mat Rz = (cv::Mat_<double>(3, 3) <<                 
-//                   cos(yaw), -sin(yaw), 0,
-//                   sin(yaw),  cos(yaw), 0,
-//                          0,         0, 1);
-//     cv::Vec3d Vel(State.Vx,State.Vy,State.Vz);
-//     cv::Mat p_d = Rz * cv::Mat(Vel);//change in position
-// 
-//     //change in rotation
-//     cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-State.Vyaw,0,
-//                                             State.Vyaw,0,0,
-//                                             0,0,0);
-//     cv::Mat R_d = Rz*S; 
-// //     cv::Mat R = Rz+State.Kw *R_d*State.dt;
-//     cv::Mat R = Rz+State.Kw *R_d*dt;
-//     cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
-// 
-//     std::cout << Vel << std::endl << std::flush ;
-//     std::cout << p_d << std::endl << std::flush ;
-//     
-//     State.X += State.Kv * p_d.at<double>(0,0) * dt;
-//     State.Y += State.Kv * p_d.at<double>(1,0) * dt;
-//     State.Z += State.Kv * p_d.at<double>(2,0) * dt;
-//     State.Yaw =  (double) angles[2];
-    
 
-//  testing real scheme
 
     //  Set up result
     vcc::matching_result result;
@@ -567,7 +446,20 @@ void fvc::agent::execControl(double dt)
     
     std::cout << label << " -- det = " << det << std::endl << std::flush;
 
-    cv::Mat U = - 1.*  L*errors[label].reshape(1,L.cols) / (float) n_neighbors ;     
+    cv::Mat U;
+
+    if(PIAG_ENABLE)
+    {
+        double gamma =  adaptGamma( errors[label]);
+        double gammaIntegral =  adaptGamma( errors_integral);
+        U = L*(gamma * errors[label].reshape(1,L.cols) + gammaIntegral * errors_integral[label].reshape(1,L.cols) );
+        U /= (float) n_neighbors ;
+        U *= -1.;
+
+        integrateError( dt);
+    }else{
+        U = - 1.*  L*errors[label].reshape(1,L.cols) / (float) n_neighbors ;
+    }
     
     /**********Updating velocities in the axis*/
     //velocities from homography decomposition
@@ -578,54 +470,13 @@ void fvc::agent::execControl(double dt)
     States[label].Vyaw += (float) U.at<float>(3,0);
     // States[label].Vyaw += (float) U.at<float>(5,0); // 6DOF
     
-//     if(ret !=0)
-//     {
-//         std::cout << label << " Controller error" << std::endl;
-// //         return;
-// //         States[label].Vx = 0.1;
-// //         States[label].Vy = 0.1;
-// //         States[label].Vz = 0.1;
-// //         States[label].Vroll = 0.1;
-// //         States[label].Vpitch = 0.1;
-// //         States[label].Vyaw = 0.1;
-//         
-//     }
+
     
 
     //  TODO: Simpla state update V2
     States[label].update();
-// //     std::cout << States[label].Vx << ", " <<
-// //     States[label].Vy << ", " <<
-// //     States[label].Vz << ", " <<
-// //     States[label].Vyaw << std::endl << std::flush;
-    
-//  //  Rotated state update V2
-//     double yaw = States[label].Yaw;
-// //     cv::Mat Rz = cv::rotationZ(States[label].Yaw);
-//     cv::Mat Rz = (cv::Mat_<double>(3, 3) <<                 
-//                   cos(yaw), -sin(yaw), 0,
-//                   sin(yaw),  cos(yaw), 0,
-//                          0,         0, 1);
-//     cv::Vec3d Vel(States[label].Vx,States[label].Vy,States[label].Vz);
-//     cv::Mat p_d = Rz * cv::Mat(Vel);//change in position
-// 
-//     //change in rotation
-//     cv::Mat S = (cv::Mat_<double>(3, 3) << 0,-States[label].Vyaw,0,
-//                                             States[label].Vyaw,0,0,
-//                                             0,0,0);
-//     cv::Mat R_d = Rz*S; 
-// //     cv::Mat R = Rz+States[label].Kw *R_d*States[label].dt;
-//     cv::Mat R = Rz+States[label].Kw *R_d*dt;
-//     cv::Vec3f angles = vcc::rotationMatrixToEulerAngles(R);
-// 
-// //     std::cout << Vel << std::endl << std::flush ;
-// //     std::cout << p_d << std::endl << std::flush ;
-//     
-//     States[label].X += States[label].Kv * p_d.at<double>(0,0) * dt;
-//     States[label].Y += States[label].Kv * p_d.at<double>(1,0) * dt;
-//     States[label].Z += States[label].Kv * p_d.at<double>(2,0) * dt;
-//     States[label].Yaw =  (double) angles[2];
-    }
+
+
 }
 
 trajectory_msgs::MultiDOFJointTrajectory fvc::agent::getPose()
@@ -676,4 +527,25 @@ void fvc::agent::reset(char SELECT)
         ARUCO_COMPUTED = false;
     }
 }
+
+
+
+double fvc::agent::adaptGamma(double _gamma_0, double _gamma_inf, double _gamma_d,
+                          cv::Mat _errors)
+{
+    //
+    double gamma =  cv::norm(error );
+    gamma *=  _gamma_d ;
+    gamma /=  _gamma_0 - _gamma_inf;
+    gamma =  exp(gamma);
+    gamma *=   _gamma_0 - _gamma_inf
+    gamma += _gamma_inf
+    return gamma;
+}
+
+void fvc::agent::integrateError(double dt)
+{
+         errors_integral += dt * error[label];
+}
+
 

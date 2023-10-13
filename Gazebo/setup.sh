@@ -20,9 +20,9 @@ fi
 if [ "$2" == "IBFC" ] || [ "$2" == "All" ]
 then
 cp -r Packages/image_based_formation_control ${WORKSPACE}/src/
-echo "# Directories, select desired input" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
-echo "input_dir: \"${WORKSPACE}/src/image_based_formation_control/config/\"" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
-echo "output_dir: \"${WORKSPACE}/image_based_formation_control/output/\"" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
+# echo "# Directories, select desired input" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
+# echo "input_dir: \"${WORKSPACE}/src/image_based_formation_control/config/\"" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
+# echo "output_dir: \"${WORKSPACE}/image_based_formation_control/output/\"" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
 mkdir -p ${WORKSPACE}/image_based_formation_control/output/0
 mkdir -p ${WORKSPACE}/image_based_formation_control/output/1
 mkdir -p ${WORKSPACE}/image_based_formation_control/output/2
@@ -42,6 +42,12 @@ cp -r Files/models/* ~/.gazebo/models/
 cp -r Files/config/* ${WORKSPACE}/src/image_based_formation_control/config/
 cp Files/worlds/* ${WORKSPACE}/src/rotors_simulator/rotors_gazebo/worlds/
 cp Files/hummingbird.xacro ${WORKSPACE}/src/rotors_simulator/rotors_description/urdf/hummingbird.xacro
+
+#   YAML
+echo "# Directories, select desired input" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
+echo "input_dir: \"${WORKSPACE}/src/image_based_formation_control/config/\"" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
+echo "output_dir: \"${WORKSPACE}/image_based_formation_control/output/\"" >> ${WORKSPACE}/src/image_based_formation_control/config/params.yaml
+
 fi
 
 if [ "$2" == "All" ]

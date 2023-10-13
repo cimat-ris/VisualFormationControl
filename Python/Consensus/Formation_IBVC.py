@@ -1112,21 +1112,26 @@ def experiment(directory = "0",
                     name = directory+"/Cameras_trayectories")
     
     #   3D plots
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
+    fig, ax = plt.subplots(ncols = 2,
+                           frameon=False,
+                           figsize=(8,6),
+                            gridspec_kw={'width_ratios': [3,1]})
+    #fig = plt.figure(frameon=False, figsize=(5,3))
+    ax[0].axis('off')
+    ax[0] = fig.add_subplot(1, 2, 1, projection='3d')
     name = directory+"/3Dplot"
-    #ax.plot(P[0,:], P[1,:], P[2,:], 'o')
-    ax.scatter(P[0,:], P[1,:], P[2,:], s = 10)
+    #axplot(P[0,:], P[1,:], P[2,:], 'o')
+    ax[0].scatter(P[0,:], P[1,:], P[2,:], s = 20)
     if gdl ==1:
         for i in range(n_agents):
-            plot_3Dcam(ax, agents[i].camera,
+            plot_3Dcam(ax[0], agents[i].camera,
                         pos_arr[i,:,:],
                         p0[:,i],
                         end_position[i,:],
                         pd[:,i],
                         color = colors[i],
                         i = i,
-                        camera_scale    = 0.05)
+                        camera_scale    = 0.06)
     elif gdl == 2:
         for i in range(n_agents):
             init = p0[:,i]
@@ -1134,7 +1139,7 @@ def experiment(directory = "0",
             ref = pd[:,i]
             init[3] = end[3] = ref[3] = pi
             init[4] = end[4] = ref[4] = 0
-            plot_3Dcam(ax, agents[i].camera,
+            plot_3Dcam(ax[0], agents[i].camera,
                         pos_arr[i,:,:],
                         init,
                         end,
@@ -1146,7 +1151,7 @@ def experiment(directory = "0",
     #   Plot cammera position at intermediate time
     if midMarker:
         step_sel = int(pos_arr.shape[2]/2)
-        ax.scatter(pos_arr[:,0,step_sel],
+        ax[0].scatter(pos_arr[:,0,step_sel],
                 pos_arr[:,1,step_sel],
                 pos_arr[:,2,step_sel],
                     marker = '+',s = 200, color = 'black')
@@ -1188,12 +1193,20 @@ def experiment(directory = "0",
     y_max += (sqrfact - height )/2
     z_min -= (sqrfact - depth )/2
     z_max += (sqrfact - depth )/2
-    ax.set_xlim(x_min,x_max)
-    ax.set_ylim(y_min,y_max)
-    ax.set_zlim(z_min,z_max)
+    ax[0].set_xlim(x_min,x_max)
+    ax[0].set_ylim(y_min,y_max)
+    ax[0].set_zlim(z_min,z_max)
     
-    fig.legend( loc=1)
-    plt.savefig(name+'.pdf',bbox_inches='tight')
+    #ax = fig.add_subplot(1, 2, 2)
+    symbols = []
+    labels = [str(i) for i in range(n_agents)]
+    for i in range(n_agents):
+        symbols.append(mpatches.Patch(color=colors[i%colors.shape[0]]))
+    ax[1].legend(symbols,labels, loc=7)
+    ax[1].axis('off')
+    
+    #fig.legend( loc=1)
+    plt.savefig(name+'.pdf')#,bbox_inches='tight')
     plt.close()
     
     #   Descriptores x agente
@@ -3028,13 +3041,14 @@ def plot_tendencias(nReps = 20,
     h2 = h2[1:,:]
     hcons = hcons[1:,:]
     
+    #   BEGIN
     #   Errores de consenso
     #fig, ax = plt.subplots( 2,1,sharex=True,frameon=False)
-    fig, ax = plt.subplots(frameon=False)
+    fig, ax = plt.subplots(frameon=False, figsize=(4.8,5.4))
     fig.suptitle("Consensus error by repetition sets")
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
               #norm=mcolors.PowerNorm(gamma=0.5),
-                 extent = (0+0.5,nReps+0.5, -0.0075,-0.0025),
+                 extent = (0+0.5,nReps+0.5, -0.00075,-0.00025),
                  aspect = 'auto',
                  vmin = 0, vmax = 100)
     
@@ -3062,19 +3076,23 @@ def plot_tendencias(nReps = 20,
     ax.set_xlabel("Step")
     ax.set_ylabel("Consensus error")
     #plt.xlim((-0.1,1.1))
-    plt.ylim((-0.001,0.01))
+    plt.ylim((-0.001,0.011))
+    plt.xticks(ticks = np.arange(1,20,2),
+                  labels = np.arange(1,20,2))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
     
     for i in range(nReps):
-        text = ax.text(i +1,  -0.005,str(int(count_mask[i])),
+        text = ax.text(i +1,  -0.0005,str(int(count_mask[i])),
                           ha="center", va="center", 
-                           color="k", fontsize =4)
+                           color="k", fontsize =10)
     
     #plt.tight_layout()
     plt.savefig(dirBase+'Consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
+    
+    #   END
     
     #   heatmap 
     #       consensus
@@ -3110,7 +3128,7 @@ def plot_tendencias(nReps = 20,
     
     
     #   Errores de traslación
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(frameon=False, figsize=(4.8,5.4))
     fig.suptitle("Translation error by repetition sets")
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
               #norm=mcolors.PowerNorm(gamma=0.5),
@@ -3144,13 +3162,15 @@ def plot_tendencias(nReps = 20,
     ax.set_ylabel("Translation error")
     #plt.xlim((-0.1,1.1))
     plt.ylim((-0.1,1.1))
+    plt.xticks(ticks = np.arange(1,20,2),
+                  labels = np.arange(1,20,2))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
     
     for i in range(nReps):
         text = ax.text(i +1,  -0.05,str(int(count_mask[i])),
                           ha="center", va="center", 
-                           color="k", fontsize =4)
+                           color="k", fontsize =10)
         
     plt.tight_layout()
     plt.savefig(dirBase+'Translation.pdf',bbox_inches='tight')
@@ -3190,7 +3210,7 @@ def plot_tendencias(nReps = 20,
     plt.close()
     
     #   Errores de Rotación
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(frameon=False, figsize=(4.8,5.4))
     fig.suptitle("Rotation error by repetition sets")
     
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
@@ -3223,13 +3243,15 @@ def plot_tendencias(nReps = 20,
     for i in range(nReps):
         text = ax.text(i +1,  -0.15,str(int(count_mask[i])),
                           ha="center", va="center", 
-                           color="k", fontsize =4)
+                           color="k", fontsize =10)
     
     fig.legend( loc=2)
     ax.set_xlabel("Step")
     ax.set_ylabel("Rotation error")
     #plt.xlim((-0.1,1.1))
     plt.ylim((-0.3,3.2))
+    plt.xticks(ticks = np.arange(1,20,2),
+                  labels = np.arange(1,20,2))
     ax.grid(axis='y')
     ax.set_axisbelow(True)
     plt.tight_layout()
@@ -4139,7 +4161,7 @@ def main(arg):
     
     ###   Plot part
     if arg[2] == 'p':
-        #i = 1
+        #i = 0
         #colorFile = colorNames[i%2]
         #plot_tendencias(dirBase = root + Names[i], 
                         #colorFile = colorFile)

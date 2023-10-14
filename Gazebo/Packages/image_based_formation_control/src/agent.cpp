@@ -162,6 +162,8 @@ bool fvc::agent::imageRead()
         }
         
     }
+    
+    
     return (loaded_imgs == n_agents);
 }
 
@@ -422,6 +424,10 @@ void fvc::agent::execControl(double dt)
     //  Err = p2 - p1
     errors[label] = result.p1 - result.p2;
     
+    //  INIT integral r c t
+    if (!INTEGRAL_INIT)
+    errors_integral = cv::Mat::zeros(result.p1.size(),result.p1.type()  );
+    
     //  estimación de Z
     int n = result.p2.rows;
     int type = result.p2.type();
@@ -450,9 +456,9 @@ void fvc::agent::execControl(double dt)
 
     if(PIAG_ENABLE)
     {
-        double gamma =  adaptGamma( errors[label]);
-        double gammaIntegral =  adaptGamma( errors_integral);
-        U = L*(gamma * errors[label].reshape(1,L.cols) + gammaIntegral * errors_integral[label].reshape(1,L.cols) );
+        double gamma =  adaptGamma(gamma_0, gamma_inf, gamma_d, errors[label]);
+        double gammaIntegral =  adaptGamma(gammaIntegral_0, gammaIntegral_inf, gammaIntegral_d, errors_integral);
+        U = L*(gamma * errors[label].reshape(1,L.cols) + gammaIntegral * errors_integral.reshape(1,L.cols) );
         U /= (float) n_neighbors ;
         U *= -1.;
 
@@ -531,21 +537,21 @@ void fvc::agent::reset(char SELECT)
 
 
 double fvc::agent::adaptGamma(double _gamma_0, double _gamma_inf, double _gamma_d,
-                          cv::Mat _errors)
+                          cv::Mat _error)
 {
     //
-    double gamma =  cv::norm(error );
+    double gamma =  cv::norm(_error );
     gamma *=  _gamma_d ;
     gamma /=  _gamma_0 - _gamma_inf;
     gamma =  exp(gamma);
-    gamma *=   _gamma_0 - _gamma_inf
-    gamma += _gamma_inf
+    gamma *=   _gamma_0 - _gamma_inf;
+    gamma += _gamma_inf;
     return gamma;
 }
 
 void fvc::agent::integrateError(double dt)
 {
-         errors_integral += dt * error[label];
+         errors_integral += dt * errors[label];
 }
 
 

@@ -54,6 +54,7 @@ namespace fvc
         
         //  Control modifications
         bool PIAG_ENABLE=false;
+        bool INTEGRAL_INIT=false;
         cv::Mat errors_integral;
         double gamma_0, gamma_inf, gamma_d;
         double gammaIntegral_0, gammaIntegral_inf, gammaIntegral_d;
@@ -96,7 +97,7 @@ namespace fvc
         bool incompleteComputedVelocities();
         //  Adaptive gamma
         double adaptGamma(double _gamma_0, double _gamma_inf, double _gamma_d,
-                          cv::Mat _errors);
+                          cv::Mat _error);
         //  Error Integral
         void integrateError(double dt);
         

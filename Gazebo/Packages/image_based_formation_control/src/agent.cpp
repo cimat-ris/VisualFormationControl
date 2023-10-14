@@ -426,7 +426,10 @@ void fvc::agent::execControl(double dt)
     
     //  INIT integral r c t
     if (!INTEGRAL_INIT)
-    errors_integral = cv::Mat::zeros(result.p1.size(),result.p1.type()  );
+    {
+        errors_integral = cv::Mat::zeros(result.p1.size(),result.p1.type()  );
+        INTEGRAL_INIT = true;
+    }
     
     //  estimación de Z
     int n = result.p2.rows;

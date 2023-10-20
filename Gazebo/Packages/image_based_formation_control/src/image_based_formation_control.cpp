@@ -34,8 +34,9 @@ int main(int argc, char **argv){
     std::string me_str(argv[1]); //the actual drone
     int controller_type = atoi(argv[2]); //control to be used
     int matching = atoi(argv[3]);	//if we desired matching data
-    int verbose = atoi(argv[4]);	//if we desired matching data
-    
+    int verbose = atoi(argv[4]);	//if we desired verbose information
+    double timeSpan = atof(argv[5]);	// simulation time
+
     // ROS NODE
     ros::init(argc,argv,"image_based_formation_control");
     ros::NodeHandle nh;
@@ -101,7 +102,7 @@ int main(int argc, char **argv){
     ros::Rate rate(20);
     t = ros::Time::now().toSec();
     double dt = t;
-    double tf = t +30;
+    double tf = t +timeSpan;
     while(ros::ok()){
         
         //-----------------------------------------------------------

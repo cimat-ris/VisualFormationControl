@@ -17,6 +17,7 @@
   <arg name="control" default="7"/>
   <arg name="matching" default="0"/>
   <arg name="verbose" default="0"/>
+  <arg name="timeSpan" default="100"/>
 
 <!--
 
@@ -28,7 +29,7 @@
     <node name="$(arg node_name)"
     pkg="$(arg node_name)"
     type="$(arg node_name)" 
-    args="0 $(arg control) $(arg matching) $(arg verbose)" 
+    args="0 $(arg control) $(arg matching) $(arg verbose) $(arg timeSpan)"
     output="screen"/>
     <rosparam command="load" 
     file="$(find image_based_formation_control)/config/params.yaml"/>
@@ -37,7 +38,7 @@
     <node name="$(arg node_name)"
     pkg="$(arg node_name)"
     type="$(arg node_name)" 
-    args="1 $(arg control) $(arg matching) $(arg verbose)" 
+    args="1 $(arg control) $(arg matching) $(arg verbose) $(arg timeSpan)"
     output="screen"/>
     <rosparam command="load" 
     file="$(find image_based_formation_control)/config/params.yaml"/>
@@ -46,7 +47,7 @@
     <node name="$(arg node_name)"
     pkg="$(arg node_name)"
     type="$(arg node_name)" 
-    args="2 $(arg control) $(arg matching) $(arg verbose)" 
+    args="2 $(arg control) $(arg matching) $(arg verbose) $(arg timeSpan)"
     output="screen"/>
     <rosparam command="load" 
     file="$(find image_based_formation_control)/config/params.yaml"/>
@@ -55,7 +56,7 @@
     <node name="$(arg node_name)"
     pkg="$(arg node_name)"
     type="$(arg node_name)"
-    args="3 $(arg control) $(arg matching) $(arg verbose)"
+    args="3 $(arg control) $(arg matching) $(arg verbose) $(arg timeSpan)"
     output="screen"/>
     <rosparam command="load"
     file="$(find image_based_formation_control)/config/params.yaml"/>

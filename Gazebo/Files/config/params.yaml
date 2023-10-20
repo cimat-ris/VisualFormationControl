@@ -22,8 +22,8 @@ enablePIAG: no
 gamma_0: 3.
 gamma_inf: 0.1
 gamma_d: -5
-gammaIntegral_0: 3.
-gammaIntegral_inf: 0.1
+gammaIntegral_0: 0.1
+gammaIntegral_inf: 0.01
 gammaIntegral_d: -5
 
 # Threshold on the feature position error, used to stop the visual control

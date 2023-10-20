@@ -44,12 +44,12 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     n_agents = nh.param(std::string("n_agents"),0);
     PIAG_ENABLE = nh.param(std::string("enablePIAG"),false);
     VERBOSE_ENABLE = nh.param(std::string("debug"),false);
-    gamma_0 = nh.param(std::string("gamma_0"),false);
-    gamma_inf = nh.param(std::string("gamma_inf"),false);
-    gamma_d = nh.param(std::string("gamma_d"),false);
-    gammaIntegral_0 = nh.param(std::string("gammaIntegral_0"),false);
-    gammaIntegral_inf = nh.param(std::string("gammaIntegral_inf"),false);
-    gammaIntegral_d = nh.param(std::string("gammaIntegral_d"),false);
+    gamma_0 = nh.param(std::string("gamma_0"),3.);
+    gamma_inf = nh.param(std::string("gamma_inf"),0.1);
+    gamma_d = nh.param(std::string("gamma_d"),-5.);
+    gammaIntegral_0 = nh.param(std::string("gammaIntegral_0"),0.1);
+    gammaIntegral_inf = nh.param(std::string("gammaIntegral_inf"),0.01);
+    gammaIntegral_d = nh.param(std::string("gammaIntegral_d"),-5.);
     
     neighbors = new int[n_agents];
     velContributions = new bool[n_agents];
@@ -107,8 +107,29 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     std::cout << input_dir << std::endl;
     std::cout << output_dir << std::endl;
 
-    //  TODO enable PIAG
-    //  TODO enable verbose
+
+    std::cout << "----    Data for agent " << label << "    -----"<< std::endl;
+    std::cout << "Number of agents: " << n_agents << std::endl;
+    std::cout << "Number of neighbors: " << n_neighbors << std::endl ;
+    std::cout << "PI-AG Enable: " << PIAG_ENABLE << std::endl;
+    std::cout << "Verbose Enable: " << VERBOSE_ENABLE << std::endl;
+    if(PIAG_ENABLE)
+    {
+        std::cout << "Proportional contribution parameters: " << std::endl;
+        std::cout << "Gamma_0: " << gamma_0 << std::endl;
+        std::cout << "Gamma_Inf: " << gamma_inf << std::endl;
+        std::cout << "Gamma_derivative: " << gamma_d << std::endl;
+
+        std::cout << "Integral contribution parameters: " << std::endl;
+        std::cout << "Gamma_0: " << gammaIntegral_0 << std::endl ;
+        std::cout << "Gamma_Inf: " << gammaIntegral_inf << std::endl ;
+        std::cout << "Gamma_derivative: " << gammaIntegral_d << std::endl ;
+    }
+    std::cout << "Output Directory: " << output_dir << std::endl ;
+    std::cout << "Input Directory: " << input_dir << std::endl ;
+
+    std::cout << "-----------------------------------------" << std::endl;
+
 }
 
 //  reads the reference images
@@ -134,6 +155,7 @@ bool fvc::agent::imageRead()
         cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     //     aruco::detectMarkers(img, dictionary, _corners, ids);
         cv::aruco::detectMarkers(tmp_img, dictionary, _corners, ids,parameters, rejected);
+        if(VERBOSE_ENABLE)
         std::cout << _corners.size() << " ArUco search in ref\n" << std::flush;
 
         
@@ -189,15 +211,17 @@ void fvc::agent::setPose(const geometry_msgs::Pose::ConstPtr& msg){
         States[i].initialize(_x,_y,_z,yaw);
 
     POSITION_UPDATED = true;
-
-    std::cout << "Init pose drone " << label << std::endl;
-    std::cout << "X: " << _x << std::endl;
-    std::cout << "Y: " << _y << std::endl;
-    std::cout << "Z: " << _z << std::endl;
-    std::cout << "Roll: " << roll << std::endl;
-    std::cout << "Pitch: " << pitch << std::endl;
-    std::cout << "Yaw: " << yaw << std::endl ;
-    std::cout << "-------------" << std::endl;
+    if(VERBOSE_ENABLE)
+    {
+        std::cout << "Init pose drone " << label << std::endl;
+        std::cout << "X: " << _x << std::endl;
+        std::cout << "Y: " << _y << std::endl;
+        std::cout << "Z: " << _z << std::endl;
+        std::cout << "Roll: " << roll << std::endl;
+        std::cout << "Pitch: " << pitch << std::endl;
+        std::cout << "Yaw: " << yaw << std::endl ;
+        std::cout << "-------------" << std::endl;
+    }
 
 }
 
@@ -452,7 +476,7 @@ void fvc::agent::execControl(double dt)
         // return;
 
     }
-    
+    if(VERBOSE_ENABLE)
     std::cout << label << " -- det = " << det << std::endl << std::flush;
 
     cv::Mat U;

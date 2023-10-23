@@ -2,18 +2,13 @@
 
 using namespace fvc;
 
-static void save_mat(double time, std::string directory, cv::Mat & _mat)
+static void save_mat(double time, std::string directory,int id, cv::Mat & _mat)
 {
-    std::ofstream outfile;
-    outfile.open(directory, std::ios_base::app);	
-    outfile << time << " " ;
-    
-    float * mat_ptr = _mat.ptr<float>(0,0);
-    int n = _mat.cols * _mat.rows;
-    for(int i=0;i<n;i++)
-		outfile << mat_ptr[i] << " " ;
-	outfile << std::endl;
-    
+
+    std::ofstream outfile(directory, std::ios::app | std::ios::binary);
+    outfile.write((char *) &time,sizeof(double));
+    outfile.write((char *) &id,sizeof(int));
+    outfile.write((char *) _mat.data,_mat.elemSize() * _mat.total());
     outfile.close();
 }
 
@@ -210,6 +205,8 @@ void fvc::agent::setPose(const geometry_msgs::Pose::ConstPtr& msg){
     for (int i = 0; i < n_agents; i ++)
         States[i].initialize(_x,_y,_z,yaw);
 
+
+
     POSITION_UPDATED = true;
     if(VERBOSE_ENABLE)
     {
@@ -326,16 +323,44 @@ bool fvc::agent::isNeighbor(int j)
 
 void fvc::agent::save_state(double time)
 {
+    if (NOT_INITIALIZED_FILE)
+    {
+        //  initialize output
+
+        std::ofstream outfile(output_dir"error.dat", std::ifstream::out | std::ifstream::trunc );
+        if (!outfile.is_open() || outfile.fail())
+        {
+            outfile.close();
+            printf("\nError : failed to erase file content !");
+        }
+        int row_bytes =  4*error[label].elemSize() +sizeof(double)+sizeof(int);
+        outfile.write((char *) &row_bytes,sizeof(int));
+        outfile.close();
+        outfile.open(output_dir"partial.dat", std::ifstream::out | std::ifstream::trunc );
+        if (!outfile.is_open() || outfile.fail())
+        {
+            outfile.close();
+            printf("\nError : failed to erase file content !");
+        }
+        row_bytes = 14*sizeof(float) +sizeof(double);
+        outfile.write((char *) &row_bytes,sizeof(int));
+        outfile.close();
+        NOT_INITIALIZED_FILE = false;
+    }
 //     std::cout << output_dir << std::endl;
 //     State.save_data(time,output_dir+"state.txt");
-    for(int i = 0; i< n_agents; i++)
-    {
-        std::string name = output_dir+"partial_"+std::to_string(i)+".txt";
-        States[i].save_data(time, name);
-        name = output_dir+"error_"+std::to_string(i)+".txt";
-        save_mat(time,name,errors[i]);
-    }
+    // for(int i = 0; i< n_agents; i++)
+    // {
+        // std::string name = output_dir+"partial_"+std::to_string(i)+".dat";
+        // States[i].save_data(time, name);
+        // name = output_dir+"error_"+std::to_string(i)+".dat";
+        // save_mat(time,name,errors[i]);
+    // }
     //Save consensus error
+    std::string name = output_dir+"partial.dat";
+    States[label].save_data(time, name);
+    name = output_dir+"error.dat";
+    save_mat(time,name,0,errors[label]);
 }
 
 //  allows to start the simulation when the pose is updated

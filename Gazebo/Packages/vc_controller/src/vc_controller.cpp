@@ -79,22 +79,22 @@ void vcc::state::initialize(
 //  Appends state data to spacified directory with the given timestamp
 void vcc::state::save_data(double time, std::string directory)
 {
-    std::ofstream outfile;
-    outfile.open(directory, std::ios_base::app);	
+    std::ofstream outfile(directory, std::ios::app | std::ios::binary);
     
-    outfile << time << " ";
-    outfile << X << " ";
-    outfile << Y << " ";
-    outfile << Z << " ";
-    outfile << Yaw << " ";
-    outfile << Pitch << " ";
-    outfile << Roll << " ";
-    outfile << Vx << " ";
-    outfile << Vy << " ";
-    outfile << Vz << " ";
-    outfile << Vyaw << " ";
-    outfile << Vpitch << " ";
-    outfile << Vroll << std::endl;
+    outfile.write((char *) & time,sizeof(double));
+    outfile.write((char *) & X,sizeof(float));
+    outfile.write((char *) & Y,sizeof(float));
+    outfile.write((char *) & Z,sizeof(float));
+    outfile.write((char *) & Yaw,sizeof(float));
+    outfile.write((char *) & Pitch,sizeof(float));
+    outfile.write((char *) & Roll,sizeof(float));
+    outfile.write((char *) & Vx,sizeof(float));
+    outfile.write((char *) & Vy,sizeof(float));
+    outfile.write((char *) & Vz,sizeof(float));
+    outfile.write((char *) & Vyaw,sizeof(float));
+    outfile.write((char *) & Vpitch,sizeof(float));
+    outfile.write((char *) & Vroll,sizeof(float));
+
     
     outfile.close();
 }

@@ -2,6 +2,7 @@
 #define AGENT_H
  
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
 #include <cmath>
@@ -39,6 +40,7 @@ namespace fvc
         vcc::state * States = nullptr;
         int label = 0;
         bool POSITION_UPDATED = false;
+        bool NOT_INITIALIZED_FILE=true;
         
         //  Fila correspondiente del Laplaciano
         int n_agents= 0;

@@ -327,16 +327,16 @@ void fvc::agent::save_state(double time)
     {
         //  initialize output
 
-        std::ofstream outfile(output_dir"error.dat", std::ifstream::out | std::ifstream::trunc );
+        std::ofstream outfile(output_dir+"error.dat", std::ifstream::out | std::ifstream::trunc );
         if (!outfile.is_open() || outfile.fail())
         {
             outfile.close();
             printf("\nError : failed to erase file content !");
         }
-        int row_bytes =  4*error[label].elemSize() +sizeof(double)+sizeof(int);
+        int row_bytes =  4*errors[label].elemSize() +sizeof(double)+sizeof(int);
         outfile.write((char *) &row_bytes,sizeof(int));
         outfile.close();
-        outfile.open(output_dir"partial.dat", std::ifstream::out | std::ifstream::trunc );
+        outfile.open(output_dir+"partial.dat", std::ifstream::out | std::ifstream::trunc );
         if (!outfile.is_open() || outfile.fail())
         {
             outfile.close();

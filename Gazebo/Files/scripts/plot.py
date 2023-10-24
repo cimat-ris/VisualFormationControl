@@ -1,5 +1,6 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 # import sys
 # import re
 import os
@@ -8,10 +9,41 @@ from numpy import pi
 
 #   Configs
 
-get_type={16:numpy.float16,
-          32:numpy.float32,
-          64:numpy.float64}
+get_type={2:np.float16,
+          4:np.float32,
+          8:np.float64}
 
+def plot_time(t_array,
+              var_array,
+              ref = None,
+              module = None):
+
+    n = var_array.shape[0]
+
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
+    nColors = colors.shape[0]
+
+
+
+    symbols = []
+    for i in range(n):
+        ax.plot(t_array,var_array[i,:] , color=colors[i%nColors])
+        symbols.append(mpatches.Patch(color=colors[i%nColors]))
+
+    if not ref is None:
+        ax.plot([t_array[0],t_array[-1]],[ref,ref],
+                'k--', alpha = 0.5)
+        symbols.append(mpatches.Patch(color='k'))
+        labels.append(refLab)
+    if not module is None:
+        for i in range(len(module)):
+            ax.plot([t_array[0],t_array[-1]],[module[i],module[i]],
+                'r--', lw = 0.5)
+        symbols.append(mpatches.Patch(color='r'))
+        labels.append("Limits")
+
+    return symbols
 
 n_agents = 4
 pd=np.array([[0.,0.,0.,0.],
@@ -24,34 +56,67 @@ pd=np.array([[0.,0.,0.,0.],
 
 for i in range(n_agents):
 
-    #   read data
-    name = str(i)+'/error.bin'
-    cols = os.path.getfilesize()
+    #   read errors data
+    name = str(i)+'/error.dat'
+    length = os.path.getsize(name)
+    print(length)
+    ArUcoTab = {}
 
-    with open(str(i)+'error.bin', 'rb') as fileH:
+    with open(name, 'rb') as fileH:
         #   header
         row_bytes = np.fromfile(fileH, dtype=np.int32, count= 1)
-        elemSize = (row_bytes-8-4)/4
-        cols = length / row_bytes
+        # row_bytes = row_bytes[0]
+        # print(row_bytes)
+        # elemSize = (row_bytes-4-8)/4
+        # print(elemSize)
+        # elemSize = int(elemSize)
+        # print(elemSize)
+        # rows = (length-4) / row_bytes
+        rows = (length-4) / (8*6)
+        # print(rows)
+        rows = int(np.floor(rows))
+        print(rows)
         # Read the data into a NumPy array
-        ArUcoTab = {}
+
         #   TODO np.dtype method
-        for i in range(cols):
+        for j in range(rows):
             timestamp = np.fromfile(fileH,
                                 dtype=np.double,
-                                offset = 4+row_bytes*i,
                                 count = 1)
             ArUcoId = np.fromfile(fileH,
                                 dtype=np.int32,
-                                offset = 12+row_bytes*i,
                                 count = 1)
+            ArUcoId = ArUcoId[0]
             errorRow = np.fromfile(fileH,
-                                dtype=get_type[elemSize],
-                                offset = 16+row_bytes*i,
-                                count = 1)
-            if ArUcoId in ArUcoTab:
-                row = np.array([timestamp]+errorRow)
-                ArUcoTab[ArUcoId][0]
+                                # dtype=get_type[elemSize],
+                                # dtype = np.float,
+                                dtype = np.double,
+                                count = 4)
+            row = np.concatenate((timestamp,errorRow))
+            print(timestamp)
+            print(ArUcoId)
+            print(errorRow)
+            # print(ArUcoTab)
+            if ArUcoId in ArUcoTab.keys():
+                ArUcoTab[ArUcoId] = np.r_[ArUcoTab[ArUcoId], row.reshape((1,5))]
+            else:
+                ArUcoTab[ArUcoId] = row.reshape((1,5))
+
+    #  plot errors
+    fig, ax = plt.subplots()
+    fig.suptitle("Non zero singular value magnitudes")
+    for ki in ArUcoTab.keys():
+        symbols = plot_time(ArUcoTab[ki][:,0],ArUcoTab[ki][:,1:].T)
+
+    # ylimits = [.0,10.1]
+    # plt.ylim((ylimits[0],ylimits[1]))
+    labels = ["0","1","2","3","4","5"]
+    fig.legend(symbols,labels, loc=2)
+
+    plt.tight_layout()
+    plt.savefig(str(i)+"/errores.pdf",bbox_inches='tight')
+    #plt.show()
+    plt.close()
 
 
     #

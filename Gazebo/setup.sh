@@ -28,6 +28,7 @@ mkdir -p ${WORKSPACE}/image_based_formation_control/output/1
 mkdir -p ${WORKSPACE}/image_based_formation_control/output/2
 mkdir -p ${WORKSPACE}/image_based_formation_control/output/3
 cp Files/scripts/plot.py ${WORKSPACE}/image_based_formation_control/output
+cp ../Python/Consensus/*.npz ${WORKSPACE}/image_based_formation_control/output
 fi
 
 if [ "$2" == "IBVS" ] || [ "$2" == "All" ]

@@ -1,2 +1,3 @@
 uint8 j
-point2f[4] data
+uint8 size
+ArUco[] ArUcos

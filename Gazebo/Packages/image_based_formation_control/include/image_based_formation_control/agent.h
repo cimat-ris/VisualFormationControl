@@ -21,6 +21,7 @@
 
 #include <image_based_formation_control/image_description.h>
 #include <image_based_formation_control/key_point.h>
+#include <image_based_formation_control/ArUco.h>
 #include <image_based_formation_control/corners.h>
 #include <image_based_formation_control/point2f.h>
 #include <image_based_formation_control/descriptors.h>
@@ -47,12 +48,14 @@ namespace fvc
         int n_neighbors= 0;
         int * neighbors = nullptr;
         bool *velContributions = nullptr;
-        
+
         //  Variables 
         std::vector<cv::Mat> errors;
         std::vector<cv::Mat> errors_1;
         std::vector<cv::Mat> errors_2;
-        std::vector<std::vector<cv::Point2f>> complements;
+        std::vector<int> ArUcos_ovelap;
+        std::vector<std::vector<std::vector<cv::Point2f>>> complements;
+        std::vector<std::vector<int>> complements_ids;
         
         //  Control modifications
         bool PIAG_ENABLE=false;
@@ -66,10 +69,14 @@ namespace fvc
         std::string output_dir;
         
         //  aruco data
+        cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+        cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
         bool ARUCO_COMPUTED=false;
-        std::vector<std::vector<cv::Point2f>> aruco_refs;
+        std::vector<std::vector<std::vector<cv::Point2f>>> aruco_refs;
+        std::vector<std::vector<int>> aruco_refs_ids;
         std::vector<cv::Mat> desired_img;
-        std::vector<cv::Point2f> corners;
+        std::vector<std::vector<cv::Point2f> > corners;
+        std::vector<int> corners_ids;
         
         //  CALLBACKS
         //callback to obtain pose from sensors
@@ -106,10 +113,12 @@ namespace fvc
         //  save data
         void save_state(double time);
         
-        
         //  read reference images
         bool imageRead();
         
+        //  get idx list
+        std::vector<int> getIdxArUco(int a, std::vector<std::vector<int>> list);
+
         //  Interface and debuging
         bool VERBOSE_ENABLE = false;
         cv::Mat image_store;

@@ -66,6 +66,7 @@ add_message_files(
 	gamma.msg
 	point2f.msg
 	corners.msg
+	ArUco.msg
 )
 
 ## Generate services in the 'srv' folder

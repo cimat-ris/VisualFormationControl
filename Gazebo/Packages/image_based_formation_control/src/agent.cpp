@@ -4,16 +4,6 @@ using namespace fvc;
 
 
 
-// static void save_mat(double time, std::string directory,int id, cv::Mat & _mat)
-// {
-//
-//     std::ofstream outfile(directory, std::ios::app | std::ios::binary);
-//     outfile.write((char *) &time,sizeof(double));
-//     outfile.write((char *) &id,sizeof(int));
-//     outfile.write((char *) _mat.data,_mat.elemSize() * _mat.total());
-//     outfile.close();
-// }
-
 int whereis(int a , std::vector<int> v)
 {
     for (int i = 0; i < v.size(); i++)
@@ -193,25 +183,17 @@ bool fvc::agent::imageRead()
         std::vector<int> _ids;
         std::vector<std::vector<cv::Point2f> > _corners;
         std::vector<std::vector<cv::Point2f> > rejected;
-        // cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-        // cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-    //     aruco::detectMarkers(img, dictionary, _corners, ids);
         cv::aruco::detectMarkers(tmp_img, dictionary, _corners, _ids,parameters, rejected);
         if(VERBOSE_ENABLE)
         std::cout << label << " " << _corners.size() << " ArUco search in ref\n" << std::flush;
 
-        
         if(! tmp_img.empty())
         {
-            
             if (_corners.size() > 0) 
             {
-
                 loaded_imgs++;
                 aruco_refs.push_back(_corners);
                 aruco_refs_ids.push_back(_ids);
-
-
             }
             else
             {
@@ -219,12 +201,9 @@ bool fvc::agent::imageRead()
                 std::vector<std::vector<cv::Point2f>> _empty;
                 aruco_refs.push_back(_empty);
             }
-        
-            
             //  Append
             desired_img.push_back(tmp_img);
         }
-        
     }
     
     
@@ -252,8 +231,6 @@ void fvc::agent::setPose(const geometry_msgs::Pose::ConstPtr& msg){
     for (int i = 0; i < n_agents; i ++)
         States[i].initialize(_x,_y,_z,yaw);
 
-
-
     POSITION_UPDATED = true;
     if(VERBOSE_ENABLE)
     {
@@ -266,7 +243,6 @@ void fvc::agent::setPose(const geometry_msgs::Pose::ConstPtr& msg){
         std::cout << "Yaw: " << yaw << std::endl ;
         std::cout << "-------------" << std::endl;
     }
-
 }
 
 void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
@@ -276,32 +252,16 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
     try{
 
         img=cv_bridge::toCvShare(msg,"bgr8")->image;
-        // std::vector<int> ids;
         std::vector<std::vector<cv::Point2f> > rejected;
-        // cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-        // cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-    //     aruco::detectMarkers(img, dictionary, _corners, ids);
         cv::aruco::detectMarkers(img, dictionary, corners, corners_ids,parameters, rejected);
-//         std::cout << label << " -- " << _corners.size() << " ArUco search\n" << std::flush;
 
     }catch (cv_bridge::Exception& e){
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
     }
 
-
-
     if (corners.size() > 0)
     {
 
-        //  Save message
-//             std::cout << label << " -- " << _corners.size() << " ArUco(s) detected\n" << std::flush;
-        // corners = _corners[0];
-
-//             if(ARUCO_COMPUTED)
-//                 corners.clear();
-//
-//             for (int i = 0; i < 4 ; i++)
-//                 corners.push_back(_corners[0][i]);
         //  Save data:
         std::fstream outfile(output_dir+"error.dat", std::ios::app | std::ios::binary);
         for(int i = 0; i< corners_ids.size() ; i++)
@@ -352,9 +312,6 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
 {
     int j = msg->j;
     int size = msg->size;
-    // std::cout << label << " -- " << " CPM: Begin get complement\n" << std::flush;
-    // std::cout << label << " -- " << " CMP: From: " << j << "\n" << std::flush;
-    // std::cout << label << " -- " << " CMP: size: " << size << "\n" << std::flush;
     //  clear complements
     complements[j].clear();
     std::vector<std::vector<cv::Point2f>> _complements(size);
@@ -365,7 +322,6 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
 
         std::vector<cv::Point2f> complement(4);
         int ref_id = msg->ArUcos[i].id;
-        // std::cout << label << " -- " << " CMP: Elem ID: " << ref_id << "\n" << std::flush;
 
         //  consenso
 
@@ -378,7 +334,6 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
         complement[3].x = msg->ArUcos[i].points[3].x;
         complement[3].y = msg->ArUcos[i].points[3].y;
 
-        // std::cout << label << " -- " << " CMP: complement[0].x: " << complement[0].x << "\n" << std::flush;
 
         //      then add point and partial error (-p*_i -(p_j - p*_j))
         int idx = whereis(ref_id,aruco_refs_ids[j] );
@@ -390,18 +345,13 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
             complement[k] = complement[k] + aruco_refs[label][idx][k];
             complement[k] = complement[k] - aruco_refs[j][idx][k];
         }
-        // std::cout << label << " -- " << " CMP: algebra done\n" << std::flush;
         _complements[i] = complement;
-        // std::cout << label << " -- " << " CMP: save to _complements\n" << std::flush;
         ids[i] = ref_id;
     }
 
     complements[j] = _complements;
-    // std::cout << label << " -- " << " CMP: save to complements\n" << std::flush;
     complements_ids[j] = ids;
-    // std::cout << label << " -- " << " CMP: save to complements_ids\n" << std::flush;
     velContributions[j] = true;
-    // std::cout << label << " -- " << " CPM: End get complement\n" << std::flush;
 }
 
 bool fvc::agent::isNeighbor(int j)
@@ -413,39 +363,7 @@ bool fvc::agent::isNeighbor(int j)
 
 void fvc::agent::save_state(double time)
 {
-    // if (NOT_INITIALIZED_FILE)
-    // {
-    //     //  initialize output
-    //
-    //     std::ofstream outfile(output_dir+"error.dat", std::ifstream::out | std::ifstream::trunc );
-    //     if (!outfile.is_open() || outfile.fail())
-    //     {
-    //         outfile.close();
-    //         printf("\nError : failed to erase file content !");
-    //     }
-    //     int row_bytes =  4*errors[label].elemSize() +sizeof(double)+sizeof(int);
-    //     outfile.write((char *) &row_bytes,sizeof(int));
-    //     outfile.close();
-    //     outfile.open(output_dir+"partial.dat", std::ifstream::out | std::ifstream::trunc );
-    //     if (!outfile.is_open() || outfile.fail())
-    //     {
-    //         outfile.close();
-    //         printf("\nError : failed to erase file content !");
-    //     }
-    //     row_bytes = 14*sizeof(float) +sizeof(double);
-    //     outfile.write((char *) &row_bytes,sizeof(int));
-    //     outfile.close();
-    //     NOT_INITIALIZED_FILE = false;
-    // }
-//     std::cout << output_dir << std::endl;
-//     State.save_data(time,output_dir+"state.txt");
-    // for(int i = 0; i< n_agents; i++)
-    // {
-        // std::string name = output_dir+"partial_"+std::to_string(i)+".dat";
-        // States[i].save_data(time, name);
-        // name = output_dir+"error_"+std::to_string(i)+".dat";
-        // save_mat(time,name,errors[i]);
-    // }
+
     //Save consensus error
     std::string name = output_dir+"partial.dat";
     States[label].save_data(time, name);
@@ -564,9 +482,6 @@ void fvc::agent::execControl(double dt)
         errors_2[i] = cv::Mat();
     }
     
-
-    //  BEGIN N arucos modification in progress
-    std::cout << label << " CExec : Begin under develop\n" << std::flush;
     std::vector<cv::Point2f> _corners;
     std::vector<std::vector<cv::Point2f>> _complements;
     for (int i = 0; i< n_agents; i++)
@@ -583,34 +498,21 @@ void fvc::agent::execControl(double dt)
     {
         //  se crea la lista de índices que tienen el aruco corners_ids[j]
         std::vector<int> selector = getIdxArUco(corners_ids[j],complements_ids);
-        std::cout << label << " CExec : Selector[" << corners_ids[j] << "]= "<< std::flush;
-        for(int l = 0; l < selector.size(); l++)
-            std::cout <<  selector[l] << ", " << std::flush;
-        std::cout << std::endl << std::flush;
 
         if (selector.size() > 0)
         {
-            std::cout << label << " CExec : |selector| > 0\n" << std::flush;
             // _corners.push_back(corners[j]);
             std::vector<cv::Point2f>::iterator begin = corners[j].begin();
             std::vector<cv::Point2f>::iterator end = corners[j].end();
             std::vector<cv::Point2f>::iterator self_end = _corners.end();
             _corners.insert (self_end,begin,end);
-            std::cout << label << " CExec : _corners insert\n" << std::flush;
             ArUcos_ovelap.push_back(corners_ids[j]);
-            std::cout << label << " CExec :  Before ovelraps incert\n" << std::flush;
             for (int i = 0; i< n_agents; i++)
             {
                 if (isNeighbor(i))
                 {
-                    std::cout << label << " CExec :  neigh " << i << "\n" << std::flush;
                     // lista de índices para el mismo aruco por cada agente
                     std::vector<cv::Point2f>  tmp = complements[i][selector[i]];
-                    std::cout << label << " CExec : tmp[" << i << ", " << selector[i] << "]= "<< std::flush;
-                    for(int l = 0; l < selector.size(); l++)
-                        std::cout <<  tmp[l] << ", " << std::flush;
-                    std::cout << std::endl << std::flush;
-
 
                     // _complements[i].push_back(tmp);
 
@@ -618,19 +520,15 @@ void fvc::agent::execControl(double dt)
                     std::vector<cv::Point2f>::iterator tend = tmp.end();
                     std::vector<cv::Point2f>::iterator tself_end = _complements[i].end();
                     _complements[i].insert(tself_end, tbegin, tend);
-                    std::cout << label << " CExec :  _complements insert\n" << std::flush;
                 }
             }
-            std::cout << label << " CExec : No possible combination\n" << std::flush;
         }
     }
 
     if (ArUcos_ovelap.size() ==0)
     {
-        std::cout << label << " CExec : No possible combination\n" << std::flush;
         return;
     }
-    std::cout << label << " CExec : Vectors constructed \n" << std::flush;
 
     for (int i = 0; i< n_agents; i++)
     {
@@ -656,15 +554,9 @@ void fvc::agent::execControl(double dt)
             else
                 errors_1[label] = errors_1[label] + errors_1[i];
             
-            
-            
         }
     }
     cv::Mat p_current_int = cv::Mat(_corners).reshape(1);
-    std::cout << label << " CExec : End under develop \n" << std::flush;
-    //  END N arucos modification in progress
-
-
 
     //  Set up result
     vcc::matching_result result;
@@ -683,7 +575,6 @@ void fvc::agent::execControl(double dt)
         errors_integral = cv::Mat::zeros(result.p1.size(),result.p1.type()  );
         INTEGRAL_INIT = true;
     }
-    std::cout << label << " CExec : Vectors error vectors computed \n" << std::flush;
 
     //  estimación de Z
     int n = result.p2.rows;
@@ -709,7 +600,6 @@ void fvc::agent::execControl(double dt)
     if(VERBOSE_ENABLE)
     std::cout << label << " -- det = " << det << std::endl << std::flush;
 
-    std::cout << label << " CExec : Interaction + matrix constructed \n" << std::flush;
 
     cv::Mat U;
 
@@ -736,11 +626,9 @@ void fvc::agent::execControl(double dt)
     // States[label].Vyaw += (float) U.at<float>(5,0); // 6DOF
     
 
-    std::cout << label << " CExec : Velocities computed " << U << "\n" << std::flush;
 
     //  TODO: Simpla state update V2
     States[label].update();
-    std::cout << label << " CExec : End \n" << std::flush;
 
 }
 
@@ -808,6 +696,7 @@ double fvc::agent::adaptGamma(double _gamma_0, double _gamma_inf, double _gamma_
     return gamma;
 }
 
+//  TODO: generalize for N-Arucos
 void fvc::agent::integrateError(double dt)
 {
          errors_integral *= 0.95;

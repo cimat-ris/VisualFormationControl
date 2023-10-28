@@ -206,6 +206,8 @@ bool fvc::agent::imageRead()
         }
     }
     
+
+
     
     return (loaded_imgs == n_agents);
 }
@@ -572,7 +574,10 @@ void fvc::agent::execControl(double dt)
     //  INIT integral r c t
     if (!INTEGRAL_INIT)
     {
-        errors_integral = cv::Mat::zeros(result.p1.size(),result.p1.type()  );
+        for (int i = 0; i < corners_ids.size(); i++)
+        errors_integral.push_back(cv::Mat::zeros(4,2,result.p1.type()  ));
+        // errors_integral = cv::Mat::zeros(result.p1.size(),result.p1.type()  );
+
         INTEGRAL_INIT = true;
     }
 
@@ -605,9 +610,18 @@ void fvc::agent::execControl(double dt)
 
     if(PIAG_ENABLE)
     {
+        cv::Mat int_tmp;
+
+        //  TODO: join int_tmp
+        for (int i = 0; i < ArUcos_ovelap.size(); i++)
+        {
+            int j = whereis(ArUcos_ovelap[i], aruco_refs_ids[label]);
+            int_tmp.push_back(errors_integral[j]);
+        }
+
         double gamma =  adaptGamma(gamma_0, gamma_inf, gamma_d, errors[label]);
-        double gammaIntegral =  adaptGamma(gammaIntegral_0, gammaIntegral_inf, gammaIntegral_d, errors_integral);
-        U = L*(gamma * errors[label].reshape(1,L.cols) + gammaIntegral * errors_integral.reshape(1,L.cols) );
+        double gammaIntegral =  adaptGamma(gammaIntegral_0, gammaIntegral_inf, gammaIntegral_d, int_tmp);
+        U = L*(gamma * errors[label].reshape(1,L.cols) + gammaIntegral * int_tmp.reshape(1,L.cols) );
         U /= (float) n_neighbors ;
         U *= -1.;
 
@@ -699,8 +713,15 @@ double fvc::agent::adaptGamma(double _gamma_0, double _gamma_inf, double _gamma_
 //  TODO: generalize for N-Arucos
 void fvc::agent::integrateError(double dt)
 {
-         errors_integral *= 0.95;
-         errors_integral += dt * errors[label];
+         // errors_integral *= 0.95;
+         // errors_integral += dt * errors[label];
+
+    for (int i = 0; i< ArUcos_ovelap.size();i++)
+    {
+        int j = whereis(ArUcos_ovelap[i],aruco_refs_ids[label]);
+        errors_integral[j] *= 0.95;
+        errors_integral[j] += dt * errors[label](cv::Rect(0,i*4,2,4 ));
+    }
 }
 
 

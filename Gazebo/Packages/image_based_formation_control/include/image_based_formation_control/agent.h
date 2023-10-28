@@ -60,7 +60,7 @@ namespace fvc
         //  Control modifications
         bool PIAG_ENABLE=false;
         bool INTEGRAL_INIT=false;
-        cv::Mat errors_integral;
+        std::vector<cv::Mat> errors_integral; // N arucos in aruco_refs_ids[label] X (4x2)
         double gamma_0, gamma_inf, gamma_d;
         double gammaIntegral_0, gammaIntegral_inf, gammaIntegral_d;
 

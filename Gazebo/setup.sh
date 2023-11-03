@@ -14,6 +14,11 @@ else
     WORKSPACE=${1%/}
 fi
 
+#   If Workspace does not exist
+if test ! -d "$WORKSPACE"; then
+  echo "Directory does not exists."
+  exit
+fi
 
 
 

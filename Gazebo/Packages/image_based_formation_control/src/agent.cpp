@@ -177,13 +177,25 @@ bool fvc::agent::imageRead()
     {
         std::string name = input_dir+"reference"+std::to_string(i)+".png";
         cv::Mat tmp_img = cv::imread(name, cv::IMREAD_COLOR);
+        // cv::Mat tmp_img = cv::imread(name, cv::IMREAD_GRAYSCALE );
+        // cv::Mat tmp_img2 = cv::imread(name, cv::IMREAD_COLOR);
+        // cv::Mat tmp_img;
+        // cv:flip(tmp_img2, tmp_img,1);
         
         //  ArUco detection in reference
+
+        cv::Ptr<cv::aruco::DetectorParameters> _parameters = cv::aruco::DetectorParameters::create();
+        cv::Ptr<cv::aruco::Dictionary> _dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
         std::vector<int> _ids;
         std::vector<std::vector<cv::Point2f> > _corners;
         std::vector<std::vector<cv::Point2f> > rejected;
-        cv::aruco::detectMarkers(tmp_img, dictionary, _corners, _ids,parameters, rejected);
+        while(_ids.size() < 2)
+        {
+                cv::aruco::detectMarkers(tmp_img, _dictionary, _corners, _ids,_parameters, rejected);
+                std::cout << label << " " << _corners.size() << " ArUco search in ref\n" << std::flush;
+        }
+        // cv::aruco::detectMarkers(tmp_img, _dictionary, _corners, _ids,_parameters, rejected);
         if(VERBOSE_ENABLE)
         std::cout << label << " " << _corners.size() << " ArUco search in ref\n" << std::flush;
 
@@ -199,7 +211,9 @@ bool fvc::agent::imageRead()
             {
                 //  Else: save empty vector
                 std::vector<std::vector<cv::Point2f>> _empty;
+                std::vector<int> _empty2;
                 aruco_refs.push_back(_empty);
+                aruco_refs_ids.push_back(_empty2);
             }
             //  Append
             desired_img.push_back(tmp_img);

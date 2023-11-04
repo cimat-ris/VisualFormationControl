@@ -178,16 +178,13 @@ int main(int argc, char **argv){
         new_agent.execControl(dt);
         dt = t;
         
-        std::cout << me_str << " main : control executed \n" << std::flush;
         //  save data
         new_agent.save_state(t);
-        std::cout << me_str << " main : data saved \n" << std::flush;
 
         //  PUBLISH NEW POSITION
 //         if (new_agent.label !=1)
         position_publisher.publish(new_agent.getPose());
-        std::cout << me_str << " main : END \n" << std::flush;
-        
+
         //  RESET CONTROL VELOCITIES
 //         new_agent.reset( fvc::CONTRIBUTIONS | fvc::CORNERS); 
 //         new_agent.reset( fvc::CORNERS); 

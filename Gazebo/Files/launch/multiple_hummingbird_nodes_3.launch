@@ -61,7 +61,7 @@
     <!--EHR-->
 <!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0.8 1.2 2.1 0 0.1"/> -->
     <!--DHR-->
-<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0.8 1.4 2.1 15 0"/> -->
+<!--     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="1.0 1.4 2.1 15 0"/> -->
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   </group>

@@ -668,6 +668,28 @@ def experiment(directory = "0",
         #pd[2,:] += 1.
         #pd[2,0] += 1.
         #pd[2,2] += 1.
+        
+        #   Prueba
+        #pd[2,:] = 1.
+        
+        ## C1: pd_yaw *= k 
+        #pd[5,:] *= 0.2
+        
+        ##  C2: pd_yaw = k
+        #pd[5,:] = 0.
+        
+        ##  C3: p0_taw = pd_yaw
+        #p0[5,:] = pd[5,:]
+        
+        ## condición última d eyaw 
+        #p0[5,:] *= 0.5
+        
+        #   EHRA
+        #p0[2,:] = p0[2,:] - pd[2,:] + 1.
+        #p0[5,:] = p0[5,:] - pd[5,:] 
+        #pd[2,:] = 1.
+        #pd[5,:] = 0.
+        
         #P[:,1] = np.array([2.5,-1,-0.23240457,1])
         #P = np.c_[P,np.array([-0.9,0.5,-0.1,1]).reshape((4,1))]
         #n_points += 1
@@ -705,6 +727,13 @@ def experiment(directory = "0",
             #[pd[3,i], pd[4,i], pd[5,i]] = ctr.get_angles(_R)
         #pd[:3,:] = R @ pd[:3,:]
         
+        #adjMat = np.array([[0, 1, 1, 0],
+                           #[1, 0, 1, 0],
+                           #[1, 1, 0, 1],
+                           #[0, 0, 1, 0]])
+                           
+        #P = P[:,:10]
+        #n_points = P.shape[1]
         #   END TEST
     else:
         #   3D scenc points
@@ -1031,6 +1060,7 @@ def experiment(directory = "0",
     for j in range(n_agents):
         logText += '\n' +"V_"+str(j)+" = "+str(U_array[j,:,-1])
     logText += '\n' +"CMRS = "+str(norm(ret_err)/n_agents)
+    logText += '\n' +"Error sum by component = "+str(error.sum(axis = 0))
     logText += '\n' +"Mean inital heights = "+str(np.mean(p0[2,:]))
     logText += '\n' +"Mean camera heights = " +str(np.mean(np.r_[p0[2,:],pd[2,:]]))
     
@@ -1447,6 +1477,7 @@ def scene(modify = [],
             testing = True
     #print("log")
     while testing:
+        #print('P not suitable')
         testing = False
         
         P = np.random.rand(3,n_points)
@@ -2377,7 +2408,7 @@ def experiment_local(pFlat = False,
             n_agents = 4, 
             n_points = nP)    
     else:
-        scene(modify = ["P","pd","p0"],
+        scene(modify = ["P","p0"],
             Pz = Pz,
                 dirBase = dirBase+"0/"+str(caseId),
                 n_agents = 4, 
@@ -2999,6 +3030,9 @@ def plot_tendencias(nReps = 20,
         arr_n_points = npzfile['arr_n_points']
         #Misscount = npzfile['Misscount']
         mask = npzfile['mask']
+        #if k ==1:
+            #mask = np.zeros(100)
+            #mask[0:20] = 1.
         
         hcons = np.r_[hcons,var_arr.reshape((1,100))]
         h1 = np.r_[h1,var_arr_2.reshape((1,100))]
@@ -3040,11 +3074,13 @@ def plot_tendencias(nReps = 20,
     h1 = h1[1:,:]
     h2 = h2[1:,:]
     hcons = hcons[1:,:]
+    figsize = (4.8,5.4)
+    #figsize = (3.2,5.4)
     
     #   BEGIN
     #   Errores de consenso
     #fig, ax = plt.subplots( 2,1,sharex=True,frameon=False)
-    fig, ax = plt.subplots(frameon=False, figsize=(4.8,5.4))
+    fig, ax = plt.subplots(frameon=False, figsize=figsize)
     fig.suptitle("Consensus error by repetition sets")
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
               #norm=mcolors.PowerNorm(gamma=0.5),
@@ -3087,7 +3123,7 @@ def plot_tendencias(nReps = 20,
                           ha="center", va="center", 
                            color="k", fontsize =10)
     
-    #plt.tight_layout()
+    plt.tight_layout()
     plt.savefig(dirBase+'Consensus.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
@@ -3128,7 +3164,7 @@ def plot_tendencias(nReps = 20,
     
     
     #   Errores de traslación
-    fig, ax = plt.subplots(frameon=False, figsize=(4.8,5.4))
+    fig, ax = plt.subplots(frameon=False, figsize=figsize)
     fig.suptitle("Translation error by repetition sets")
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
               #norm=mcolors.PowerNorm(gamma=0.5),
@@ -3210,7 +3246,7 @@ def plot_tendencias(nReps = 20,
     plt.close()
     
     #   Errores de Rotación
-    fig, ax = plt.subplots(frameon=False, figsize=(4.8,5.4))
+    fig, ax = plt.subplots(frameon=False, figsize=figsize)
     fig.suptitle("Rotation error by repetition sets")
     
     ax.imshow(count_mask.reshape((1,nReps)), cmap = "Purples", 
@@ -3352,7 +3388,45 @@ def test_reg():
     plt.close()
     return
 
-
+def plot_local_among(array, nReps,
+                     subtitle = "Failed cases by step",
+                     ylabel = "Failed simulations",
+                     name = 'Rectification_count.pdf'):
+    #from matplotlib.ticker import MaxNLocator, FuncFormatter
+    
+    
+    #   failed cases
+    fig, ax = plt.subplots(frameon=False, figsize = (4.8,5.4))
+    fig.suptitle(subtitle)
+    #ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ref = np.arange(nReps)+1
+    ax.set_xticks(ref)
+    
+    
+    npzfile = np.load("default.npz")
+    colors = npzfile["colors"]
+    ax.plot(ref,array[0,:], color = colors[0], label= "EHR-P")#,lw = 0.5)
+    ax.plot(ref,array[1,:], color = colors[1], label= "DHR-P")#,lw = 0.5)
+    ax.plot(ref,array[2,:], color = colors[2], label= "EHR-PI-AG")#,lw = 0.5)
+    ax.plot(ref,array[3,:], color = colors[3], label= "DHR-PI-AG")#,lw = 0.5)
+    
+    
+    fig.legend( loc=2)
+    ax.set_xlabel("Step")
+    ax.set_ylabel(ylabel)
+    #plt.xlim((-0.1,1.1))
+    #plt.ylim((-0.01,0.11))
+    ax.grid(axis='y')
+    ax.set_axisbelow(True)
+    
+    plt.xticks(ticks = np.arange(1,20,2),
+                  labels = np.arange(1,20,2))
+    
+    plt.tight_layout()
+    plt.savefig(name,bbox_inches='tight')
+    #plt.show()
+    plt.close()
+    
 def mainLocal(arg):
     
     ##  Color palettes
@@ -3570,6 +3644,17 @@ def mainLocal(arg):
     #return
     #   END plot circle reference
     
+    
+    #   BEGIN plot example boxplot
+    
+    
+    #plot_tendencias(2,colorFile= 'colorPalette_B.npz')
+    
+    #return
+
+    #   END plot example boxplot
+    
+    
     #   BEGIN UI [r | v | Simple | 0-4]
     
     #  Arg parser and log INIT
@@ -3583,10 +3668,10 @@ def mainLocal(arg):
                 #n_agents = 4, 
                 #n_points = 30)
         ret = experiment(directory=arg[3],
-                    t_end = 400,
+                    t_end = 50,
                     #setRectification = True,
                     #gdl = 2,
-                    #leader = 0,
+                    leader = 0,
                     #lamb = 0.1,
                     ##modified =["nPoints"],
                     #gamma0 = 3.,
@@ -3891,182 +3976,358 @@ def main(arg):
     
     #   BEGIN read npz
     
-    ##   TODO: test the consenus of hte good cases 
-    ##directory = arg[3]
-    ##npzfile = np.load(directory+'/data.npz')
-    ##arr = []
+    
+    #   BEGIN Front parallel
+    #count_succeded = 0
+    #count_mask = 0
+    #count_Nsucceded = 0 #   Solo de comporbación 
+    #etmax = 0
+    #ermax = 0
+    #consmax = 0
+    
     #for i in range(20):
-        #npzfile = np.load(str(i)+'/data.npz')
-        ##npzfile = np.load('data_'+str(i)+'.npz')
-        ##print(npzfile['var_arr_2'].max())
-        ##print(npzfile['var_arr_3'].max())
-        #tmp = npzfile['var_arr']
+        
+        #npzfile = np.load('data_'+str(i)+'.npz')
+        #cons = npzfile['var_arr']
+        #cons = np.linalg.norm(cons,axis = 0)/4
         #et = npzfile['var_arr_2']
         #ew = npzfile['var_arr_3']
         #mask = npzfile['mask']
-        #tmp = np.linalg.norm(tmp,axis = 0)/4
-        ##if i == 15:
-            ##print(tmp)
-        #tmp = tmp[mask == 0]
+        #count_mask += mask.sum()
+        #cons = cons[mask == 0]
         #et = et[mask == 0]
         #ew = ew[mask == 0]
-        #tmp_max = tmp.max()
-        ##print(tmp_max)
-        #idx = np.argmax(tmp)
-        ##print(idx)
-        ##idx = idx[0]
-        #print('ec = ' + str(tmp[idx]) + '\tet = ' +str(et[idx]) + '\tew = ' +str(ew[idx]))
-        ##print('--')
         
-        ##if i == 16:
-            ##print(tmp)
+        ##test = np.count_nonzero((et < 0.1) & (ew < 0.1))
+        #test = np.count_nonzero((et < 0.1) & (ew < 0.1))
+        #count_succeded += test
+        #count_Nsucceded += et.shape[0] + mask.sum()
         
-        ##   Min 3d analysis
-        ##npzfile = np.load('data_'+str(i)+'.npz')
-        ##arr_nP = npzfile['arr_nP']
-        ##mask = npzfile['mask']
-        ##arr_nP = np.array(arr_nP, np.int64)
-        ##arr_nP -= 4
-        ##arr_trial_heat_cons = npzfile['arr_trial_heat_cons']
-        ##for j in range(4):
-            ###if mask[j] == 0. and arr_nP[j] <95:
-            ##if mask[j] == 0. :
-                ##if arr_nP[j] == 96:
-                    ##arr_nP[j] = 95
-                ##arr.append(arr_trial_heat_cons[j,arr_nP[j]])
+        
+        ##_filter = cons < 0.01
+        #_filter = cons < 0.005
+        ##_filter = (et < 0.01) & (ew < 0.1)
+        #et = et[_filter]
+        #ew = ew[_filter]
+        #cons = cons[_filter]
+        
+        
+        #consmax = max(cons.max(),consmax)
+        #etmax = max(et.max(),etmax)
+        #ermax = max(ew.max(),ermax)
+        ##print(test)
+    #print(etmax, ermax, consmax)
+    #print (count_succeded)
+    #print (count_mask)
+    #print (count_Nsucceded)
+    #   END Front parallel
+    
+    
+    #   BEGIN npoints
+    
+    #arr = []
+    #for i in range(25): 
+        
+        #npzfile = np.load('data_'+str(i)+'.npz')
+        #arr_nP = npzfile['arr_nP']
+        #mask = npzfile['mask']
+        #arr_nP = np.array(arr_nP, np.int64)
+        #arr_nP -= 4
+        #arr_trial_heat_cons = npzfile['arr_trial_heat_cons']
+        #for j in range(4):
+            ##if mask[j] == 0. and arr_nP[j] <95:
+            #if mask[j] == 0. :
+                #if arr_nP[j] == 96:
+                    #arr_nP[j] = 95
+                #else:
+                    #arr.append(arr_trial_heat_cons[j,arr_nP[j]])
         ##print(arr_nP)
         ##print(arr_trial_heat_cons[:,arr_nP])
         ##print('--')
-       
-    ##print(arr)
-    ##print(max(arr))
-    #return
+    #print(arr)
+    #print(any(np.array(arr) < 0.001))
+    #print(max(arr))
     
-    #   END read npz
+    #   END npoints
     
-    #   BEGIN plot fail cases comparison 
+    #   BEGIN read npz local
     
-    #Names = ["W_04_localCirc_Rectification_P/",
-             #"W_04_localRand_Rectification_P/",
-             #"W_04_localCirc_Rectification_PIG/",
-             #"W_04_localRand_Rectification_PIG/"]
+    arr = []
+    arrt = []
+    arrw = []
+    arrm = []
+    arrtm = []
+    arrwm = []
+    count_succeded = 0
+    count_mask = 0
+    count_Nsucceded = 0 #   Solo de comporbación 
+    
+    print('---------------',arg[3])
+    for i in range(20): 
+    
+        npzfile = np.load(str(i)+'/data.npz')
+        
+        consenso = npzfile['var_arr']
+        et = npzfile['var_arr_2']
+        ew = npzfile['var_arr_3']
+        mask = npzfile['mask']
+        consenso = np.linalg.norm(consenso,axis = 0)/4
+        
+        consenso = consenso[mask == 0]
+        et = et[mask == 0]
+        ew = ew[mask == 0]
+        
+        
+        _filter = [True]
+        if arg[3] == '1':
+            _filter = (et < 0.1) & (ew < 0.1)
+        elif arg[3] == '2':
+            _filter = (et > 0.1) & (ew > 0.1)
+            
+        #_filter = consenso < 0.01
+        #_filter = consenso < 0.005
+        
+        if any(_filter):
+            
+            if arg[3] != '0':
+                et = et[_filter]
+                ew = ew[_filter]
+                consenso = consenso[_filter]
+        
+        
+            #   analize overall consensus
+            consenso_max = consenso.max()
+            #print(consenso_max)
+            idx = np.argmax(consenso)
+            arr.append(consenso[idx])
+            arrt.append(et[idx])
+            arrw.append(ew[idx])
+            
+            idx = np.argmin(consenso)
+            arrm.append(consenso[idx])
+            arrtm.append(et[idx])
+            arrwm.append(ew[idx])
+            
+            #   analize the successful
+            test = np.count_nonzero((et < 0.1) & (ew < 0.1))
+            count_mask += mask.sum()
+            count_succeded += test
+            count_Nsucceded += et.shape[0] + mask.sum()
+            if i ==0:
+                print('step 0 successful = ', test)
+            if i ==19:
+                print('step 19 successful = ',test)
+        
+    print('Failed = ',count_mask)
+    print('Succeded = ',count_succeded)
+    print('Check = ',count_Nsucceded)
+    
+    print('Max consensus = ',max(arr))
+    print('Max et = ',max(arrt))
+    print('Max ew = ',max(arrw))
+    print('Min consensus = ',min(arrm))
+    print('Min et = ',min(arrtm))
+    print('Min ew = ',min(arrwm))
+    print('---------------')
+    return
+    
+    #   END read npz local
+            
+    #   BEGIN testing  hypostesis: does height variablility affects the outcome
+    
+    #for i in range(20): 
+        #refs = []
+        #for j in range(100):
+            #npzfile = np.load(str(i)+'/'+str(j)+'/data.npz')
+            #tmp = npzfile['pd']
+            #tmp = tmp[2,:]
+            ##tmp = tmp.max() - tmp.min()
+            #tmp = np.var(tmp)
+            #refs.append(tmp)
+        #refs = np.array(refs)
+        
+        #npzfile = np.load(str(i)+'/data.npz')
+        #et = npzfile['var_arr_2']
+        #ew = npzfile['var_arr_3']
+        #mask = npzfile['mask']
+        
+        #et = et[mask == 0]
+        #ew = ew[mask == 0]
+        #refs = refs[mask == 0]
+        #for j in range(100):
+            #print('delta h = ' + str(refs[j]) + '\tet = ' +str(et[j]) + '\tew = ' +str(ew[j]))
+        ##print('--')
+        
+    ###Hipotesis failed
+    
+    #   BEGIN testing  hypostesis: does height variablility affects the outcome
+    
+    #   BEGIN plot  cases comparison 
+    
+    #series = int(arg[3])
+    
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    
+    ###   Local
+    #if series == 3:
+        #Names = ["W_06_localEHRA_P_full/",
+                #"W_04_localRand_P/",
+                #"W_06_localEHRA_PIG_full/",
+                #"W_04_localRand_PIG/"]
+        
+        
+    ###   Local
+    #if series == 0:
+        #Names = ["W_06_localEHRA_P/",
+                #"W_05_localRand_P/",
+                #"W_06_localEHRA_PIG/",
+                #"W_05_localRand_PIG/"]
+        
+    
+    ## Local + rectification
+    #if series == 1:
+        #Names = ["W_06_localEHRA_P_r/",
+                #"W_05_localRand_P_r/",
+                #"W_06_localEHRA_PIG_r/",
+                #"W_05_localRand_PIG_r/"]
+    
+    
+    ### Local + leader
+    #if series == 2:
+        #Names = ["W_06_localEHRA_P_l/",
+                #"W_05_localRand_P_l/",
+                #"W_06_localEHRA_PIG_l/",
+                #"W_05_localRand_PIG_l/"]
     
     #nReps = 20
     #count_mask = np.zeros((4,nReps),dtype = np.int_)
+    #count_succeded = np.zeros((4,nReps),dtype = np.int_)
+    #_max = np.zeros((3,4,nReps))
+    #_min = np.zeros((3,4,nReps))
+    #_avr = np.zeros((3,4,nReps))
+    
     #for i in range(len(Names)):
         #dirBase = root + Names[i]
         #for k in range(nReps):
             
             #npzfile = np.load(dirBase+str(k)+'/data.npz')
             #mask = npzfile['mask']
+            
+            #consenso = npzfile['var_arr']
+            #consenso = np.linalg.norm(consenso,axis = 0)/4
+            #et = npzfile['var_arr_2']
+            #ew = npzfile['var_arr_3']
+            
+            #consenso = consenso[mask == 0]
+            #et = et[mask == 0]
+            #ew = ew[mask == 0]
+            
+            #count_succeded[i,k] = np.count_nonzero((et < 0.1) & (ew < 0.1))
             #count_mask[i,k] = mask.sum()
+            
+            #_max[0,i,k] = max(consenso)
+            #_max[1,i,k] = max(et)
+            #_max[2,i,k] = max(ew)
+            #_min[0,i,k] = min(consenso)
+            #_min[1,i,k] = min(et)
+            #_min[2,i,k] = min(ew)
+            #_avr[0,i,k] = np.mean(consenso)
+            #_avr[1,i,k] = np.mean(et)
+            #_avr[2,i,k] = np.mean(ew)
     
-    #from matplotlib.ticker import MaxNLocator, FuncFormatter
+    #plot_local_among(count_mask,nReps,
+                     #subtitle = "Failed cases by step",
+                     #ylabel = "Failed simulations",
+                     #name = 'Local_count_failed.pdf')
+    #print(count_succeded[:,0])
+    #print(count_succeded[:,-1])
+    #plot_local_among(count_succeded,nReps,
+                     #subtitle = "Succeded cases by step",
+                     #ylabel = "Succeded simulations",
+                     #name = 'Count_success.pdf')
+    ##return
+    #plot_local_among(_max[0],nReps,
+                     #subtitle = "Max CRMS cases by step",
+                     #ylabel = "Max CRMS ",
+                     #name = 'Local_MaxCRMS.pdf')
+    ##plot_local_among(_min[0],nReps,
+                     ##subtitle = "Min CRMS cases by step",
+                     ##ylabel = "Min CRMS ",
+                     ##name = 'Local_MinCRMS.pdf')
+    ##plot_local_among(_avr[0],nReps,
+                     ##subtitle = "Mean CRMS cases by step",
+                     ##ylabel = "Mean CRMS ",
+                     ##name = 'Local_MeanCRMS.pdf')
     
-    #fig, ax = plt.subplots(frameon=False)
-    #fig.suptitle("Failed cases by step")
-    ##ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    #ref = np.arange(nReps)+1
-    #ax.set_xticks(ref)
+    #plot_local_among(_max[2],nReps,
+                     #subtitle = "Max rotation error cases by step",
+                     #ylabel = "Max rotation error ",
+                     #name = 'Local_Maxwe.pdf')
+    ##plot_local_among(_min[2],nReps,
+                     ##subtitle = "Min rotation error cases by step",
+                     ##ylabel = "Min rotation error ",
+                     ##name = 'Local_Minwe.pdf')
+    ##plot_local_among(_avr[2],nReps,
+                     ##subtitle = "Mean rotation error cases by step",
+                     ##ylabel = "Mean rotation error ",
+                     ##name = 'Local_Meanwe.pdf')
+    
+    #plot_local_among(_max[1],nReps,
+                     #subtitle = "Max translation error cases by step",
+                     #ylabel = "Max translation error ",
+                     #name = 'Local_Maxte.pdf')
+    ##plot_local_among(_min[1],nReps,
+                     ##subtitle = "Min translation error cases by step",
+                     ##ylabel = "Min translation error ",
+                     ##name = 'Local_Minte.pdf')
+    ##plot_local_among(_avr[1],nReps,
+                     ##subtitle = "Mean translation error cases by step",
+                     ##ylabel = "Mean translation error ",
+                     ##name = 'Local_Meante.pdf')
     
     
-    #npzfile = np.load("default.npz")
-    #colors = npzfile["colors"]
-    #ax.plot(ref,count_mask[0,:], color = colors[0], label= "EHR-P")#,lw = 0.5)
-    #ax.plot(ref,count_mask[1,:], color = colors[1], label= "DHR-P")#,lw = 0.5)
-    #ax.plot(ref,count_mask[2,:], color = colors[2], label= "EHR-PI-AG")#,lw = 0.5)
-    #ax.plot(ref,count_mask[3,:], color = colors[3], label= "DHR-PI-AG")#,lw = 0.5)
-    
-    
-    #fig.legend( loc=2)
-    #ax.set_xlabel("Step")
-    #ax.set_ylabel("Failed simulations")
-    ##plt.xlim((-0.1,1.1))
-    ##plt.ylim((-0.01,0.11))
-    #ax.grid(axis='y')
-    #ax.set_axisbelow(True)
-    
-    
-    #plt.tight_layout()
-    #plt.savefig('Rectification_count.pdf',bbox_inches='tight')
-    ##plt.show()
-    #plt.close()
     #return 
 
-    #   END plot fail cases comparison 
+    #   END plot  cases comparison 
     
-    #   BEGIN Front parallel Part: set Circular
-    
-    
-    
-    ##   Local tests  
-    
+    #   BEGIN modify Front parallel
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_04_FrontParallel_Circular_Flat/",
-             #"W_04_FrontParallel_Circular_NFlat/",
-             #"W_04_FrontParallel_Circular_NFlat_PIG/"]
-    #nReps = 5
-    #nodes = 20
+    #Names = ["W_06_FrontParallel_EHRA_Flat/",
+             #"W_06_FrontParallel_EHRA_NFlat/"]
+    #Pz = [[0,0],
+          #[-1,0]]
     
-    ##   Plot
-    #if arg[2] == 'p':
-        #for i in range(len(Names)):
-            #dirBase = root + Names[i]
-            #colorFile = colorNames[int(i>0)]
-            #experiment_plots(dirBase =  dirBase,
-                            #kSets = nodes,
-                            #colorFile = colorFile)
+    #for j in range(2):
+        #for i in range(100):
+            ##ajeste pd previo ára 06 EHRA
+            #name = root+Names[j]+str(i)+'/'
+            #npzfile = np.load(name+'data.npz')
+            #pd = npzfile['pd']
+            #pd[2,:] = 1.
+            #pd[5,:] = 0.
             
-        #return
-    
-    #job = int(arg[3])
-    #sel_case = int(arg[4])
-    
-    ##  process
-    #dirBase = root + Names[sel_case]
-    #colorFile = colorNames[int(sel_case>0)]
-    
-    #logText = "Set = "+ dirBase+'\n'
-    #write2log(logText)
-    
-    #logText = "Job = "+str(job)+'\n'
-    #write2log(logText)
-    
-    #if sel_case < 2:
-        #experiment_frontParallel(nReps = nReps,
-                                 #repeat = True, #   Only if already created
-                     #t_end = 800,
-                    #dirBase = dirBase,
-                    #node = job,
-                    #Flat = (sel_case == 0))
-    #else:
-        #experiment_frontParallel(nReps = nReps,
-                                 #repeat = True,
-                        #t_end = 800,
-                        #gamma0 = 3.,
-                        #gammaInf = .1,
-                        #intGamma0 = 0.1,
-                        #intGammaInf = 0.01,
-                        #intGammaSteep = 5,
-                        #dirBase = dirBase,
-                        #node = job)
-    #write2log("LOG FINISHED \n")
+            #scene(dirBase = name,
+                    #modify=["pd",'P'],
+                    #Pz = Pz[j],
+                    #n_agents = 4, 
+                    #n_points = random.randint(4,11),
+                    #inpd=pd)
     #return 
+
+    #   END modify Front parallel
+    
+    #   BEGIN Front parallel 
     
     
-    #   END Front parallel Part: set Circular
-    #   BEGIN Front parallel Part: set Random
-    
-    
-    
-    ##   Local tests  
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    #Names = ["W_04_FrontParallel_Random_Flat/",
-             #"W_04_FrontParallel_Random_NFlat/",
-             #"W_04_FrontParallel_Random_NFlat_PIG/"]
+    #Names = ["W_06_FrontParallel_EHRA_Flat/",
+             #"W_06_FrontParallel_EHRA_NFlat/",
+             #"W_06_FrontParallel_EHRA_NFlat_PIG/"]
+    ##Names = ["W_05_FrontParallel_Random_Flat/",
+             ##"W_05_FrontParallel_Random_NFlat/",
+             ##"W_05_FrontParallel_Random_NFlat_PIG/"]
     #nReps = 5
     #nodes = 20
     
@@ -4097,11 +4358,9 @@ def main(arg):
     #if sel_case < 2:
         #experiment_frontParallel(nReps = nReps,
                         #t_end = 800,
-                        #n_points = 30,
                         #repeat = True, #   Only if already created
                         #dirBase = dirBase,
-                        #node = job,
-                        #Flat = (sel_case == 0))
+                        #node = job)
     #else:
         #experiment_frontParallel(nReps = nReps,
                         #t_end = 800,
@@ -4116,144 +4375,180 @@ def main(arg):
     #return 
     
     
-    #   END Front parallel Part: set Random
+    #   END Front parallel 
     
     
-    ##   BEGIN CLUSTER Local
+    ###   BEGIN CLUSTER Local
     
-    #    Local tests  
-    series = int(arg[3])
-    
-    root = "/home/est_posgrado_edgar.chavez/Consenso/"
-    
-    ##   Local
-    if series == 0:
-        Names = ["W_05_localCirc_P/",
-                "W_05_localRand_P/",
-                "W_05_localCirc_PIG/",
-                "W_05_localRand_PIG/"]
-        setRectification = False
-        gdl = 1
-        leader = None
-        
-    
-    # Local + rectification
-    if series == 1:
-        Names = ["W_05_localCirc_P_r/",
-                "W_05_localRand_P_r/",
-                "W_05_localCirc_PIG_r/",
-                "W_05_localRand_PIG_r/"]
-        setRectification = True
-        gdl = 2
-        leader = None
-    
-    
-    ## Local + leader
-    if series == 2:
-        Names = ["W_05_localCirc_P_l/",
-                "W_05_localRand_P_l/",
-                "W_05_localCirc_PIG_l/",
-                "W_05_localRand_PIG_l/"]
-        setRectification = False
-        gdl = 1
-        leader = 0
-    
-    
-    ###   Plot part
-    if arg[2] == 'p':
-        #i = 0
-        #colorFile = colorNames[i%2]
-        #plot_tendencias(dirBase = root + Names[i], 
-                        #colorFile = colorFile)
-        #return
-        
-        for i in range(len(Names)):
-            colorFile = colorNames[i%2]
-            plot_tendencias(dirBase = root + Names[i], 
-                            colorFile = colorFile)
-            
-        return
-    
-    #   Proc part
-    job = int(arg[3])
-    sel = int(arg[4])
-    i = job
-    
-    #  process
-    name = Names[sel]
-    colorFile = colorNames[sel%2]
-    
-    logText = "Set = "+root + name+'\n'
-    write2log(logText)
-    
-    logText = "Repetition = "+str(i)+'\n'
-    write2log(logText)
-    #   Proporcional
-    if sel == 0 or sel == 1:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #   PI AG
-    if sel == 2 or sel ==3:
-        experiment_repeat(nReps = 100,
-                          t_end = 800,
-                          setRectification = setRectification,
-                          gdl = gdl,
-                          leader = leader,
-                        gamma0 = 3.,
-                        gammaInf = .1,
-                        intGamma0 = 0.1,
-                        intGammaInf = 0.01,
-                        dirBase = root + name+str(i)+"/",
-                        enablePlotExp= False)
-    #experiment_plots(dirBase = root + name+str(i)+"/", 
-                     #colorFile = colorFile)
-    
-    write2log("LOG FINISHED \n")
-    return
-    
-    #   END Cluster local
-    #   BEGIN Cluster local: SETUP
+    ####    Local tests  
+    #series = int(arg[3])
     
     #root = "/home/est_posgrado_edgar.chavez/Consenso/"
     
-    ##   Span:
-    ##   local
-    ##names = ["W_05_localCirc_Ref/",
-             ##"W_05_localRand_Ref/"]
-    ##dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
-                    ##np.linspace(0.1,2.,20).reshape((1,20)),
-                    ##np.linspace(0.1,2.,20).reshape((1,20)),
-                    ##np.linspace(0.1,np.pi/2,20).reshape((1,20)),
-                    ##np.linspace(0.1,np.pi/2,20).reshape((1,20)),
-                    ##np.linspace(0.1,np.pi/2,20).reshape((1,20))]
-    ###   Reference
-    #names = ["W_05_localCirc_Ref_r/",
-             #"W_05_localRand_Ref_r/"]
-    #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
-                    #np.linspace(0.1,2.,20).reshape((1,20)),
-                    #np.linspace(0.1,2.,20).reshape((1,20)),
-                    #np.linspace(0.1,np.pi/6,20).reshape((1,20)),
-                    #np.zeros((1,20)),
-                    #(np.pi/2) * np.ones(20).reshape((1,20))]
+    ###   Local
+    #if series == 3:
+        #Names = ["W_06_localEHRA_P_full/",
+                #"W_06_localRand_P_full/",
+                #"W_06_localEHRA_PIG_full/",
+                #"W_06_localRand_PIG_full/"]
+        #setRectification = False
+        #gdl = 1
+        #leader = None
+        
+    ###   Local
+    #if series == 0:
+        #Names = ["W_06_localEHRA_P/",
+                #"W_06_localRand_P/",
+                #"W_06_localEHRA_PIG/",
+                #"W_06_localRand_PIG/"]
+        #setRectification = False
+        #gdl = 1
+        #leader = None
+        
+    
+    ## Local + rectification
+    #if series == 1:
+        #Names = ["W_06_localEHRA_P_r/",
+                #"W_06_localRand_P_r/",
+                #"W_06_localEHRA_PIG_r/",
+                #"W_06_localRand_PIG_r/"]
+        #setRectification = True
+        #gdl = 2
+        #leader = None
+    
+    
+    ### Local + leader
+    #if series == 2:
+        #Names = ["W_06_localEHRA_P_l/",
+                #"W_06_localRand_P_l/",
+                #"W_06_localEHRA_PIG_l/",
+                #"W_06_localRand_PIG_l/"]
+        #setRectification = False
+        #gdl = 1
+        #leader = 0
+    
+    
+    ####   Plot part
+    #if arg[2] == 'p':
+        ##i = 0
+        ##colorFile = colorNames[i%2]
+        ##plot_tendencias(dirBase = root + Names[i], 
+                        ##colorFile = colorFile)
+        ##return
+        
+        #for i in range(len(Names)):
+            #if i %2 ==0 :
+                #colorFile = colorNames[i%2]
+                #plot_tendencias(dirBase = root + Names[i], 
+                                #colorFile = colorFile)
+            
+        #return
+    
+    ##   Proc part
+    #i = int(arg[4])
+    #sel = int(arg[5])
+    
+    ##  process
+    #name = Names[sel]
+    #colorFile = colorNames[sel%2]
+    
+    #logText = "Set = "+root + name+'\n'
+    #write2log(logText)
+    
+    #logText = "Repetition = "+str(i)+'\n'
+    #write2log(logText)
+    ##   Proporcional
+    #if sel == 0 or sel == 1:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                          #setRectification = setRectification,
+                          #gdl = gdl,
+                          #leader = leader,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##   PI AG
+    #if sel == 2 or sel ==3:
+        #experiment_repeat(nReps = 100,
+                          #t_end = 800,
+                          #setRectification = setRectification,
+                          #gdl = gdl,
+                          #leader = leader,
+                        #gamma0 = 3.,
+                        #gammaInf = .1,
+                        #intGamma0 = 0.1,
+                        #intGammaInf = 0.01,
+                        #dirBase = root + name+str(i)+"/",
+                        #enablePlotExp= False)
+    ##experiment_plots(dirBase = root + name+str(i)+"/", 
+                     ##colorFile = colorFile)
+    
+    #write2log("LOG FINISHED \n")
+    #return
+    
+    ##   END Cluster local
+    ##   BEGIN Cluster local: SETUP
+    #series = int(arg[3])
+    
+    #root = "/home/est_posgrado_edgar.chavez/Consenso/"
+    
+    #####  Span:
+    ##   local full range
+    #if series == 0:
+        #names = ["W_06_localEHRA_P_full/",
+                #"W_05_localRand_P_full/"]
+        #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi,20).reshape((1,20))]
+    ##   local half range
+    #if series == 1:
+        #names = ["W_06_localEHRA_P/",
+                #"W_05_localRand_P/"]
+        #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi/2,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi/2,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi/2,20).reshape((1,20))]
+    
+    ###   30° range
+    #if series == 2:
+        #names = ["W_06_localEHRA_P_r/",
+                #"W_05_localRand_P_r/"]
+        #dArray = np.r_[np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,2.,20).reshape((1,20)),
+                        #np.linspace(0.1,np.pi/6,20).reshape((1,20)),
+                        #np.zeros((1,20)),
+                        #(np.pi/2) * np.ones(20).reshape((1,20))]
              
     #for i in range(100):
+        #print(i, end='\r')
+        ##ajeste pd previo ára 06 EHRA
+        #name = root+names[0]+'0/'+str(i)+'/'
+        #npzfile = np.load(name+'data.npz')
+        #pd = npzfile['pd']
+        #pd[2,:] = 1.
+        #pd[5,:] = 0.
+        #scene(dirBase = name,
+              #modify=["pd"],
+              #inpd=pd)
+        
+        ##   condiciones iniciales
         #experiment_local(n_points = 30,
                     #dirBase = root+names[0],
                     #caseId = i,
                     #dArray = dArray,
-                    #activatepdCirc = True)    
-    
-    #for i in range(100):
-        #experiment_local(n_points = 30,
-                    #dirBase = root+names[1],
-                    #caseId = i,
-                    #dArray = dArray,
                     #activatepdCirc = False)    
+    
+    ##for i in range(100):
+        ##experiment_local(n_points = 30,
+                    ##dirBase = root+names[1],
+                    ##caseId = i,
+                    ##dArray = dArray,
+                    ##activatepdCirc = False)    
         
     #return
     
@@ -4263,8 +4558,8 @@ def main(arg):
     #   BEGIN   testing required points
 
     
-    #Names= ["W_04_nPoints_Circular/",
-            #"W_04_nPoints_Circular_PIG/",
+    #Names= ["W_06_nPoints_EHRA/",
+            #"W_06_nPoints_EHRA_PIG/",
             #"W_04_nPoints_Random/",
             #"W_04_nPoints_Random_PIG/"]
     
@@ -4277,12 +4572,12 @@ def main(arg):
     
     ##   Plot part
     #if arg[2] == 'p':
-        #i = 2
-        #dirBase = root + Names[i]
-        #colorFile = colorNames[int(np.floor(i/2))]
-        #plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
-        #experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
-        #return 
+        ##i = 2
+        ##dirBase = root + Names[i]
+        ##colorFile = colorNames[int(np.floor(i/2))]
+        ##plot_minP_data(dirBase, nodos,nReps, colorFile = colorFile)
+        ##experiment_plots(dirBase = dirBase, kSets = nodos, colorFile = colorFile)
+        ##return 
         #for i in range(len(Names)):
             #dirBase = root + Names[i]
             #colorFile = colorNames[int(np.floor(i/2))]
@@ -4313,7 +4608,8 @@ def main(arg):
 
 if __name__ ==  "__main__":
     
-    if os.getlogin( ) == 'bloodfield':
+    #if os.getlogin() == 'bloodfield':
+    if os.uname()[1] == 'LimorLamar':
         mainLocal(sys.argv)
     else:
         main(sys.argv)

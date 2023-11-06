@@ -77,6 +77,7 @@ namespace fvc
         std::vector<cv::Mat> desired_img;
         std::vector<std::vector<cv::Point2f> > corners;
         std::vector<int> corners_ids;
+        int n_ArUcos_ref = 1;
         
         //  CALLBACKS
         //callback to obtain pose from sensors

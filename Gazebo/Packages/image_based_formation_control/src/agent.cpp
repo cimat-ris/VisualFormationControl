@@ -39,6 +39,7 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     tmp_State.load(nh);
     // Load Laplacian rows
     n_agents = nh.param(std::string("n_agents"),0);
+    n_ArUcos_ref = nh.param(std::string("n_ArUcos_ref"),1);
     PIAG_ENABLE = nh.param(std::string("enablePIAG"),false);
     VERBOSE_ENABLE = nh.param(std::string("debug"),false);
     gamma_0 = nh.param(std::string("gamma_0"),3.);
@@ -136,9 +137,6 @@ void fvc::agent::load(const ros::NodeHandle &nh)
     outfile.close();
 
 
-    std::cout << input_dir << std::endl;
-    std::cout << output_dir << std::endl;
-
 
     std::cout << "----    Data for agent " << label << "    -----"<< std::endl;
     std::cout << "Number of agents: " << n_agents << std::endl;
@@ -182,10 +180,16 @@ bool fvc::agent::imageRead()
 
         cv::Ptr<cv::aruco::DetectorParameters> _parameters = cv::aruco::DetectorParameters::create();
         cv::Ptr<cv::aruco::Dictionary> _dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+        _parameters->adaptiveThreshWinSizeMin = 141;  // default 3
+        _parameters->adaptiveThreshWinSizeMax = 251;  // default 23
+        _parameters->adaptiveThreshWinSizeStep = 20;  // default 10
+        _parameters->adaptiveThreshConstant = 4 ;     // default 7
+
 
         std::vector<int> _ids;
         std::vector<std::vector<cv::Point2f> > _corners;
         std::vector<std::vector<cv::Point2f> > rejected;
+
 
         cv::aruco::detectMarkers(tmp_img, _dictionary, _corners, _ids,_parameters, rejected);
         // std::cout << label << " " << _corners.size() << " ArUco search in ref\n" << std::flush;
@@ -196,7 +200,7 @@ bool fvc::agent::imageRead()
 
         if(! tmp_img.empty())
         {
-            if (_corners.size() > 0) 
+            if (_corners.size() == n_ArUcos_ref)
             {
                 loaded_imgs++;
                 aruco_refs.push_back(_corners);
@@ -348,12 +352,13 @@ void fvc::agent::getImageDescription(const image_based_formation_control::corner
 
         //      then add point and partial error (-p*_i -(p_j - p*_j))
         int idx = whereis(ref_id,aruco_refs_ids[j] );
-        if (idx <0 )
+        int idx_label = whereis(ref_id,aruco_refs_ids[label] );
+        if (idx <0 || idx_label <0)
             continue;
 
         for (int k = 0; k< 4; k++)
         {
-            complement[k] = complement[k] + aruco_refs[label][idx][k];
+            complement[k] = complement[k] + aruco_refs[label][idx_label][k];
             complement[k] = complement[k] - aruco_refs[j][idx][k];
         }
         _complements[i] = complement;
@@ -604,8 +609,10 @@ void fvc::agent::execControl(double dt)
 
     }
     if(VERBOSE_ENABLE)
-    std::cout << label << " -- det = " << det << std::endl << std::flush;
-
+    {
+        std::cout << label << " -- det = " << det << std::endl << std::flush;
+        std::cout << "Error:\n" << errors[label] << std::endl << std::flush;
+    }
 
     cv::Mat U;
 

@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+
 import sys
 # import re
 import os
@@ -13,6 +15,8 @@ get_type={2:np.float16,
           4:np.float32,
           8:np.float64}
 
+
+#   My plots
 def plot_time(ax, t_array,
               var_array,
               ref = None,
@@ -28,7 +32,7 @@ def plot_time(ax, t_array,
 
     symbols = []
     for i in range(n):
-        ax.plot(t_array,var_array[i,:] , color=colors[i%nColors])
+        ax.plot(t_array,var_array[i,:] , color=colors[i%nColors], lw = 0.6 )
         symbols.append(mpatches.Patch(color=colors[i%nColors]))
 
     if not ref is None:
@@ -45,20 +49,70 @@ def plot_time(ax, t_array,
 
     return symbols
 
-def main(arg):
-    n_agents = 4
-    pd=np.array([[0.,0.,0.,0.],
-                [0.,0.,0.,0.],
-                [0.,0.,0.,0.],
-                [pi,pi,pi,pi],
-                [0.,0.,0.,0.],
-                [0.,0.,0.,0.]])
+def plot_descriptors(ax,descriptors_array):
+                     # camera_iMsize,
+                     # s_ref,
+                    #colors,
+                    # pred,
+                    # enableLims = True,
+                    # name="time_plot",
+                    # label="Variable"):
+
+    n = descriptors_array.shape[0]/2
+    #print(n)
+    n = int(n)
+
+    npzfile = np.load("general.npz")
+    colors = npzfile["colors"]
+    nColors = colors.shape[0]
+
+    # fig, ax = plt.subplots()
+    # fig.suptitle(label)
+    # if enableLims:
+    #     plt.xlim([0,camera_iMsize[0]])
+    #     plt.ylim([0,camera_iMsize[1]])
+
+    # ax.plot([camera_iMsize[0]/2,camera_iMsize[0]/2],
+    #         [0,camera_iMsize[0]],
+    #         color=[0.25,0.25,0.25])
+    # ax.plot([0,camera_iMsize[1]],
+    #         [camera_iMsize[1]/2,camera_iMsize[1]/2],
+    #         color=[0.25,0.25,0.25])
+
+    # symbols = []
+    for i in range(n):
+        ax.plot(descriptors_array[2*i,0],descriptors_array[2*i+1,0],
+                '*',color=colors[i%nColors])
+        ax.plot(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1],
+                'o',color=colors[i%nColors])
+        ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
+                color=colors[i%nColors])
+        # ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i%nColors])
+        #print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
+
+        #   Hip = predicted endpoints
+        # ax.plot(pred[2*i],pred[2*i+1],
+        #         'x',color=colors[i%nColors])
 
 
+    # symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
+    #            mlines.Line2D([0],[0],marker='o',color='k'),
+    #            # mlines.Line2D([0],[0],marker='^',color='k'),
+    #            # mlines.Line2D([0],[0],marker='x',color='k'),
+    #            mlines.Line2D([0],[0],linestyle='-',color='k')]
+    # # labels = ["Start","End","reference","Predicted","trayectory"]
+    # labels = ["Start","End","trayectory"]
+    # fig.legend(symbols,labels, loc=1)
+    #
+    # plt.tight_layout()
+    # plt.savefig(name+'.pdf',bbox_inches='tight')
+    # #plt.show()
+    # plt.close()
+
+##  Plot task
+
+def plotErrors(directory, n_agents):
     for i in range(n_agents):
-
-        #   read errors data
-        directory = arg[1].rstrip('/')+'/'
         name = directory + str(i)+'/error.dat'
         length = os.path.getsize(name)
         print("length = ", length)
@@ -69,18 +123,10 @@ def main(arg):
             row_bytes = np.fromfile(fileH, dtype=np.int32, count= 1)
             # row_bytes = row_bytes[0]
             print("row_bytes = ", row_bytes)
-            # elemSize = (row_bytes-4-8)/4
-            # print(elemSize)
-            # elemSize = int(elemSize)
-            # print(elemSize)
-            # rows = (length-4) / row_bytes
             rows = (length-4) / (8*10)
-            # print(rows)
             rows = int(np.floor(rows))
-            print("rows = ",rows)
-            # Read the data into a NumPy array
 
-            #   TODO np.dtype method
+            # Read the data into a NumPy array
             for j in range(rows):
                 timestamp = np.fromfile(fileH,
                                     dtype=np.float64,
@@ -95,10 +141,9 @@ def main(arg):
                                     # dtype = np.double,
                                     count = 8)
                 row = np.concatenate((timestamp,errorRow))
-                print(timestamp)
-                print(ArUcoId)
-                print(errorRow)
-                # print(ArUcoTab)
+                # print(timestamp)
+                # print(ArUcoId)
+                # print(errorRow)
                 if ArUcoId in ArUcoTab.keys():
                     ArUcoTab[ArUcoId] = np.r_[ArUcoTab[ArUcoId], row.reshape((1,9))]
                 else:
@@ -112,13 +157,147 @@ def main(arg):
 
         # ylimits = [.0,10.1]
         # plt.ylim((ylimits[0],ylimits[1]))
-        # labels = ["0","1","2","3","4","5"]
-        # fig.legend(symbols,labels, loc=2)
 
         plt.tight_layout()
         plt.savefig(directory + str(i)+"/errores.pdf",bbox_inches='tight')
         #plt.show()
         plt.close()
+
+
+def plotFeatures(directory, n_agents):
+    for i in range(n_agents):
+        name = directory + str(i)+'/arUcos.dat'
+        length = os.path.getsize(name)
+        print("length = ", length)
+        ArUcoTab = {}
+
+        with open(name, 'rb') as fileH:
+            #   header
+            # row_bytes = row_bytes[0]
+            # print("row_bytes = ", row_bytes)
+            rows = length / (8*4+4)
+            rows = int(np.floor(rows))
+
+            # Read the data into a NumPy array
+            for j in range(rows):
+                ArUcoId = np.fromfile(fileH,
+                                    dtype=np.int32,
+                                    count = 1)
+                ArUcoId = ArUcoId[0]
+                Features = np.fromfile(fileH,
+                                    # dtype=get_type[elemSize],
+                                    dtype = np.float32,
+                                    # dtype = np.double,
+                                    count = 8)
+                print(ArUcoId)
+                print(Features)
+                if ArUcoId in ArUcoTab.keys():
+                    ArUcoTab[ArUcoId] = np.r_[ArUcoTab[ArUcoId], Features.reshape((8,1))]
+                else:
+                    ArUcoTab[ArUcoId] = Features.reshape((8,1))
+        # return
+        #  plot errors
+        camera_iMsize = [1024, 1024]
+
+        fig, ax = plt.subplots()
+        fig.suptitle("Feature errors")
+        plt.xlim([0,camera_iMsize[0]])
+        plt.ylim([0,camera_iMsize[1]])
+        ax.plot([camera_iMsize[0]/2,camera_iMsize[0]/2],
+            [0,camera_iMsize[0]],
+            color=[0.25,0.25,0.25])
+        ax.plot([0,camera_iMsize[1]],
+            [camera_iMsize[1]/2,camera_iMsize[1]/2],
+            color=[0.25,0.25,0.25])
+
+        for ki in ArUcoTab.keys():
+            plot_descriptors(ax, ArUcoTab[ki])
+
+        symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
+               mlines.Line2D([0],[0],marker='o',color='k'),
+               mlines.Line2D([0],[0],linestyle='-',color='k')]
+        labels = ["Start","End","trayectory"]
+        fig.legend(symbols,labels, loc=1)
+
+        plt.tight_layout()
+        plt.savefig(directory + str(i)+"/Image_Features.pdf",bbox_inches='tight')
+        #plt.show()
+        plt.close()
+
+def plotVelocities(directory, n_agents):
+    for i in range(n_agents):
+        name = directory + str(i)+'/partial.dat'
+        length = os.path.getsize(name)
+        print("length = ", length)
+
+        with open(name, 'rb') as fileH:
+            #   header
+            np.fromfile(fileH, dtype=np.int32, count= 1)
+            # rows = (length-4) / row_bytes
+            rows = (length-4) / (8*7)
+            print("rows = ",rows)
+            rows = int(np.floor(rows))
+            print("rows = ",rows)
+            time = np.zeros(rows)
+            velocities = np.zeros((6,rows))
+            states = np.zeros((6,rows))
+
+            # Read the data into a NumPy array
+            for j in range(rows):
+                time[j] = np.fromfile(fileH,
+                                    dtype=np.float64,
+                                    count = 1)
+                states[:,j] = np.fromfile(fileH,
+                                    dtype = np.float32,
+                                    count = 6)
+                velocities[:,j] = np.fromfile(fileH,
+                                    dtype = np.float32,
+                                    count = 6)
+
+                # print(time[j])
+                # print(states[:,j])
+                # print(velocities[:,j])
+
+        # return
+        #  plot errors
+        fig, ax = plt.subplots()
+        fig.suptitle("Velocities")
+        symbols = plot_time(ax, time,velocities)
+        plt.savefig(directory + str(i)+"/Velocities.pdf",bbox_inches='tight')
+        plt.close()
+
+    return states
+
+def main(arg):
+    n_agents = 4
+    pd=np.array([[0.,0.,0.,0.],
+                [0.,0.,0.,0.],
+                [0.,0.,0.,0.],
+                [pi,pi,pi,pi],
+                [0.,0.,0.,0.],
+                [0.,0.,0.,0.]])
+
+    directory = arg[1].rstrip('/')+'/'
+
+    # #   BEGIN ERRORS
+    # print("Ploting ERRORS")
+    # plotErrors(directory,n_agents)
+    #
+    # #   END ERRORS
+    # #   BEGIN VELOCITIES / POSITION
+    # print("Ploting VELOCITIES / POSITION")
+    # plotVelocities(directory,n_agents)
+
+    #   END VELOCITIES / POSITION
+    #   BEGIN Features
+
+    print("Ploting FEATURES")
+    plotFeatures(directory,n_agents)
+
+    #   END FEATURES
+
+
+
 
 
         #
@@ -188,7 +367,6 @@ def main(arg):
         #         plot_3Dcam(ax[0], agents[i].camera,
         #                     pos_arr[i,:,:],
         #                     p0[:,i],
-        #                     end_position[i,:],
         #                     pd[:,i],
         #                     color = colors[i],
         #                     i = i,

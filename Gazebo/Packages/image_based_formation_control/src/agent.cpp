@@ -278,7 +278,7 @@ void fvc::agent::processImage(const sensor_msgs::Image::ConstPtr & msg)
     {
 
         //  Save data:
-        std::fstream outfile(output_dir+"error.dat", std::ios::app | std::ios::binary);
+        std::fstream outfile(output_dir+"arUcos.dat", std::ios::app | std::ios::binary);
         for(int i = 0; i< corners_ids.size() ; i++)
         {
             outfile.write((char *) & corners_ids[i],sizeof(int));

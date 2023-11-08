@@ -80,6 +80,11 @@ def plot_descriptors(ax,descriptors_array):
     #         color=[0.25,0.25,0.25])
 
     # symbols = []
+
+    ref =  descriptors_array[:,0].copy()
+    descriptors_array = descriptors_array[:,1:]
+
+
     for i in range(n):
         ax.plot(descriptors_array[2*i,0],descriptors_array[2*i+1,0],
                 '*',color=colors[i%nColors])
@@ -87,12 +92,17 @@ def plot_descriptors(ax,descriptors_array):
                 'o',color=colors[i%nColors])
         ax.plot(descriptors_array[2*i,:],descriptors_array[2*i+1,:],
                 color=colors[i%nColors])
-        # ax.plot(s_ref[0,i],s_ref[1,i],marker='^',color=colors[i%nColors])
+        ax.plot(ref[2*i],ref[2*i+1],marker='^',color=colors[i%nColors])
         #print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
 
         #   Hip = predicted endpoints
-        # ax.plot(pred[2*i],pred[2*i+1],
-        #         'x',color=colors[i%nColors])
+
+    ax.plot(ref[[0,2,4,6,0]],ref[[1,3,5,7,1]],
+                color='k', lw = 0.4)
+    ax.plot(descriptors_array[[0,2,4,6,0],-1],descriptors_array[[1,3,5,7,1],-1],
+                color='k', lw = 0.4)
+    ax.plot(descriptors_array[[0,2,4,6,0],0],descriptors_array[[1,3,5,7,1],0],
+                color='k', lw = 0.4)
 
 
     # symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
@@ -189,10 +199,10 @@ def plotFeatures(directory, n_agents):
                                     dtype = np.float32,
                                     # dtype = np.double,
                                     count = 8)
-                print(ArUcoId)
-                print(Features)
+                # print(ArUcoId)
+                # print(Features)
                 if ArUcoId in ArUcoTab.keys():
-                    ArUcoTab[ArUcoId] = np.r_[ArUcoTab[ArUcoId], Features.reshape((8,1))]
+                    ArUcoTab[ArUcoId] = np.c_[ArUcoTab[ArUcoId], Features.reshape((8,1))]
                 else:
                     ArUcoTab[ArUcoId] = Features.reshape((8,1))
         # return
@@ -210,15 +220,18 @@ def plotFeatures(directory, n_agents):
             [camera_iMsize[1]/2,camera_iMsize[1]/2],
             color=[0.25,0.25,0.25])
 
+        print("DB: 1")
         for ki in ArUcoTab.keys():
             plot_descriptors(ax, ArUcoTab[ki])
 
         symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
                mlines.Line2D([0],[0],marker='o',color='k'),
+               mlines.Line2D([0],[0],marker='^',color='k'),
+               # mlines.Line2D([0],[0],marker='x',color='k'),
                mlines.Line2D([0],[0],linestyle='-',color='k')]
-        labels = ["Start","End","trayectory"]
+        labels = ["Start","End","reference","trayectory"]
         fig.legend(symbols,labels, loc=1)
-
+        print("DB: 2")
         plt.tight_layout()
         plt.savefig(directory + str(i)+"/Image_Features.pdf",bbox_inches='tight')
         #plt.show()

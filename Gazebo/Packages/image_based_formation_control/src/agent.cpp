@@ -219,7 +219,17 @@ bool fvc::agent::imageRead()
         }
     }
     
-
+    //  Save corners data from reference at first of the log
+    if (aruco_refs_ids[label].size() == n_ArUcos_ref)
+    {
+        std::fstream outfile(output_dir+"arUcos.dat", std::ios::app | std::ios::binary);
+        for (int i = 0; i < n_ArUcos_ref; i++)
+        {
+            outfile.write((char *) & aruco_refs_ids[label][i],sizeof(int));
+            outfile.write((char *) & aruco_refs[label][i][0], 4*sizeof(cv::Point2f));
+        }
+        outfile.close();
+    }
 
     
     return (loaded_imgs == n_agents);

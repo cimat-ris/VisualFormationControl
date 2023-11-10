@@ -850,6 +850,7 @@ def experiment(directory = "0",
     t_array = np.linspace(t,t_end,steps)
     #t_array = np.arange(t,dt*steps,dt)
     err_array = np.zeros((n_agents,2*n_points,steps))
+    errDelta_array = np.zeros((n_agents,2*n_points,steps))
     serr_array = np.zeros((2,steps))
     U_array = np.zeros((n_agents,6,steps))
     
@@ -927,6 +928,7 @@ def experiment(directory = "0",
         
         for j in range(n_agents):
             error[j,:] = agents[j].error
+        errDelta_array[:,:,i] = error.copy()
         #print(error)
         error = L @ error
         
@@ -1278,6 +1280,15 @@ def experiment(directory = "0",
                     name = directory+"/Features_Error_"+str(i),
                     label = "Features Error")
     
+    #   Errores Deltas x agentes
+    for i in range(n_agents):
+        mp.plot_time(t_array,
+                    errDelta_array[i,:,:],
+                    #colors,
+                    #ylimits = [-1,1],
+                    name = directory+"/Deltas_Error_"+str(i),
+                    label = "Deltas Error")
+        
     #   Errores x agentes
     tmp = norm(err_array,axis = 1) / n_agents
     mp.plot_time(t_array,
@@ -3450,6 +3461,73 @@ def mainLocal(arg):
         print("Logfile Error."+logFile+" OUT")
         return
     
+    #   BEGIN   2 cameras
+    
+    #   CONF
+    directory = "twoCameras"
+    
+    #   Puntos 3D
+    n_points = 30
+    #P = np.random.rand(3,n_points)
+    #P[0:2,:] -= 0.5
+    #P[2,:] -= 0.5
+    #P[:2,:] *= 4.
+    
+    #   Referencias
+    pd = circle(2,1,T=np.array([0.,0.,2.]))
+
+    ###   Condiciones iniciales
+    #kt = 2.
+    #kw = pi/10
+    #kw = 0.
+    #p0 = pd.copy()
+
+    #p0[:3,:] += kt*2.*(np.random.rand(3,2)-0.5)
+    #p0[3:,:] += kw*2.*(np.random.rand(3,2)-0.5)
+    
+    #modify =  ['p0','pd','P']
+    modify =  ['p0','P']
+    ##modify =  ['p0','pd']
+    #modify =  ['p0']
+    #Pz = [0,0]
+    
+    
+    scene(modify =modify,
+          #inP = P,
+          inpd = pd,
+          #inp0 = p0,
+          dirBase = directory,
+          #Pz = Pz,
+          n_agents = 2, 
+          X=[-1,1],
+            Y=[-1,1],
+            Z=[0.5,1.5],
+            roll=[pi,pi],
+            pitch=[0,0],
+            #yaw=[-pi/2,pi/2],
+            #yaw=[0,0]D,
+          n_points = n_points)
+    
+    #  RUN
+    print("Running")
+    experiment(directory=directory,
+                t_end = 800,
+                ##setRectification = True,
+                ##gdl = 2,
+                #leader = 0,
+                ##lamb = 0.1,
+                ###modified =["nPoints"],
+                ##gamma0 = 3.,
+                ##gammaInf = .1,
+                ##intGamma0 = 0.1,
+                ##intGammaInf = 0.01,
+                ##intGammaSteep = 5,
+                repeat = True)
+    #view3D(directory)
+    return
+    
+    #   END     2 cameras
+    
     
     #   BEGIN   Contrajemplos
     #P = np.array([[1.,1.,-1.,-1.],
@@ -3657,43 +3735,43 @@ def mainLocal(arg):
     
     #   BEGIN UI [r | v | Simple | 0-4]
     
-    #  Arg parser and log INIT
-    selector = arg[2]
+    ##  Arg parser and log INIT
+    #selector = arg[2]
     
-    #   Desktop
-    if selector == 'r':
-        #scene(modify = ["P"],
-              #Pz = [-1,0],
-                #dirBase = arg[3],
-                #n_agents = 4, 
-                #n_points = 30)
-        ret = experiment(directory=arg[3],
-                    t_end = 50,
-                    #setRectification = True,
-                    #gdl = 2,
-                    leader = 0,
-                    #lamb = 0.1,
-                    ##modified =["nPoints"],
-                    #gamma0 = 3.,
-                    #gammaInf = .1,
-                    #intGamma0 = 0.1,
-                    #intGammaInf = 0.01,
-                    #intGammaSteep = 5,
-                    #set_derivative = True,
-                    #tanhLimit = True,
-                    #k_int = 0.1,
-                    #int_res = 0.2,
-                    repeat = True)
-        print(ret)
+    ##   Desktop
+    #if selector == 'r':
+        ##scene(modify = ["P"],
+              ##Pz = [-1,0],
+                ##dirBase = arg[3],
+                ##n_agents = 4, 
+                ##n_points = 30)
+        #ret = experiment(directory=arg[3],
+                    #t_end = 50,
+                    ##setRectification = True,
+                    ##gdl = 2,
+                    #leader = 0,
+                    ##lamb = 0.1,
+                    ###modified =["nPoints"],
+                    ##gamma0 = 3.,
+                    ##gammaInf = .1,
+                    ##intGamma0 = 0.1,
+                    ##intGammaInf = 0.01,
+                    ##intGammaSteep = 5,
+                    ##set_derivative = True,
+                    ##tanhLimit = True,
+                    ##k_int = 0.1,
+                    ##int_res = 0.2,
+                    #repeat = True)
+        #print(ret)
+        ##view3D(arg[3])
+        #return
+    #if selector == 'v':
         #view3D(arg[3])
-        return
-    if selector == 'v':
-        view3D(arg[3])
-        return
+        #return
     
     
     
-    return
+    #return
     
     #   END UI
     

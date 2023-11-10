@@ -300,6 +300,8 @@ class agent:
                         np.sign(qR[1,0]-qR[0,1])])
         self.q *= 0.5
         
+        # self.M = np.eye(2*self.n_points)
+
         self.s_current = self.camera.project(points)
         self.s_current_n = self.camera.normalize(self.s_current)
         #print("---")
@@ -564,17 +566,21 @@ class agent:
             
         if control_sel ==1:
             Ls = Interaction_Matrix(s_current_n,Z_current,gdl)
+            # self.M = Ls.copy()
             self.u, self.s, self.vh  = np.linalg.svd(Ls)
             #Ls = Inv_Moore_Penrose(Ls) 
             Ls = np.linalg.pinv(Ls) 
+            # self.M = self.M @ Ls
         elif control_sel ==2:
             Ls = self.inv_Ls_set
         elif control_sel ==3:
             Ls = Interaction_Matrix(s_current_n,Z_current,gdl)
+            # self.M = Ls.copy()
             self.u, self.s, self.vh  = np.linalg.svd(Ls)
             #Ls = Inv_Moore_Penrose(Ls) 
             Ls = np.linalg.pinv(Ls) 
             Ls = 0.5*( Ls + self.inv_Ls_set)
+            # self.M = self.M @ Ls
         if Ls is None:
                 print("Invalid Ls matrix")
                 return np.array([0.,0.,0.,0.,0.,0.]), np.array([0.,0.,0.,0.,0.,0.])

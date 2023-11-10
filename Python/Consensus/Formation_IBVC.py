@@ -916,7 +916,10 @@ def experiment(directory = "0",
     write2log(logText+'\n')
     
     
-    
+    ##  BEGIN Testing possitiveness
+    # # # A_base = np.kron(L,np.eye(n_points))
+    # np.set_printoptions(threshold=np. inf, suppress=True, linewidth=np. inf)
+    ##  END Testing possitiveness
     
     #   LOOP
     for i in range(steps):
@@ -925,15 +928,33 @@ def experiment(directory = "0",
         #   Error:
         
         error = np.zeros((n_agents,2*n_points))
-        
+        ##  BEGIN Testing possitiveness
+        # # A = A_base.copy()
+        # A = np.zeros((n_agents*2*n_points,n_agents*2*n_points))
+        ##  END Testing possitiveness
         for j in range(n_agents):
             error[j,:] = agents[j].error
+            ##  BEGIN Testing possitiveness
+            # for k in range(n_agents):
+            #     # print(agents[j].M.shape)
+            #     # print(A.shape)
+            #     A[2*j*n_points:2*(j+1)*n_points,2*k*n_points:2*(k+1)*n_points] = L[j,k] * agents[j].M
+            ##  END Testing possitiveness
         errDelta_array[:,:,i] = error.copy()
         #print(error)
         error = L @ error
-        
+
+        ##  BEGIN Testing possitiveness
+        # AU, AS, AV = np.linalg.svd(A)
+        # # print(A)
+        # if any(AS<0.) :
+        #     print("S(A) < 0")
+        #     print(AS)
+        # if np.linalg.det(A) < 0 :
+        #     print("|A| != 0")
+        ##  END Testing possitiveness
+
         #   save data
-        #err_array[:,:,i] = error.copy()
         if set_derivative:
             for Li in range(n_agents):
                 for Lj in range(n_agents):
@@ -3492,26 +3513,26 @@ def mainLocal(arg):
     #Pz = [0,0]
     
     
-    scene(modify =modify,
-          #inP = P,
-          inpd = pd,
-          #inp0 = p0,
-          dirBase = directory,
-          #Pz = Pz,
-          n_agents = 2, 
-          X=[-1,1],
-            Y=[-1,1],
-            Z=[0.5,1.5],
-            roll=[pi,pi],
-            pitch=[0,0],
-            #yaw=[-pi/2,pi/2],
-            #yaw=[0,0]D,
-          n_points = n_points)
+    # scene(modify =modify,
+    #       #inP = P,
+    #       inpd = pd,
+    #       #inp0 = p0,
+    #       dirBase = directory,
+    #       #Pz = Pz,
+    #       n_agents = 2,
+    #       X=[-1,1],
+    #         Y=[-1,1],
+    #         Z=[0.5,1.5],
+    #         roll=[pi,pi],
+    #         pitch=[0,0],
+    #         #yaw=[-pi/2,pi/2],
+    #         #yaw=[0,0]D,
+    #       n_points = n_points)
     
     #  RUN
     print("Running")
     experiment(directory=directory,
-                t_end = 800,
+                t_end = 200,
                 ##setRectification = True,
                 ##gdl = 2,
                 #leader = 0,
@@ -4687,7 +4708,7 @@ def main(arg):
 if __name__ ==  "__main__":
     
     #if os.getlogin() == 'bloodfield':
-    if os.uname()[1] == 'LimorLamar':
+    if os.uname()[1] == 'LimorLamar' or os.uname()[1] == 'acronexus':
         mainLocal(sys.argv)
     else:
         main(sys.argv)

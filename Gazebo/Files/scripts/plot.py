@@ -49,15 +49,15 @@ def plot_time(ax, t_array,
 
     return symbols
 
-def plot_descriptors(ax,descriptors_array):
+def plot_descriptors(ax,descriptors_array,
                      # camera_iMsize,
                      # s_ref,
                     #colors,
-                    # pred,
+                    pred,
                     # enableLims = True,
                     # name="time_plot",
                     # label="Variable"):
-
+                    ):
     n = descriptors_array.shape[0]/2
     #print(n)
     n = int(n)
@@ -96,8 +96,12 @@ def plot_descriptors(ax,descriptors_array):
         #print(descriptors_array[2*i,-1],descriptors_array[2*i+1,-1])
 
         #   Hip = predicted endpoints
+        ax.plot(pred[2*i],pred[2*i+1],
+                'x',color=colors[i%nColors])
 
     ax.plot(ref[[0,2,4,6,0]],ref[[1,3,5,7,1]],
+                color='k', lw = 0.4)
+    ax.plot(pred[[0,2,4,6,0]],pred[[1,3,5,7,1]],
                 color='k', lw = 0.4)
     ax.plot(descriptors_array[[0,2,4,6,0],-1],descriptors_array[[1,3,5,7,1],-1],
                 color='k', lw = 0.4)
@@ -175,6 +179,9 @@ def plotErrors(directory, n_agents):
 
 
 def plotFeatures(directory, n_agents):
+
+    agentsDicts = []
+
     for i in range(n_agents):
         name = directory + str(i)+'/arUcos.dat'
         length = os.path.getsize(name)
@@ -205,9 +212,28 @@ def plotFeatures(directory, n_agents):
                     ArUcoTab[ArUcoId] = np.c_[ArUcoTab[ArUcoId], Features.reshape((8,1))]
                 else:
                     ArUcoTab[ArUcoId] = Features.reshape((8,1))
-        # return
-        #  plot errors
-        camera_iMsize = [1024, 1024]
+        agentsDicts.append(ArUcoTab)
+
+    #   Calculate targets
+
+
+
+    #  plot errors
+    camera_iMsize = [1024, 1024]
+    for i in range(n_agents):
+
+        ArUcoTab=agentsDicts[i]
+
+        #   Predicted (grafo conmpletamente conexo)
+        arUcoPred = {}
+        for ki in ArUcoTab.keys():
+            pred = np.zeros((n_agents,8))
+            for j in range(n_agents):
+                if ki in agentsDicts[j].keys():
+                    pred[j,:] = agentsDicts[j][ki][:,1] - agentsDicts[j][ki][:,0]
+            pred = pred.mean(axis = 0)
+            pred = agentsDicts[j][ki][:,0] + pred
+            arUcoPred[ki] = pred.copy()
 
         fig, ax = plt.subplots()
         fig.suptitle("Feature errors")
@@ -222,7 +248,7 @@ def plotFeatures(directory, n_agents):
 
         print("DB: 1")
         for ki in ArUcoTab.keys():
-            plot_descriptors(ax, ArUcoTab[ki])
+            plot_descriptors(ax, ArUcoTab[ki], pred= arUcoPred[ki] )
 
         symbols = [mlines.Line2D([0],[0],marker='*',color='k'),
                mlines.Line2D([0],[0],marker='o',color='k'),

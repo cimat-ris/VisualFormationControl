@@ -1264,6 +1264,7 @@ def experiment(directory = "0",
     
     #   Descriptores x agente
     #       Predicted endpoints
+    #   TODO revisar formulación
     pred = np.zeros((n_agents,2*n_points))
     for i in range(n_agents):
         pred[i,:] = agents[i].s_ref.T.reshape(2*n_points) - desc_arr[i,:,0]

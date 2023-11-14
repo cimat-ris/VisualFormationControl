@@ -1,13 +1,20 @@
+
+#   libs
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+from numpy import pi, sin, cos
+from numpy.linalg import norm, svd
+from scipy.optimize import minimize_scalar
 
+#   sys
 import sys
-# import re
 import os
 
-from numpy import pi
+#   Custom
+import camera as cm
+
 
 #   Configs
 
@@ -15,6 +22,82 @@ get_type={2:np.float16,
           4:np.float32,
           8:np.float64}
 
+#   Aux fun
+
+
+def get_angles(R, prev_angs= None):
+    #print(R)
+    if (R[2,0] < 1.0):
+    #if (R[2,0] < 0.995):
+        if R[2,0] > -1.0:
+        #if R[2,0] > -0.995:
+            pitch = np.arcsin(-R[2,0])
+            if not( prev_angs is None):
+                #print(prev_angs)
+                #print("pitch = ", pitch)
+                pitch_alt = np.sign(pitch) *(pi - abs(pitch))
+                #print("pitch_alt = ", pitch_alt)
+                delta_pitch = abs(pitch-prev_angs[1])
+                #print("delta_p = ", delta_pitch)
+                if delta_pitch > pi:
+                    delta_pitch = 2*pi-delta_pitch
+                    #print("delta_p = ", delta_pitch)
+                delta_pitch2 = abs(pitch_alt-prev_angs[1])
+                #print("delta_p2 = ", delta_pitch2)
+                if delta_pitch2 > pi:
+                    delta_pitch2 = 2*pi-delta_pitch2
+                    #print("delta_p2 = ", delta_pitch2)
+                if delta_pitch2 < delta_pitch:
+                    pitch = pitch_alt
+                #print("pitch = ", pitch)
+            cp = cos(pitch)
+            yaw = np.arctan2(R[1,0]/cp,R[0,0]/cp)
+            roll = np.arctan2(R[2,1]/cp,R[2,2]/cp)
+        else:
+            #print("WARN: rotation not uniqe C1")
+            pitch = np.pi/2.
+            if prev_angs is None:
+                yaw = -np.arctan2(-R[1,2],R[1,1])
+                roll = 0.
+            else:
+                tmp = np.arctan2(-R[1,2],R[1,1])
+                roll = prev_angs[0]
+                yaw = roll - tmp
+                if yaw > pi:
+                    yaw -= 2*pi
+                if yaw < -pi:
+                    yaw += 2*pi
+                #tmp = np.arctan2(-R[1,2],R[1,1])
+                #yaw = prev_angs[2]
+                #roll = yaw + tmp
+                #if roll > pi:
+                    #roll -= 2*pi
+                #if roll < -pi:
+                    #roll += 2*pi
+
+    else:
+        #print("WARN: rotation not uniqe C2")
+        pitch = -np.pi/2.
+        if prev_angs is None:
+            yaw = np.arctan2(-R[1,2],R[1,1])
+            roll = 0.
+        else:
+            tmp = np.arctan2(-R[1,2],R[1,1])
+            roll = prev_angs[0]
+            yaw = tmp - roll
+            if yaw > pi:
+                yaw -= 2*pi
+            if yaw < -pi:
+                yaw += 2*pi
+            #tmp = np.arctan2(-R[1,2],R[1,1])
+            #yaw = prev_angs[2]
+            #roll = tmp - yaw
+            #if roll > pi:
+                #roll -= 2*pi
+            #if roll < -pi:
+                #roll += 2*pi
+
+    return [roll, pitch, yaw]
 
 #   My plots
 def plot_time(ax, t_array,
@@ -48,6 +131,9 @@ def plot_time(ax, t_array,
         labels.append("Limits")
 
     return symbols
+
+
+
 
 def plot_descriptors(ax,descriptors_array,
                      # camera_iMsize,
@@ -123,20 +209,162 @@ def plot_descriptors(ax,descriptors_array,
     # #plt.show()
     # plt.close()
 
+def error_state(reference,  camera, gdl = 1, name= None):
+
+    n = reference.shape[1]
+    state = np.zeros((6,n))
+    for i in range(len(camera)):
+        state[:,i] = camera[i].p
+
+    #   Obten centroide
+    centroide_ref = reference[:3,:].sum(axis=1)/n
+    centroide_state = state.sum(axis=1)/n
+
+    #   Centrar elementos
+    new_reference = reference.copy()
+    new_reference[0] -= centroide_ref[0]
+    new_reference[1] -= centroide_ref[1]
+    new_reference[2] -= centroide_ref[2]
+    new_reference[:3,:] /= norm(new_reference[:3,:],axis = 0).mean()
+
+    new_state = state.copy()
+    new_state[0] -= centroide_state[0]
+    new_state[1] -= centroide_state[1]
+    new_state[2] -= centroide_state[2]
+
+    # print("centered ref and state")
+    # print(new_reference)
+    # print(new_state)
+
+    M = new_state[:3,:].T.reshape((n,1,3))
+    D = new_reference[:3,:].T.reshape((n,3,1))
+    H = D @ M
+    H = H.sum(axis = 0)
+
+    U, S, VH = svd(H)
+    R = VH.T @ U.T
+
+    #   Caso de Reflexión
+    if np.linalg.det(R) < 0.:
+        VH[2,:] = -VH[2,:]
+        R = VH.T @ U.T
+
+    #   Actualizando Orientación de traslaciones
+    #   Para la visualización se optó por usar
+    #   \bar p_i = R.T p_i en vez de \bar p^r_i = R p*_i
+    new_state[:3,:] = R.T @ new_state[:3,:]
+
+    #   Actualizando escala y Obteniendo error de traslaciones
+    f = lambda r : (norm(new_reference[:3,:] - r*new_state[:3,:],axis = 0)**2).sum()/n
+    r_state = minimize_scalar(f, method='brent')
+    t_err = f(r_state.x)
+    t_err = np.sqrt(t_err)
+
+    new_state[:3,:] = r_state.x * new_state[:3,:]
+
+
+    #   Actualizando rotaciones
+    rot_err = np.zeros(n)
+    if gdl ==1:
+        for i in range(n):
+
+            #   update new_state
+            _R = R.T @ camera[i].R
+            [new_state[3,i], new_state[4,i], new_state[5,i]] = get_angles(_R)
+            camera[i].pose(new_state[:,i])
+
+            #   Get error
+            _R =  cm.rot(new_reference[3,i],'x') @ camera[i].R.T
+            _R = cm.rot(new_reference[4,i],'y') @ _R
+            _R = cm.rot(new_reference[5,i],'z') @ _R
+            _arg = (_R.trace()-1.)/2.
+            if abs(_arg) < 1.:
+                rot_err[i] = np.arccos(_arg)
+            else:
+                rot_err[i] = np.arccos(np.sign(_arg))
+
+    else:
+        #   Get error
+        [Rtheta,Rphi,Rpsi] = get_angles(R)
+        rot_err = state[5,:] - reference[5,:]
+        rot_err -= Rpsi
+        rot_err[rot_err < -pi] += 2*pi
+        rot_err[rot_err > pi] -= 2*pi
+        rot_err_plot = rot_err.copy()
+
+
+    #   RMS
+    rot_err = rot_err**2
+    rot_err = rot_err.sum()/n
+    rot_err = np.sqrt(rot_err)
+
+
+    if name is None:
+        #   recovering positions
+        for i in range(n):
+            camera[i].pose(state[:,i])
+
+        return [t_err, rot_err]
+
+     ##   Plot
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    #   TODO plot Z parallel for gdl == 2
+    if gdl ==1 :
+        for i in range(n):
+            camera[i].draw_camera(ax, scale=0.2, color='red')
+            ax.text(camera[i].p[0],camera[i].p[1],camera[i].p[2],str(i))
+            camera[i].pose(new_reference[:,i])
+            camera[i].draw_camera(ax, scale=0.2, color='brown')
+            ax.text(camera[i].p[0],camera[i].p[1],camera[i].p[2],str(i))
+            camera[i].pose(state[:,i])
+    else:
+        for i in range(n):
+            #   new_state
+            new_state[3:,i] = np.array([pi,0.,rot_err_plot[i]])
+            camera[i].pose(new_state[:,i])
+            camera[i].draw_camera(ax, scale=0.2, color='red')
+            ax.text(camera[i].p[0],camera[i].p[1],camera[i].p[2],str(i))
+
+            #   new_reference
+            new_reference[3:,i] = np.array([pi,0.,new_reference[5,i]])
+            camera[i].pose(new_reference[:,i])
+            camera[i].draw_camera(ax, scale=0.2, color='brown')
+            ax.text(camera[i].p[0],camera[i].p[1],camera[i].p[2],str(i))
+            camera[i].pose(state[:,i])
+
+
+
+    plt.savefig(name+'.pdf',bbox_inches='tight')
+    #plt.show()
+    plt.close()
+
+    return [t_err, rot_err]
+
+
+
+ #      -----------------------------------------------------------
+ #      -----------------------------------------------------------
+ #      -----------------------------------------------------------
+ #      -----------------------------------------------------------
+
+
+
 ##  Plot task
 
 def plotErrors(directory, n_agents):
     for i in range(n_agents):
         name = directory + str(i)+'/error.dat'
         length = os.path.getsize(name)
-        print("length = ", length)
+        # print("length = ", length)
         ArUcoTab = {}
 
         with open(name, 'rb') as fileH:
             #   header
             row_bytes = np.fromfile(fileH, dtype=np.int32, count= 1)
             # row_bytes = row_bytes[0]
-            print("row_bytes = ", row_bytes)
+            # print("row_bytes = ", row_bytes)
             rows = (length-4) / (8*10)
             rows = int(np.floor(rows))
 
@@ -185,7 +413,7 @@ def plotFeatures(directory, n_agents):
     for i in range(n_agents):
         name = directory + str(i)+'/arUcos.dat'
         length = os.path.getsize(name)
-        print("length = ", length)
+        # print("length = ", length)
         ArUcoTab = {}
 
         with open(name, 'rb') as fileH:
@@ -246,7 +474,6 @@ def plotFeatures(directory, n_agents):
             [camera_iMsize[1]/2,camera_iMsize[1]/2],
             color=[0.25,0.25,0.25])
 
-        print("DB: 1")
         for ki in ArUcoTab.keys():
             plot_descriptors(ax, ArUcoTab[ki], pred= arUcoPred[ki] )
 
@@ -257,7 +484,6 @@ def plotFeatures(directory, n_agents):
                mlines.Line2D([0],[0],linestyle='-',color='k')]
         labels = ["Start","End","reference","trayectory"]
         fig.legend(symbols,labels, loc=1)
-        print("DB: 2")
         plt.tight_layout()
         plt.savefig(directory + str(i)+"/Image_Features.pdf",bbox_inches='tight')
         #plt.show()
@@ -268,16 +494,16 @@ def plotVelocities(directory, n_agents):
     for i in range(n_agents):
         name = directory + str(i)+'/partial.dat'
         length = os.path.getsize(name)
-        print("length = ", length)
+        # print("length = ", length)
 
         with open(name, 'rb') as fileH:
             #   header
             np.fromfile(fileH, dtype=np.int32, count= 1)
             # rows = (length-4) / row_bytes
             rows = (length-4) / (8*7)
-            print("rows = ",rows)
+            # print("rows = ",rows)
             rows = int(np.floor(rows))
-            print("rows = ",rows)
+            # print("rows = ",rows)
             time = np.zeros(rows)
             velocities = np.zeros((6,rows))
             states = np.zeros((6,rows))
@@ -309,29 +535,49 @@ def plotVelocities(directory, n_agents):
 
     return allStates
 
-# def plotFError(directory,n_agents, allStates):
-#
-#     #   filter by time
-#
-#     allStatesFiltered = np.zeros((n_agents,6,1))
-#
-#     for j in range(allStates[0].shape[1]):
-#         _filter = [-1]*n_agents
-#         for i in range(1,n_agents):
-#             tmp = np.where(allStates[0][0,j] == allStates[i][0,:])
-#             if tmp.shape[0] > 0 :
-#                 _filter[i] = tmp[0]
-#         if all(_filter != -1):
-#
-#
-#     for i in range(1,n_agents):
-#         allStates[i] = allStates[i][:,select]
+def plotFError(directory,n_agents, allStates,pd):
 
 
+    P = np.array([[1, 0, 0],
+                  [1, 1, 0],
+                  [0, 0, 0]]) # Dummy points
+    #   Error at the begining
+    camera = []
+    for i in range(n_agents):
+        tmp = allStates[i][1:,0]
+        tmp[3] += pi
+        cam = cm.camera()
+        cam.pose(tmp)
+        camera.append(cam)
+    ret = error_state(pd,  camera, gdl = 1, name= directory+"Err_0.pdf")
+    print("Error_0 = ",ret)
+
+    #   Error at the end
+    camera = []
+    for i in range(n_agents):
+        tmp = allStates[i][1:,-1]
+        tmp[3] += pi
+        cam = cm.camera()
+        cam.pose(tmp)
+        camera.append(cam)
+    ret = error_state(pd,  camera, gdl = 1, name= directory+"Err_fin.pdf")
+    print("Error_fin = ",ret)
 
 
 def main(arg):
     n_agents = 4
+    EHR = np.zeros((5,n_agents))
+    DHR = np.zeros((5,n_agents))
+
+    EHR[:,0]=np.array([0.8, 3.2, 2.1, 0, 0])
+    DHR[:,0]=np.array([0.8, 3.2, 2.6, -10, 0])
+    EHR[:,1]=np.array([0.8, 1.2, 2.1, 0, 0.1])
+    DHR[:,1]=np.array([1.0, 1.4, 2.1, 15, 0])
+    EHR[:,2]=np.array([2.8, 1.2, 2.1, 0, 0.2])
+    DHR[:,2]=np.array([2.8, 1.2, 3.1, 0, 0])
+    EHR[:,3]=np.array([2.8, 3.2, 2.1, 0, 0.3])
+    DHR[:,3]=np.array([2.8, 3.2, 2.1, 10, 0])
+
     pd=np.array([[0.,0.,0.,0.],
                 [0.,0.,0.,0.],
                 [0.,0.,0.,0.],
@@ -339,21 +585,30 @@ def main(arg):
                 [0.,0.,0.,0.],
                 [0.,0.,0.,0.]])
 
+
     directory = arg[1].rstrip('/')+'/'
 
+    if "EHR" in directory:
+        pd[:3,:] = EHR[:3,:]
+        pd[5,:] = EHR[3,:]
+
+    if "DHR" in directory:
+        pd[:3,:] = DHR[:3,:]
+        pd[5,:] = DHR[3,:]
+
     # #   BEGIN ERRORS
-    # print("Ploting ERRORS")
-    # plotErrors(directory,n_agents)
+    print("Ploting IMAGE ERRORS ERRORS")
+    plotErrors(directory,n_agents)
     #
     # #   END ERRORS
     # #   BEGIN VELOCITIES / POSITION
-    # print("Ploting VELOCITIES / POSITION")
-    # allStates = plotVelocities(directory,n_agents)
+    print("Ploting VELOCITIES / POSITION")
+    allStates = plotVelocities(directory,n_agents)
 
     #   END VELOCITIES / POSITION
-
+    print("Ploting FORMATION ERRORS")
     #   BEGIN FORMATION ERROR
-    # plotFError(directory,n_agents, allStates)
+    plotFError(directory,n_agents, allStates,pd)
     #   END FORMATION ERROR
 
 

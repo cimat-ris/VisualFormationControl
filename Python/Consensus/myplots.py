@@ -59,7 +59,7 @@ def plot_time(t_array,
     plt.savefig(name+'.pdf',bbox_inches='tight')
     #plt.show()
     plt.close()
-    
+
     #   ---
     
 

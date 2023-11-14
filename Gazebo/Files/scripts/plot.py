@@ -365,7 +365,7 @@ def plotErrors(directory, n_agents):
             row_bytes = np.fromfile(fileH, dtype=np.int32, count= 1)
             # row_bytes = row_bytes[0]
             # print("row_bytes = ", row_bytes)
-            rows = (length-4) / (8*10)
+            rows = (length-4) / (8+4+4*8)
             rows = int(np.floor(rows))
 
             # Read the data into a NumPy array
@@ -395,6 +395,7 @@ def plotErrors(directory, n_agents):
         fig, ax = plt.subplots()
         fig.suptitle("Feature errors")
         for ki in ArUcoTab.keys():
+            print(ArUcoTab[ki][:,0].shape)
             symbols = plot_time(ax, ArUcoTab[ki][:,0],ArUcoTab[ki][:,1:].T)
 
         # ylimits = [.0,10.1]
@@ -529,6 +530,7 @@ def plotVelocities(directory, n_agents):
         #  plot errors
         fig, ax = plt.subplots()
         fig.suptitle("Velocities")
+        print(time.shape)
         symbols = plot_time(ax, time,velocities)
         plt.savefig(directory + str(i)+"/Velocities.pdf",bbox_inches='tight')
         plt.close()

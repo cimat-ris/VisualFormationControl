@@ -122,13 +122,13 @@ def plot_time(ax, t_array,
         ax.plot([t_array[0],t_array[-1]],[ref,ref],
                 'k--', alpha = 0.5)
         symbols.append(mpatches.Patch(color='k'))
-        labels.append(refLab)
+        # labels.append(refLab)
     if not module is None:
         for i in range(len(module)):
             ax.plot([t_array[0],t_array[-1]],[module[i],module[i]],
                 'r--', lw = 0.5)
         symbols.append(mpatches.Patch(color='r'))
-        labels.append("Limits")
+        # labels.append("Limits")
 
     return symbols
 
@@ -395,7 +395,7 @@ def plotErrors(directory, n_agents):
         fig, ax = plt.subplots()
         fig.suptitle("Feature errors")
         for ki in ArUcoTab.keys():
-            print(ArUcoTab[ki][:,0].shape)
+            # print(ArUcoTab[ki][:,0].shape)
             symbols = plot_time(ax, ArUcoTab[ki][:,0],ArUcoTab[ki][:,1:].T)
 
         # ylimits = [.0,10.1]
@@ -530,14 +530,20 @@ def plotVelocities(directory, n_agents):
         #  plot errors
         fig, ax = plt.subplots()
         fig.suptitle("Velocities")
-        print(time.shape)
+        # print(time.shape)
         symbols = plot_time(ax, time,velocities)
         plt.savefig(directory + str(i)+"/Velocities.pdf",bbox_inches='tight')
+        plt.close()
+        fig, ax = plt.subplots()
+        fig.suptitle("States")
+        # print(time.shape)
+        symbols = plot_time(ax, time,states)
+        plt.savefig(directory + str(i)+"/States.pdf",bbox_inches='tight')
         plt.close()
 
     return allStates
 
-def plotFError(directory,n_agents, allStates,pd):
+def plotFError(directory,n_agents, allStates,pd,gdl = 1):
 
 
     P = np.array([[1, 0, 0],
@@ -551,7 +557,7 @@ def plotFError(directory,n_agents, allStates,pd):
         cam = cm.camera()
         cam.pose(tmp)
         camera.append(cam)
-    ret = error_state(pd,  camera, gdl = 1, name= directory+"Err_0.pdf")
+    ret = error_state(pd,  camera, gdl = gdl, name= directory+"Err_0.pdf")
     print("Error_0 = ",ret)
 
     #   Error at the end
@@ -562,7 +568,7 @@ def plotFError(directory,n_agents, allStates,pd):
         cam = cm.camera()
         cam.pose(tmp)
         camera.append(cam)
-    ret = error_state(pd,  camera, gdl = 1, name= directory+"Err_fin.pdf")
+    ret = error_state(pd,  camera, gdl = gdl, name= directory+"Err_fin.pdf")
     print("Error_fin = ",ret)
 
 
@@ -598,27 +604,28 @@ def main(arg):
         pd[:3,:] = DHR[:3,:]
         pd[5,:] = DHR[3,:]
 
+    gdl = 1
+    if len(arg)>2 :
+        gdl = int(arg[2])
+
     # #   BEGIN ERRORS
     print("Ploting IMAGE ERRORS ERRORS")
     plotErrors(directory,n_agents)
-    #
     # #   END ERRORS
+
     # #   BEGIN VELOCITIES / POSITION
     print("Ploting VELOCITIES / POSITION")
     allStates = plotVelocities(directory,n_agents)
-
     #   END VELOCITIES / POSITION
-    print("Ploting FORMATION ERRORS")
+
     #   BEGIN FORMATION ERROR
-    plotFError(directory,n_agents, allStates,pd)
+    print("Ploting FORMATION ERRORS")
+    plotFError(directory,n_agents, allStates,pd,gdl = gdl)
     #   END FORMATION ERROR
 
-
     #   BEGIN Features
-
     print("Ploting FEATURES")
     plotFeatures(directory,n_agents)
-
     #   END FEATURES
 
 

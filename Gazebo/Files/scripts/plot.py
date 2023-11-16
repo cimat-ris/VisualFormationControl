@@ -561,7 +561,7 @@ def plotFError(directory,n_agents, allStates,pd,gdl = 1):
         cam = cm.camera()
         cam.pose(tmp)
         camera.append(cam)
-    ret = error_state(pd,  camera, gdl = gdl, name= directory+"Err_0.pdf")
+    ret = error_state(pd,  camera, gdl = gdl, name= directory+"Err_0")
     print("Error_0 = ",ret)
 
     #   Error at the end
@@ -572,7 +572,7 @@ def plotFError(directory,n_agents, allStates,pd,gdl = 1):
         cam = cm.camera()
         cam.pose(tmp)
         camera.append(cam)
-    ret = error_state(pd,  camera, gdl = gdl, name= directory+"Err_fin.pdf")
+    ret = error_state(pd,  camera, gdl = gdl, name= directory+"Err_fin")
     print("Error_fin = ",ret)
 
 

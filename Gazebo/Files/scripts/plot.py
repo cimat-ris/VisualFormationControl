@@ -204,7 +204,7 @@ def plot_descriptors(ax,descriptors_array,
     # labels = ["Start","End","trayectory"]
     # fig.legend(symbols,labels, loc=1)
     #
-    # plt.tight_layout()
+    # #plt.tight_layout()
     # plt.savefig(name+'.pdf',bbox_inches='tight')
     # #plt.show()
     # plt.close()
@@ -401,7 +401,7 @@ def plotErrors(directory, n_agents):
         # ylimits = [.0,10.1]
         # plt.ylim((ylimits[0],ylimits[1]))
 
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.savefig(directory + str(i)+"/errores.pdf",bbox_inches='tight')
         #plt.show()
         plt.close()
@@ -485,7 +485,7 @@ def plotFeatures(directory, n_agents):
                mlines.Line2D([0],[0],linestyle='-',color='k')]
         labels = ["Start","End","reference","trayectory"]
         fig.legend(symbols,labels, loc=1)
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.savefig(directory + str(i)+"/Image_Features.pdf",bbox_inches='tight')
         #plt.show()
         plt.close()
@@ -531,13 +531,17 @@ def plotVelocities(directory, n_agents):
         fig, ax = plt.subplots()
         fig.suptitle("Velocities")
         # print(time.shape)
-        symbols = plot_time(ax, time,velocities)
+        symbols = plot_time(ax, time,velocities[[0,1,2,5],:])
+        labels = ["X","Y","Z","Yaw"]
+        fig.legend(symbols,labels, loc=2)
         plt.savefig(directory + str(i)+"/Velocities.pdf",bbox_inches='tight')
         plt.close()
+
         fig, ax = plt.subplots()
         fig.suptitle("States")
         # print(time.shape)
-        symbols = plot_time(ax, time,states)
+        symbols = plot_time(ax, time,states[[0,1,2,5],:])
+        fig.legend(symbols,labels, loc=2)
         plt.savefig(directory + str(i)+"/States.pdf",bbox_inches='tight')
         plt.close()
 
